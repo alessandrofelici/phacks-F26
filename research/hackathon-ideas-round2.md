@@ -6,20 +6,22 @@ Inputs: the official Fall '26 track wording and MLH prizes (`prizes/hackprinceto
 
 Quick score (1-5 each): **Fit** to the track wording, **Demo** wow in 2 minutes, **Build** feasibility for 3 people in about 30 hours, **Gap** (likely fewer competing teams in that track or prize).
 
-| # | Idea | Track | Prize stack | Fit/Demo/Build/Gap | Total |
+Gap scores for the ideas marked ✓ were revised after a prior-art search (see "Prior-art checks" at the end). Section numbers below follow the original order.
+
+| § | Idea | Track | Prize stack | Fit/Demo/Build/Gap | Total |
 |---|---|---|---|---|---|
-| 1 | Group Chat Game Master | Entertainment | Photon, Gemini | 5/5/4/4 | 18 |
-| 2 | Bench Voice | Science & Discovery | Gemini, Tiger Data | 5/4/4/5 | 18 |
-| 3 | Retrofit Radar | Sustainability | B+E alt, Tiger Data | 4/4/4/5 | 17 |
-| 4 | Office Hours Router | Education | Photon, MongoDB | 5/4/4/4 | 17 |
-| 5 | Teach-Back | Education | Gemini | 5/5/4/3 | 17 |
-| 6 | Field Ping | Science & Discovery | Photon, MongoDB | 4/5/4/4 | 17 |
+| 1 | Group Chat Game Master ✓ | Entertainment | Photon, Gemini | 5/5/4/5 | 19 |
+| 5 | Teach-Back ✓ | Education | Gemini | 5/5/4/3 | 17 |
+| 6 | Field Ping ✓ | Science & Discovery | Photon, MongoDB | 4/5/4/4 | 17 |
+| 2 | Bench Voice ✓ | Science & Discovery | Gemini, Tiger Data | 5/4/4/3 | 16 |
 | 7 | Shade Map | Sustainability | Gemini | 5/4/3/4 | 16 |
-| 8 | Described Live | Entertainment | Gemini, Best Overall | 4/5/3/4 | 16 |
+| 8 | Described Live ✓ | Entertainment | Gemini, Best Overall | 4/5/3/4 | 16 |
+| 4 | Office Hours Router ✓ | Education | Photon, MongoDB | 5/4/4/2 | 15 |
 | 9 | Cash Drawer | B+E | Photon, Capital One | 4/4/4/3 | 15 |
 | 10 | Wound Check | Healthcare | Photon | 5/4/4/2 | 15 |
 | 11 | Air Badge | Healthcare / Hardware | Best Hardware, Tiger Data | 4/4/3/4 | 15 |
 | 12 | Repro Bot | Science & Discovery | Vultr | 5/3/2/5 | 15 |
+| 3 | Retrofit Radar ✓ | Sustainability | B+E alt, Tiger Data | 4/4/4/2 | 14 |
 
 ---
 
@@ -129,5 +131,19 @@ Quick score (1-5 each): **Fit** to the track wording, **Demo** wow in 2 minutes,
 
 ## Suggested shortlist with Second Key and Neighbor Call
 1. Keep **Second Key** or **Neighbor Call** as the main bet if Photon/Capital One prizes are confirmed.
-2. If sponsor prizes don't appear, **Bench Voice** (Science & Discovery) and **Group Chat Game Master** (Entertainment) target the two tracks the team had no entry for, where competition is likely thinnest.
+2. If sponsor prizes don't appear, **Group Chat Game Master** (Entertainment) is the strongest new idea after the prior-art checks. For Science & Discovery, **Field Ping** now looks more open than Bench Voice.
 3. Before committing, run any of these through `event-day-brainstorm-prompt.md` with the final prize list.
+
+---
+
+## Prior-art checks (2026-11-13, web search, one or two queries per idea)
+Re-checked Devpost at the same time: still only MLH prizes, and no announcements under Updates.
+
+- **Group Chat Game Master: Gap 4→5.** I found no iMessage version. The closest are a 2016 group-chat [Murder Mystery Bot](https://thenextweb.com/news/murder-mystery-bot-is-all-the-fun-of-a-group-date-without-having-to-put-on-pants), a 2022 [Wechaty group-chat project](https://wechaty.js.org/2022/03/31/shezhang-bujian-le-en/) (pre-LLM era NLP), and solo AI-mystery apps ([CrimeChat](https://apps.apple.com/us/app/crimechat/id6446483261), [Shapes](https://shapes.inc/aimurdermyst-ai), [MystNight](https://orhpius.itch.io/mystnight)). A TechRadar writer found ChatGPT [works well as a game master](https://www.techradar.com/computing/artificial-intelligence/i-hosted-a-games-night-with-the-help-from-ai-and-heres-how-you-can-too) but "needs watching", which supports the structured world-state design. Hook: multiplayer, secret roles by DM, nothing to install.
+- **Bench Voice: Gap 5→3.** The commercial space is already occupied: [LabTwin](https://labforward.io/labtwin) (wet-lab voice assistant with hands-free timers that pushes to an ELN), [ASCENSCIA](https://www.scisure.com/blog/introducing-ascenscia-the-voice-assistant-designed-for-scientists) (eLabNext and [SciNote](https://www.scinote.net/blog/labvoice-scinote-data-capture-via-voice-in-the-lab/) integrations) and [Dotmatics + LabVoice](https://www.rdworldonline.com/dotmatics-collaborates-with-labvoice-to-enable-voice-assisted-laboratory-workflows/). All are paid enterprise products. A hackathon version needs a different hook: open source and free for academic labs, with automatic comparison against the written protocol so out-of-spec steps get flagged (the vendors mostly do capture and timers).
+- **Retrofit Radar: Gap 5→2.** This is crowded: Daisy's [Carbon Curve](https://journalofcyberpolicy.com/?p=260294) (AI, projects 2030 fines), [BuildingLink's calculator](https://www.buildinglink.io/nyc-local-law-97-penalty-calculator), [Schneider Electric](https://www.esgdive.com/news/schneider-electric-building-decarbonization-calculator-nyc-local-law-97-compliance/728415/), [LL97.AI](https://netzerocompare.com/software/ll97-ai), and NYC's own [free concierge service](https://www.smartcitiesdive.com/news/nyc-concierge-service-enhanced-web-tools-local-law-97/817577/). The fine rate is confirmed at **$268 per tCO2e** over the limit. Drop it unless it pivots to a city without these tools (e.g. Boston BERDO or Denver Energize).
+- **Office Hours Router: Gap 4→2.** Academic prototypes already do the core idea: a [UVA thesis](https://libraetd.lib.virginia.edu/public_view/3f462699g) (auto-grouping plus an LLM chatbot), [ASCI at SIGCSE 2025](https://sigcse2025.sigcse.org/details/sigcse-ts-2025-Papers/183/ASCI-AI-Smart-Classroom-Initiative) (queue, grouping and a local LLM), and open-source [HelpMe](https://github.com/ubco-db/helpme) (UBCO). A warning sign: ASCI reports that **TAs and students prefer one-on-one over group sessions**, which undercuts the main demo.
+- **Teach-Back: Gap stays 3, but the research supports it.** No consumer voice app was found, but there's plenty of research: [AlgoBo / "Teach AI How to Code"](https://arxiv.org/html/2309.14534v1) (agents given deliberate misconceptions), [Chrysalis](https://arxiv.org/html/2510.05271v1), and a [CHI 2026 study](https://arxiv.org/html/2601.16583v1) where the tutee role drew the most effort but caused high pressure. A key design rule from that work: LLM tutees that are too capable discourage teaching, and a persona prompt alone isn't enough to keep them believably wrong.
+- **Field Ping: Gap stays 4.** No SMS or iMessage species-ID service was found. iNaturalist [says a conversational ID chatbot is coming](https://panama.inaturalist.org/posts/97786-ai-powered-identifications-through-text), so the edge is texting with no install, plus the follow-up questions that make records research-grade.
+- **Described Live: Gap stays 4.** Live description research targets surroundings, not media: [WorldScribe](https://news.umich.edu/real-time-descriptions-of-surroundings-for-people-who-are-blind) (UIST 2024 Best Paper) and [VocalEyes](https://arxiv.org/abs/2503.16488v1). WorldScribe's approach of using a fast model for brief detail and a slow one for scenes that last could carry over to video.
+- Not checked yet: Shade Map, Cash Drawer, Wound Check, Air Badge, Repro Bot.
