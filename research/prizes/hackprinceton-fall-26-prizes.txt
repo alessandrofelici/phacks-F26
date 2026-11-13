@@ -1,0 +1,32 @@
+HackPrinceton Fall '26 Devpost (https://hackprinceton-fall-26.devpost.com/), fetched 2026-11-13 (event day).
+Submissions "open soon". 8 non-cash prizes listed, all MLH. Photon / Capital One / Amazon / other sponsor prizes are NOT on the page yet.
+
+TRACKS (official wording, abridged)
+- Healthcare: healthcare delivery, wellness, public health. e.g. telehealth, AI diagnostics, mental health, fitness tracking.
+- Sustainability: environmental challenges or eco-friendly behavior. e.g. carbon tracking, smart waste management, renewable energy.
+- Business & Enterprise: financial tools, business operations. e.g. fintech for startups, B2B billing, analytics dashboards, cybersecurity, privacy.
+- Entertainment: creatively integrate entertainment and media. e.g. storytelling apps, interactive experiences, media literacy platforms.
+- Education: learning more interactive, accessible or personalized. e.g. e-learning, immersive/virtual educational experiences.
+- Science & Discovery: "turn curiosity into discovery". e.g. research accelerators, data models, tools to aid scientific processes and methods.
+
+OVERALL
+- Best Overall Hack: must excel on creativity, utility, charity, avidity. Track winners not eligible.
+- Best Rookie Hack: first-time hackathon participants.
+- Best Hardware Hack: IoT, robotics, wearables, physical computing.
+
+REQUIREMENTS
+1. Public GitHub repo created Nov 13-15 2026.
+2. Optional video <= 2 min. In-person demos required Sunday.
+3. Add Discord usernames to the submission.
+
+MLH PRIZES (1 winner each)
+- Build Your Hackathon A-Team with SpaceXSI (raffle): Cursor as core coding agent + a Grok Bot automation, described in the write-up. Prize: Cursor mechanical keyboards.
+- Best Use of Gemini API: MLH swag kits.
+- Best Use of Solana: hardware wallets.
+- Best Use of Tiger Data (Postgres for time-series / real-time analytics): Stream Deck Mini.
+- Best Use of Vultr (cloud compute / GPUs): assorted prizes.
+- DEV Writing Challenge: $100, publish a post on DEV.
+- Best Use of MongoDB Atlas: M5Stack IoT kit.
+- Best Domain Name from GoDaddy Registry: digital gift card.
+
+Participants at fetch time: 37. Judges listed: ~50.
