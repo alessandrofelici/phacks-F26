@@ -1,0 +1,46 @@
+ACTA AI || AI & Tech for Clinical Trials by Regeneron [Cash Prizes] || built: fastapi, langgraph, nextjs, react
+Aletheia || What would you build on top of a user’s purchase data? by KnotAPI [3 Prizes] || built: claude, cursor, enter.pro, gemini, javascript, knotapi, supabase, typescript
+Asclepius || Best Overall Hack ; AI Research and Alignment Environments by d_model [$500 for 1st, $250 for 2nd, $125 for 3rd (Amazon gift cards)] ; AI & Tech for Clinical Trials by Regeneron [Cash Prizes] || built: agentic-ai, claude, d3.js, differential-privacy, fastapi, gemma, machine-learning, neural-networks, postgresql, pydantic
+Atlas || Best AI-Powered App by Orchids (1st place: $300 cash, 2nd place: $200 cash) ; AI & Tech for Clinical Trials by Regeneron [Cash Prizes] || built: express.js, framer, google-gemini-api, next.js, node.js, react, spark.js, tailwindcss, three.js, typescript
+Aura || What would you build on top of a user’s purchase data? by KnotAPI [3 Prizes] ; Best Use of Enter Pro by Enter Pro [Enter.pro 1-Year Unilimited membership (worth 1000usd+)] || built: anime.js, gemini, python, react
+BRIDGE || Best Hardware + AI Hack by Justin Bojarski [$500 Gift Card] || built: azure, clip, gemini, html, isaacsim, json, k2v2, kinect, pybullet, python
+BioStrata || AI & Tech for Clinical Trials by Regeneron [Cash Prizes] || built: gemini, javascript, node.js, postgresql, r, react, supabase, tailwind-css
+Citadail || Best AI-Powered App by Orchids (1st place: $300 cash, 2nd place: $200 cash) || built: agent, api, dedalus, docx, exceljs, framer, gemini, github, imessage, live
+Confab || AI Research and Alignment Environments by d_model [$500 for 1st, $250 for 2nd, $125 for 3rd (Amazon gift cards)] || built: colab, gemma-4-e2b, google, google-gemini-api, huggingface-transformers, numpy, pandas, plotly, python, pytorch
+Ember || Best Hardware Hack || built: arduino, jetson-nano, motor, python, realsense, servo
+Flanner || What would you build on top of a user’s purchase data? by KnotAPI [3 Prizes] || built: diffusion, gemini, gemma, k2, knotapi, photon, python, rainbow
+GreenChain || Best Use of K2 Think V2 by Institute of Foundation Models at MBZUAI [reMarkable tablet for every member of the winning team] ; Best use of Dedalus Containers by Dedalus [$250 for the top 4] ; Best agent swarm hosted on Dedalus Containers by Dedalus [$500 for 1st place] || built: beautiful-soup, d3.js, dedalus-labs, fastapi, gemini, gemma, godaddy, hugeicons, next.js, numpy
+HealthBridge || Best Use of Enter Pro by Enter Pro [Enter.pro 1-Year Unilimited membership (worth 1000usd+)] || built: bailey, docker, fastify, gemma, k2thinkv2, node.js, openfda, phi, rxnorm, typescript
+Hop-It || Best Rookie Hack ; Best Hardware + AI Hack by Justin Bojarski [$500 Gift Card] || built: gemini-vision, html5, k2-think-v2, react, render, vercel
+InSilico || AI & Tech for Clinical Trials by Regeneron [Cash Prizes] || built: chromadb, fastapi, gemini, html5, next.js, numpy, pandas, python, radixui, rag
+LEGR || Best Business and Enterprise Hack ; Best Use of Enter Pro by Enter Pro [Enter.pro 1-Year Unilimited membership (worth 1000usd+)] || built: claude, css3, dedalus, html5, javascript, knot, openai, photon, postgresql, python
+Larp N Learn || Best Game || built: chromadb, fastapi, langgraph, next.js, react, react-flow, wispr
+Lazarus || AI & Tech for Clinical Trials by Regeneron [Cash Prizes] || built: fastapi, gemini, javascript, k2-think, neo4j, neon, node.js, openai, openclaw, photon
+Live Laugh Plant || [MLH] Best Domain Name from GoDaddy Registry || built: canvas-api, drei, google-gemini, gsap, javascript, leaflet.js, next.js, node.js, openweathermap, photon
+Object State Tracking in Language Models || AI Research and Alignment Environments by d_model [$500 for 1st, $250 for 2nd, $125 for 3rd (Amazon gift cards)] || built: huggingface, matplotlib, python, pytorch, scikit-learn
+Onkos || AI & Tech for Clinical Trials by Regeneron [Cash Prizes] || built: chromadb, clinicaltrials.gov, fastapi, gh200-gpu, git, google-maps, heygen-liveavatar, javascript, k2-think-v2, kimi-k2
+OpenCraft || Best use of Dedalus Containers by Dedalus [$250 for the top 4] || built: ai-agent-design, api-integration, backend-development, event-driven-architecture, express.js, frontend-development, node.js, prompt-engineering, react, real-time-systems
+Patient Zero || Beautifully Engineered Nonsense by Sonar || built: elevenlabs, gemini, k2, next.js, react-three-fiber, sonarqube, supabase, synthea, vercel
+ProtoSense || AI & Tech for Clinical Trials by Regeneron [Cash Prizes] || built: fastapi, gemini, pymupdf, python, python-multipart-pymupdf-(pdf-parsing)-google-gemini-api-(google-generativeai)-for-optional-extraction-support-sqlite-(for-lightweight-persistence)-next.js, react, typescript-tailwind-css, uvicorn-pydantic
+REVIVE || Best Hardware + AI Hack by Justin Bojarski [$500 Gift Card] || built: c++, html, kotlin, python, shell, swift
+ReWire || Best Hardware + AI Hack by Justin Bojarski [$500 Gift Card] || built: claude, css, fastapi, framer, json, k2-think-v2, pydantic, pynput, pyserial, python
+Rom-Com || AI & Tech for Clinical Trials by Regeneron [Cash Prizes] || built: apscheduler, arduino, c++, css, docker, elevenlabs, fastapi, gemini, grove, liveavatar
+Saynario || [MLH] Best Use of ElevenLabs || built: anthropic, digitalocean, docker, elevenlabs, fastapi, javascript, python, vite, websockets, whisper
+ShakeUR || [MLH] Best Use of DigitalOcean ; Beautifully Engineered Nonsense by Sonar || built: mediapipe, opencv, python, typescript
+ShapeUp || [MLH] Best Use of Gemini API || built: firebase, nextjs, pyrotch, python, three.js, typescript, vercel
+Shomi: Shop without leaving iMessage || What would you build on top of a user’s purchase data? by KnotAPI [3 Prizes] || built: knot, langchain, photon, sqlite, typescript
+Someone Save Us || Best Entertainment and Media Hack || built: digitalocean, gemma4, godaddy, k2-think-v2, knotapi, photon, python, three.js, typescript
+Spark || Best Education Hack || built: claude, css, elo, firebase, javascript, pwa, react
+Synova || AI & Tech for Clinical Trials by Regeneron [Cash Prizes] || built: css, fastapi, github, html, javascript, json, python, react, whisper
+TaleTailor || Best Use of Enter Pro by Enter Pro [Enter.pro 1-Year Unilimited membership (worth 1000usd+)] || built: enter.pro, eslint, k2thinkv2, k2thinkv2api, react, tailwind
+Terra-Zone || Best Use of Enter Pro by Enter Pro [Enter.pro 1-Year Unilimited membership (worth 1000usd+)] || built: deno, framer-motion, google-gemini-2.0-flash-api, maplibre-gl, open-elevation, postgis, postgresql, radix-ui, react-19, react-three-fiber
+Trustworthy Science || AI & Tech for Clinical Trials by Regeneron [Cash Prizes] || built: chroma, gemini, huggingface, k2, langchain, python, react, uv, vite
+Unilert || Best use of Dedalus Containers by Dedalus [$250 for the top 4] || built: dedalus, fastapi, javascript, next.js, python, rest, sqlite, typescript
+VITAL || Best Healthcare Hack || built: claude, css, elevenlabs, html, json, mediapipe, overshoot, photon, react, typescript
+Vietnam Trail || Best Use of Enter Pro by Enter Pro [Enter.pro 1-Year Unilimited membership (worth 1000usd+)] || built: css, elevenlabs, enter.pro, gemma4, html, react19, shadcn, supabase, tailwind, typescript
+WaterShield Alerts || Best Sustainability Hack ; Agents in iMessage by Photon [Cash Prize] || built: arduino, esp32, javascript, photon, python
+Wavelength || Agents in iMessage by Photon [Cash Prize] || built: anthropic, canvas, google-cloud, javascript, photon, python, react, slack, typescript
+WiseBuys || What would you build on top of a user’s purchase data? by KnotAPI [3 Prizes] || built: fastapi, gemini, knotapi, postgresql, react
+lumos.health || Best use of Dedalus Containers by Dedalus [$250 for the top 4] || built: 3js, dedalus, html, javascript, json, supabase, typescript
+reAgent || Best Use of Enter Pro by Enter Pro [Enter.pro 1-Year Unilimited membership (worth 1000usd+)] || built: python
+suppl.ai || Build What Actually Runs Monday by Eragon [Mac Mini] || built: dedalus, fastapi, gemini, motion, postgresql, pydantic, pytest, python, tailwind, tavily

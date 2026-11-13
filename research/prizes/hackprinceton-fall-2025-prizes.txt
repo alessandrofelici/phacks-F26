@@ -1,0 +1,37 @@
+AI BnB || Best Use of Dedalus by Dedalus Labs || built: dedaluslabs, docker, flask, javascript, next.js, python, react, supabase, tailwindcss, typescript
+Amelia || Best Use of Vibe Kanban by Vibe Kanban || built: airplanes.live, dedalus, dedaluslabs, elevenlabs, fastapi, grok, mapbox, python, react, redis
+Better || Build on the Knot TransactionLink API by Knot API || built: firebase, knotapi, nessieapi, next.js, swiftui, typescript, xcode
+Brahma || Best Use of Vibe Kanban by Vibe Kanban || built: dedaluslabs, mcp, python, shell
+Cortex || YC x HackPrinceton Challenge by Y Combinator || built: next.js, openai, pinecone, playwright, retell-ai, supabase, tailwind-css, vercel, vertex-ai
+Cropit || Best Practical AI Innovation by Amazon || built: amazon, capital-one, dedalus, elevenlabs, gemini, knot, next.js, react, tailwind.css, usda-national-farmers-market-directory
+Dielectric || Best Use of Grok for Real-Time Data/Signal Analysis by xAI || built: kicad, mcp, python, xai
+Discer.io || YC x HackPrinceton Challenge by Y Combinator ; Best Use of Dedalus by Dedalus Labs || built: bun, dedalus, digitalocean, grok, javascript, nextjs, openai, python, react, snowflake
+Evolv - Dive Deep. See Clear. || Best Predictive Intelligence by Chestnut Forty || built: anthropic, flask, javascript, mapbox, node.js, python, vite
+FairFlow || Best Use of Vibe Kanban by Vibe Kanban || built: react, vite, xai, xapi
+FoodBridge || Best Rookie Hack || built: java, nextjs, tailwind, typescript
+Forexery || Best Predictive Intelligence by Chestnut Forty || built: dedalus-labs, gymnasium, matplotlib, numpy, pandas, python, tensorboard
+Foundaura || Best Use of Snowflake API by MLH || built: dedalus, fastapi, python, react, snowflake
+Interactive DAW || Best Hardware Hack || built: loop-midi, mediapipe-hands, opencv, python, raspberry-pi, reaper, ultrasonic-sensor
+Jigsaw: Make your PCB boards click together || Best Business + Enterprise Hack [Courtesy of Orcava AI, Eragon AI] || built: dedalus, flask, react
+Lume - Your tech-savvy guide. || Best Education + Entertainment Track ; Best Use of ElevenLabs by MLH || built: chromeextension, claude, css3, dedaluslabs, dom, flask, flask-cors, html5, javascript, json
+Messenger AI || Exploring Hybrid Intelligence by Photon || built: dedaluslabs, photon, python, typescript
+MindPad || Best Overall Hack [Courtesy of Amplitude, Anthropic, OpenAI] ; Best Practical AI Innovation by Amazon ; Best Use of Gemini API by MLH || built: ann, css, figma, gemini-api, html, mediapipe, openai-agent-sdk, openai-api, opencv, pyautogui
+Nautilink || Best Use of Solana by MLH || built: ais, amazon-dynamodb, amazon-web-services, apollo-server, aws-cognito, buckets, cypress, dast, datadog, eslint
+New Roots || Most Impactful Use of the X API by X || built: beautiful-soup, django, docker, firebase, firestore, grok, python, react, selenium, tailwindcss
+PiggyBank || Build on the Knot TransactionLink API by Knot API ; Exploring Hybrid Intelligence by Photon ; Best Use of DigitalOcean Gradient AI by MLH || built: capital-one, chatbot, clerk, dedalus, digitalocean, flask, gemini, heart, knot, llama
+PropheSea || Best Predictive Intelligence by Chestnut Forty || built: css, javascript, next.js, node.js, python, react, sql, tailwind, typescript
+Protein Architect || YC x HackPrinceton Challenge by Y Combinator || built: alphafold, dedaluslabs, elevenlabs, esm2, fastapi, gemini, googleveo, python, pytorch, sagemaker
+Recall || Best Use of Grok for Real-Time Data/Signal Analysis by xAI ; Best Use of Arm by MLH || built: grok, nextjs, ngrok, openai, opencv, python, raspberrypi, typescript
+SlopGuard || Best Use of Vibe Kanban by Vibe Kanban || built: fastapi, flask, indexeddb, jupyternotebooks, keras, matplotlib, next.js, numpy, openai, opencv
+SpatialMD || Best Use of Dedalus by Dedalus Labs || built: canvas-api, claude-sonnet, dedalus-labs-ai-framework, fastapi-(python), gpt-4-vision, ibm-plex-typography, mediapipe, numpy, opencv, react-18
+Synovia || Best Healthcare Hack [Courtesy of Daylight Health] || built: css, fastapi, gemini, html, python, typescript
+TerraLink || Best Overall Hack [Courtesy of Amplitude, Anthropic, OpenAI] ; Best Sustainability Hack [Courtesy of EaglePlan] || built: flask, gemini, geojson, google-earth-engine, javascript, lucide-react, numpy, python, react, restful-api
+TextFly || Exploring Hybrid Intelligence by Photon ; Best Use of Vibe Kanban by Vibe Kanban || built: ai, anthropic, openai, photon, python, typescript, x
+ViralWave.ai || Best Practical AI Innovation by Amazon ; Most Impactful Use of the X API by X || built: amazonnova, dedalus, gemini, grokai, next.js, nova, python, suno, typescript, x
+Watt's Up || Best Overall Hack [Courtesy of Amplitude, Anthropic, OpenAI] || built: dedalus-labs-sdk, google-gemini, google-maps, hugging-face, nasa-power-api, numpy, opencv, python, pytorch, react
+WhyKnot || Best .Tech Domain Name by MLH || built: dadelus, fastapi, mongodb, nextjs, openai, python
+Wings || Exploring Hybrid Intelligence by Photon || built: dedalus, imessagekit, javascript, knot, nessie, node.js, openai, python, react, snowflake
+XChange - Where Market Chatter Becomes Market Insight || Most Impactful Use of the X API by X || built: github, javascript, react, sql, tailwind, typescript, vite, x, xai, xapi
+doeve || Exploring Hybrid Intelligence by Photon || built: anthropic-api, claude-3.5-sonnet, elevenlabs, fastapi, httpx, imessage-sdk, langchain, langgraph, node.js, opencv
+edgecart. || Best Financial Hack by Capital One ; YC x HackPrinceton Challenge by Y Combinator ; Build on the Knot TransactionLink API by Knot API || built: flask, gemini, knot, python, pytorch, react, resnet18, typescript, websocket, xai
+terrar.ai || Best Use of Grok for Real-Time Data/Signal Analysis by xAI || built: c#, grok

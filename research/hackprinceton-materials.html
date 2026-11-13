@@ -1,0 +1,1146 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>HackPrinceton Fall 2026: research and plan</title><style>
+:root{--bg:#fff;--fg:#1d1d1f;--muted:#6b6b70;--line:#e3e3e8;--accent:#e77500;--side:#f6f6f8;--code:#f2f2f5}
+@media (prefers-color-scheme:dark){:root{--bg:#161618;--fg:#ececf0;--muted:#9a9aa2;--line:#2e2e33;--accent:#ff9a3c;--side:#1e1e21;--code:#232327}}
+*{box-sizing:border-box}
+body{margin:0;font:15px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--fg)}
+nav{position:fixed;top:0;left:0;bottom:0;width:230px;overflow-y:auto;background:var(--side);border-right:1px solid var(--line);padding:18px 14px}
+nav .brand{font-weight:700;margin-bottom:12px}
+nav .group{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:16px 0 4px}
+nav a{display:block;padding:4px 8px;border-radius:6px;color:var(--fg);text-decoration:none;font-size:14px}
+nav a:hover{background:var(--line)}
+main{margin-left:230px;padding:28px 40px 80px;max-width:1040px}
+section{padding-top:12px;border-top:1px solid var(--line);margin-top:36px}
+section:first-child{border-top:0;margin-top:0}
+.src{font-size:12px;color:var(--muted)}
+h1{font-size:26px;margin:.2em 0}h2{font-size:20px;margin-top:1.6em}h3{font-size:16px}
+a{color:var(--accent)}
+.meta{color:var(--muted)}
+table{border-collapse:collapse;display:block;overflow-x:auto;margin:12px 0;font-size:14px}
+th,td{border:1px solid var(--line);padding:6px 9px;vertical-align:top;text-align:left}
+th{background:var(--side)}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font-size:13px}
+pre{background:var(--code);padding:12px;border-radius:8px;overflow-x:auto;font-size:13px;line-height:1.45}
+pre code{background:none;padding:0}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin:18px 0}
+.card{display:flex;flex-direction:column;gap:6px;padding:14px;border:1px solid var(--line);border-radius:10px;color:var(--fg);text-decoration:none}
+.card:hover{border-color:var(--accent)}
+.card .rank{color:var(--accent);font-weight:700}
+.card em{color:var(--muted);font-size:13px;font-style:normal}
+details>summary{cursor:pointer;color:var(--muted);margin:8px 0}
+@media (max-width:760px){nav{position:static;width:auto;border-right:0;border-bottom:1px solid var(--line)}main{margin-left:0;padding:18px}}
+</style></head>
+<body><nav><div class="brand">HackPrinceton F26</div><a href="#overview">Overview</a><div class="group">Start here</div><a href="#plan">Build plan</a><div class="group">Specs</div><a href="#second-key">#1 Second Key</a><a href="#neighbor-call">#2 Neighbor Call</a><a href="#backups">Backups</a><a href="#shiftproof">ShiftProof (dropped)</a><div class="group">Research</div><a href="#winners">What wins at HP</a><a href="#track-fit">Track fit</a><a href="#reels">Reels takeaways</a><a href="#brainstorm">Event-day prompt</a><a href="#loop">Scoring log</a><div class="group">Appendix</div><a href="#ideas">All 15 ideas</a><a href="#prizes-f25">Fall &#x27;25 winners (raw)</a><a href="#prizes-s26">Spring &#x27;26 winners (raw)</a><div class="group">Built 2026-11-09</div></nav><main><section id="overview">
+<h1>HackPrinceton Fall 2026: research and plan</h1>
+<p class="meta">Nov 13&ndash;15, 2026 &middot; Princeton &middot; 36 h &middot; team of 3 &middot; 2-min live demo Sunday</p>
+<div class="cards">
+  <a class="card" href="#second-key"><span class="rank">#1</span><b>Second Key</b>
+    <span>Bank-side hold on transfers during a live scam call; family co-signs over iMessage.</span>
+    <em>Business + Enterprise &middot; Capital One + Photon &middot; score 24</em></a>
+  <a class="card" href="#neighbor-call"><span class="rank">#2</span><b>Neighbor Call</b>
+    <span>Check-in calls to seniors living alone during heat, cold and smoke alerts.</span>
+    <em>Healthcare &middot; Photon + Amazon &middot; score 22</em></a>
+  <a class="card" href="#backups"><span class="rank">#3</span><b>Team's choice</b>
+    <span>ClearPath Web (accessibility) or Bill Rescue with an energy-burden map.</span>
+    <em>Education / Sustainability</em></a>
+</div>
+<h2>Key takeaways</h2>
+<ul>
+  <li><b>Use Photon (iMessage) as the interface.</b> It had 5 prize winners in Fall '25 and was in 4 of 6 Spring '26 track winners' stacks.</li>
+  <li>Past winners: Healthcare = monitor&rarr;alert, Business + Enterprise = workflow agents, Sustainability = geospatial/IoT.</li>
+  <li>Repo must be created at the event. Before then: pick the idea by Wed Nov 11, upgrade Twilio (~$20), get Photon / AirNow / Nessie keys.</li>
+  <li>Friday night: run the <a href="#brainstorm">event-day prompt</a> against the real prize list, then visit sponsor booths.</li>
+</ul>
+<h2>Not verified yet</h2>
+<ul>
+  <li>Fall 2026 sponsor prize list (Devpost page not live as of Nov 9).</li>
+  <li>Photon dashboard (app.photon.codes didn't respond).</li>
+  <li>Whether the agent-board helper counts as pre-existing code; ask an organizer.</li>
+</ul>
+</section><section id="plan"><div class="src">board/notes/hackprinceton-plan.md</div><h1>HackPrinceton Fall 2026: picks + build plan for a team of 3</h1>
+<p>Event: Nov 13-15 2026, 36 h, Princeton (JRR Building). Log: <code>hackprinceton-loop.md</code>. Track fit: <code>hackprinceton-track-fit.md</code>.
+Rules that shape the plan: public repo <strong>created during the event</strong>; <strong>2-min live demo Sunday</strong> 9:30-2 (required), optional &lt;=2-min video; AI-assisted code "welcome and encouraged"; rubric = creativity, utility, charity, avidity; track winners can't also win Best Overall.
+Instagram reels from the developer: not read (instagram.com blocked). Paste captions/what they say and I'll fold them in.</p>
+<h2>1. Picks (refined again 2026-11-09 with Devpost winner data, live APIs and the two reels)</h2>
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>Idea</th>
+<th>Track</th>
+<th>Sponsor prizes to stack</th>
+<th>Spec</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td><strong>Second Key</strong> (bank-side hold during a live scam call)</td>
+<td>Business + Enterprise</td>
+<td>Capital One Best Financial Hack ($1,000, 1 winner), Photon (5 winners last fall)</td>
+<td>hp-spec-second-key.md</td>
+</tr>
+<tr>
+<td>2</td>
+<td><strong>Neighbor Call</strong> (now: heat, cold and smoke check-ins)</td>
+<td>Healthcare</td>
+<td>Photon; Amazon Practical AI (3 winners)</td>
+<td>hp-spec-neighbor-call.md</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Team's choice: ClearPath Web (Education, accessibility) or Bill Rescue with an energy-burden map (Sustainability)</td>
+<td></td>
+<td></td>
+<td>hp-spec-backups.md</td>
+</tr>
+<tr>
+<td>Why: see <code>hackprinceton-winners-analysis.md</code>. Past HackPrinceton winners: Healthcare = monitor→alert (VITAL), B+E = workflow agents (LEGR, Jigsaw), Sustainability = geospatial/IoT. <strong>Photon/iMessage shows up in many winners' stacks</strong>, so make iMessage the user interface either way.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Neighbor Call's live demo: November has no heat alerts but does have live winter-storm alerts. Cold killed ~2,520 Americans in 2023 vs heat 2,391 in 2024, so the scope is now all extreme weather, demoed with real NWS alerts from that weekend.</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Dropped: ShiftProof (CMS Emmy exists). Prior art seen at HackPrinceton: NannyCam (S26, eldercare finances via iMessage), Guardian (falls), Lume (won Education F25, seniors).</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2>2. Event strategy (from the reels + winner data)</h2>
+<ul>
+<li>Friday night: run <code>event-day-brainstorm-prompt.md</code> against the real prize list (~1 h). Prefer the stack with less competition (sponsor prizes with several winners: Photon, Amazon).</li>
+<li>In the first 3 hours, spend ~20 min at the chosen sponsors' booths and ask what would wow them; design the demo's first 30 seconds around that.</li>
+<li>Judges see ~2-3 minutes: one live moment (a phone rings / a transfer freezes), a visible agent-to-agent conversation on screen, then the architecture slide.</li>
+</ul>
+<h2>3. Team of 3: roles</h2>
+<table>
+<thead>
+<tr>
+<th>Role</th>
+<th>Owns</th>
+<th>Typical files</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>A. Agent/voice lead</td>
+<td>LLM prompts, tool calls, Twilio/Photon, rules engine, red-flag logic</td>
+<td><code>server/agent/*</code>, <code>server/telephony/*</code></td>
+</tr>
+<tr>
+<td>B. Product/UI lead</td>
+<td>Next.js screens, dashboard, demo "simulate" controls, visual polish</td>
+<td><code>app/*</code>, <code>components/*</code></td>
+</tr>
+<tr>
+<td>C. Data/integration + pitch lead</td>
+<td>External APIs (NWS/AirNow or Nessie), DB schema, seed data, deploy, Devpost text, slides, demo script</td>
+<td><code>lib/data/*</code>, <code>db/*</code>, <code>README</code>, pitch</td>
+</tr>
+<tr>
+<td>Hosting: Next.js UI on Vercel; one persistent Node service (Railway/Fly or a laptop + tunnel) for the Twilio WebSocket and the Photon loop.</td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Everyone codes with Claude Code (AI help is allowed). Coordination: the <strong>agent board</strong> (projects/agent-board: a pinned GitHub issue; agents post when done and <code>board wait</code> for @mentions; ownership table in CLAUDE.md). Tested 2026-11-09. Each person runs 1-2 sessions in their own git worktree on their own folder. Merge to main every ~2 h, each owner merging only their own branch after reading <code>git diff</code>.</td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2>4. Stack (one repo, one language, few moving parts)</h2>
+<ul>
+<li>Next.js (App Router, TypeScript) on Vercel; API routes for the agent; Supabase (Postgres + auth) or SQLite for speed.</li>
+<li>Claude API (tool use) for reasoning; deterministic TypeScript for rules/red flags (judges trust "the LLM never decides alone").</li>
+<li>Voice: Twilio Voice + Media Streams with a realtime speech model, or simpler: Twilio <code>&lt;Gather&gt;</code> speech + TTS (more reliable in 36 h).</li>
+<li>Messaging: Photon Spectrum SDK (iMessage/SMS) for the sponsor prize; Twilio SMS fallback.</li>
+<li>Twilio: <strong>upgrade before the event (~$20)</strong>. Trial accounts only call 5 verified numbers, play a trial message, allow 1 conference, and include 75 voice / 30 Media Streams minutes. That breaks a live judge demo.</li>
+</ul>
+<h2>5. Before the event (no code, since the repo must be created at the event)</h2>
+<ul>
+<li>Pick the idea + a backup by Wed Nov 11; write the 1-page spec, data contracts (JSON shapes), the demo script and the 2-min pitch outline.</li>
+<li>Accounts + keys: Anthropic, Twilio (upgraded, number bought), Photon (free $100 credit), Vercel, Supabase, NWS (no key, needs User-Agent) / AirNow key or Capital One Nessie key.</li>
+<li>Extra keys found necessary (2026-11-09): AirNow API key (free, docs.airnowapi.org), Capital One Nessie key (nessieisreal.com; use <strong>https</strong>), Photon project ID/secret (app.photon.codes, $100 free credit).</li>
+<li>The agent-board script is a pre-existing tool, like a library: keep it in its own repo, not in the hackathon repo. If unsure, ask an organizer Friday.</li>
+<li>Each person reads the docs for their part (Photon Spectrum, Twilio Media Streams, NWS alerts API).</li>
+<li>Prepare a <code>CLAUDE.md</code> + <code>TEAM.md</code> text (owners, contracts, "don't touch others' folders") to paste in at hour 0.</li>
+</ul>
+<h2>6. 36-hour timeline (Fri evening -&gt; Sun 9:30 judging)</h2>
+<table>
+<thead>
+<tr>
+<th>Hours</th>
+<th>Goal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0-2</td>
+<td>Create repo, paste CLAUDE.md/TEAM.md, scaffold, deploy "hello" to Vercel, agree on contracts</td>
+</tr>
+<tr>
+<td>2-6</td>
+<td>Each role builds its vertical slice against mocked contracts</td>
+</tr>
+<tr>
+<td>6</td>
+<td><strong>Mentor check</strong> (MindPad's first idea was rejected; get feedback early)</td>
+</tr>
+<tr>
+<td>6-12</td>
+<td><strong>Integration #1: ugly end-to-end demo works</strong> (call -&gt; agent -&gt; dashboard)</td>
+</tr>
+<tr>
+<td>12-20</td>
+<td>Sleep in staggered 3-4 h shifts (always 2 awake); polish the main path; sponsor integrations</td>
+</tr>
+<tr>
+<td>20-26</td>
+<td>Integration #2; edge cases that appear in the demo only; seed realistic data</td>
+</tr>
+<tr>
+<td>26</td>
+<td><strong>Feature freeze.</strong> Record the backup video (optional upload, but have it in case live telephony fails)</td>
+</tr>
+<tr>
+<td>26-32</td>
+<td>Devpost write-up (problem, data, how built, future plans = "avidity"), slides, README</td>
+</tr>
+<tr>
+<td>32-35</td>
+<td>Rehearse the 2-min demo 5+ times with a timer; bug fixes only</td>
+</tr>
+<tr>
+<td>35-36</td>
+<td>Submit Devpost + repo link; test the demo on venue Wi-Fi + hotspot</td>
+</tr>
+</tbody>
+</table>
+<h2>7. Demo/pitch rules (2 minutes)</h2>
+<p>0:00-0:15 the number (e.g. "41,000 Americans die from smoke each year; 15.8M seniors live alone"). 0:15-1:30 live demo of one path, no menus. 1:30-1:50 how it works (agent + deterministic safety). 1:50-2:00 what's next + who it's for. Have the video ready if the phone network fails.</p>
+<h2>8. Risks</h2>
+<ul>
+<li>Telephony on venue networks: keep a hotspot + prerecorded fallback.</li>
+<li>Over-scoping: one user, one city/state, one happy path + one failure path.</li>
+<li>Usage limits: Claude Code on a Pro plan can hit limits mid-hackathon, so stagger heavy sessions and keep model calls in the app cheap (Haiku/Sonnet for runtime).</li>
+</ul></section><section id="second-key"><div class="src">board/notes/hp-spec-second-key.md</div><h1>Second Key: refined spec (cycle C2, 2026-11-09)</h1>
+<p>Track: <strong>Business + Enterprise</strong> (fraud prevention = cybersecurity/fintech, B2B for banks). Sponsor stack: <strong>Capital One Best Financial Hack</strong> (Nessie mock-bank API optional), <strong>Photon</strong> (family co-sign over iMessage).</p>
+<h2>R1 Facts for the pitch (checked)</h2>
+<ul>
+<li>FTC <em>Protecting Older Consumers 2025-26</em> (Oct 2026): adults 60+ reported ~$3B lost in 2025, 5x since 2020; largest losses by bank transfer, then crypto; reports &gt;$100K = 6% of reports but 70% of dollars.</li>
+<li>Regulation is moving toward holds: FINRA filed (Federal Register, Sep 9 2026, SR-FINRA-2026-018) a new <strong>Rule 2166, a temporary delay of up to 5 business days for suspected fraud, for any customer</strong>, plus longer Rule 2165 holds (55 → 145 business days) and "emergency contact" wording for trusted contacts. Still a proposal, not approved as far as I found. Banks rely on state hold laws + the 2024 interagency statement.</li>
+<li>McAfee 2026: 13% of parents have a family codeword.</li>
+</ul>
+<h2>R2 Tech</h2>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>Choice</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Call screening</td>
+<td>Twilio Voice + ConversationRelay (text stream) → Claude classifier prompt + keyword rules</td>
+<td>Same plumbing as Neighbor Call. CallScreenBench's 4B model is optional and unreleased, so skip it.</td>
+</tr>
+<tr>
+<td>Bank</td>
+<td>Capital One <strong>Nessie</strong> (customers, accounts, transfers) for the sponsor prize + our own "hold" layer</td>
+<td>api.nessieisreal.com is blocked from this machine (proxy), so it's unverified here; 2026 hackathon tracks still list it. Nessie has no hold concept, so our service sits in front: <code>POST /transfer</code> → risk check → <code>held</code> → co-sign → forward to Nessie. Fallback: an in-app mock bank.</td>
+</tr>
+<tr>
+<td>Co-sign</td>
+<td>Photon Spectrum iMessage (proactive DM via <code>im.space.create</code>) with a reply "YES 4821 / NO"</td>
+<td>Twilio SMS fallback.</td>
+</tr>
+<tr>
+<td>App</td>
+<td>Next.js: "Grandma's bank app" (big buttons) + "Family view" + "Bank ops console" (B2B angle)</td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2>R3 Prior art and the differentiator</h2>
+<ul>
+<li><strong>EverSafe</strong> (AI monitoring of accounts/email, read-only trusted advocates, ~$7.49/mo; Fidelity integration 2026), <strong>Carefull</strong> (Edward Jones partnership Jun 2026; monitoring + caregiver alerts), <strong>True Link</strong> (prepaid card with merchant blocks + real-time purchase alerts), <strong>ElderGuard AI</strong> (hackathon winner 2025: deepfake call detection + family notification), Pixel/iOS call screening.</li>
+<li>All of them either watch the call <strong>or</strong> watch the account, and alert <em>after</em> the fact. <strong>Differentiator:</strong> "Second Key links the two: when a pressure call is in progress, the next outgoing transfer is held until a family member co-signs, which is the 'temporary delay + trusted contact' model regulators are writing into FINRA Rule 2166, delivered as an API banks can plug in."</li>
+<li>Creativity 3 → 4 with the call-to-payment link + regulatory hook.</li>
+</ul>
+<h2>R4 Design</h2>
+<p><strong>Flow:</strong> call arrives on the senior's line (Twilio number) → live transcript → risk score per turn (rules: urgency, secrecy, "don't tell", gift card, crypto ATM, wire, bail, IRS; plus Claude judgment) → risk ≥ threshold: session flagged "pressure call active", family pinged ("Rosa is on a call that looks like a bail scam") → senior opens the bank app and tries a $4,800 transfer → held → family iMessage with amount, payee, call summary → family replies NO → transfer cancelled, senior sees a calm explanation; YES + code → released to Nessie.
+<strong>Safe-word step:</strong> during the flagged call the agent (whisper-only to the senior via SMS, or audible if the senior opts in) suggests asking the family question; we won't speak to the caller by default (consent, false positives).</p>
+<p><strong>Data contracts</strong></p>
+<pre><code class="language-json">// RiskEvent
+{&quot;call_id&quot;:&quot;c1&quot;,&quot;senior_id&quot;:&quot;s1&quot;,&quot;turn&quot;:3,&quot;score&quot;:0.86,&quot;cues&quot;:[&quot;urgency&quot;,&quot;bail&quot;,&quot;secrecy&quot;],&quot;summary&quot;:&quot;Caller claims to be grandson in jail, asks for bail money&quot;}
+// TransferRequest
+{&quot;id&quot;:&quot;t1&quot;,&quot;senior_id&quot;:&quot;s1&quot;,&quot;amount&quot;:4800,&quot;payee&quot;:&quot;QuickBail LLC&quot;,&quot;method&quot;:&quot;wire&quot;,&quot;status&quot;:&quot;held|released|cancelled&quot;,&quot;hold_reason&quot;:&quot;active pressure call&quot;,&quot;cosigner&quot;:&quot;+1…&quot;,&quot;expires_at&quot;:&quot;…&quot;}
+// CoSignDecision
+{&quot;transfer_id&quot;:&quot;t1&quot;,&quot;by&quot;:&quot;+1…&quot;,&quot;decision&quot;:&quot;deny&quot;,&quot;code_ok&quot;:true,&quot;at&quot;:&quot;…&quot;}
+</code></pre>
+<p><strong>2-minute demo script</strong>
+- 0:00 "Seniors lost $3B to reported fraud last year, most of it by bank transfer." Three screens visible: grandma's phone, family phone, bank console.
+- 0:15 The judge holds "grandma's" phone; a teammate calls as the "grandson in jail". The live transcript scrolls and the risk meter climbs; at turn 3, family gets an iMessage.
+- 0:55 The judge (as grandma) taps "Send $4,800" in the bank app → "Held: waiting for Ana".
+- 1:10 Family replies "NO". Transfer cancelled; grandma sees "Ana says this isn't real. Call her now."
+- 1:25 The bank console shows the held transfer + audit trail: "the FINRA 2166 workflow, automated."
+- 1:45 "EverSafe and Carefull alert after the money moves. Second Key stops it while the call is live."</p>
+<p><strong>Fallbacks:</strong> Twilio fails → pre-recorded call audio played into the transcript; Photon fails → SMS; Nessie fails → mock bank.
+<strong>Cut list:</strong> safe-word whisper, multiple family co-signers, crypto-ATM/gift-card merchant blocks, Spanish.
+<strong>Legal/ethics notes for Q&amp;A:</strong> two-party-consent states mean the screener announces itself; a family override on false positives; there's no credential access, since the senior initiates every transfer.</p>
+<h2>R5 Score</h2>
+<p>Fit 4 → <strong>5</strong> if pitched B2B to banks (enterprise + security), pattern 5, feasibility 3 (telephony + bank + messaging = 3 integrations; mitigated by shared plumbing), charity 5, creativity 4, sponsor +2 → <strong>24</strong>. <strong>New #1.</strong></p>
+<h2>Update 2026-11-09 (HackPrinceton history)</h2>
+<ul>
+<li>Prior art at HackPrinceton itself: <strong>NannyCam</strong> (Spring '26, not a winner): "remote eldercare that watches medications, restocks the pantry, and guards finances, all through iMessage." <strong>Flux</strong> (Fall '25): AI-governed approvals for agent payments. Nobody did live-call → payment hold. Say in the pitch: "not monitoring after the fact; a hold <em>during</em> the call".</li>
+<li>Sponsor odds: Capital One "Best Financial Hack" = $1,000, <strong>1 winner</strong> (Fall '25: edgecart). Photon prize had <strong>5 winners</strong> in Fall '25. Business + Enterprise winners were workflow agents (Jigsaw, LEGR), consistent with the bank-ops console angle.</li>
+<li>Nessie API verified reachable over HTTPS (port 80 is blocked by the proxy; use https://api.nessieisreal.com). Get a key at nessieisreal.com before the event.</li>
+<li>Citations: CallScreenBench (arXiv 2609.23959) now has 11 citations on OpenAlex (in 7 weeks); still vendor-authored.</li>
+</ul></section><section id="neighbor-call"><div class="src">board/notes/hp-spec-neighbor-call.md</div><h1>Neighbor Call: refined spec (cycle C1, 2026-11-09)</h1>
+<p>Track: <strong>Healthcare</strong> (public health). Sponsor stack: Photon (iMessage family alerts via Spectrum), Amazon Practical AI (generic).</p>
+<h2>R1 Facts for the pitch (checked)</h2>
+<ul>
+<li>Maricopa County 2025: <strong>430 heat-related deaths</strong>; AC present in 94% of indoor deaths; people 50+ were <strong>90% of indoor deaths</strong> (Maricopa 2025 Heat Deaths Report, via ABC15/search; PDF not opened, so the 94% vs "AC not working" split is unknown).</li>
+<li>15.8M Americans 65+ live alone (ACS 2024). Wildfire smoke ~41K deaths/yr (Qiu et al., Nature, Sep 2025).</li>
+<li>CDC/NIA warning signs for older adults: confusion or acting strangely, no sweating, dizziness, nausea, headache, weakness, vomiting, fast/weak pulse; fans don't prevent heat illness in the high 90s (CDPH). These become the deterministic red-flag list.</li>
+<li>No published evaluation of phone check-in programs during heat waves was found. Pitch it as filling a gap, not as "proven".</li>
+</ul>
+<h2>R2 Tech (verified via docs/GitHub/search; no live calls, since the proxy blocks the API hosts)</h2>
+<table>
+<thead>
+<tr>
+<th>Need</th>
+<th>Choice</th>
+<th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Trigger</td>
+<td>NWS <code>api.weather.gov/alerts/active?area=AZ</code></td>
+<td>Free, no key, <strong>must send a User-Agent</strong>. Event names changed Mar 4 2025: "Extreme Heat Warning/Watch" (was "Excessive"); match both.</td>
+</tr>
+<tr>
+<td>Smoke</td>
+<td>AirNow <code>/aq/observation/current/ziplatlong/</code></td>
+<td>Free key, 500 req/h. <strong>Old <code>/zipCode/current</code> endpoint retired Sep 30 2026</strong>; old tutorials will break.</td>
+</tr>
+<tr>
+<td>Phone call</td>
+<td>Twilio Voice + <strong>ConversationRelay</strong></td>
+<td>Twilio does STT/TTS and sends text over a WebSocket; our server calls Claude. $0.07/min + ~$0.014/min outbound. Starter repos: pBread/twilio-agentic-voice-assistant, rishabkumar7/twilio-cr-gemini-python (swap Gemini for Claude). <strong>Upgrade Twilio</strong> (trial = 5 verified numbers, trial message, 75 min).</td>
+</tr>
+<tr>
+<td>Family alert</td>
+<td>Photon <code>spectrum-ts</code> (npm 12.15, MIT, 2.2k★)</td>
+<td>Proactive DM works: <code>im.user("+1…")</code> then <code>im.space.create(user)</code> then <code>space.send(text)</code>. Inbound uses a long-running <code>for await</code> loop, so host it on a persistent Node process (Railway/Fly/laptop), not Vercel functions. Free $100 credit.</td>
+</tr>
+<tr>
+<td>LLM</td>
+<td>Claude (Haiku-class for live turns, latency)</td>
+<td>Conversation only; the escalation decision is deterministic.</td>
+</tr>
+<tr>
+<td>App</td>
+<td>Next.js dashboard + Supabase</td>
+<td>Coordinator view: roster, call status, flags.</td>
+</tr>
+</tbody>
+</table>
+<h2>R3 Prior art and the differentiator</h2>
+<ul>
+<li>Daily AI check-in call services exist: AloneAssist ($19.99/mo, conversational AI call, alerts after 3 misses), Verocall ($19/mo), iamfine ($14.99, press-1), police "R U OK" programs. NYC "Be a Buddy" uses human volunteers.</li>
+<li><strong>Differentiator (one sentence):</strong> "Not a daily subscription: a free, event-triggered heat and smoke response that calls only when the weather turns dangerous, asks heat-specific clinical questions, and hands the county a ranked list of who needs a ride to a cooling center <em>now</em>."</li>
+<li>Novelty is moderate (3/5); the strength is the public-health framing + the trigger + the coordinator view.</li>
+</ul>
+<h2>R4 Design</h2>
+<p><strong>Flow:</strong> NWS/AirNow poll (or demo button) → select enrolled seniors in affected zones → Twilio outbound call → ConversationRelay ↔ our WebSocket ↔ Claude (script + free talk) → answers parsed into <code>CheckIn</code> → rules engine → status green/yellow/red → red: family iMessage via Photon + dashboard alert + offer cooling-center ride; no answer x2: family + "wellness check" flag.</p>
+<p><strong>Data contracts</strong></p>
+<pre><code class="language-json">// Senior
+{&quot;id&quot;:&quot;s1&quot;,&quot;name&quot;:&quot;Rosa M.&quot;,&quot;phone&quot;:&quot;+1602…&quot;,&quot;zip&quot;:&quot;85008&quot;,&quot;lang&quot;:&quot;es&quot;,&quot;family&quot;:[{&quot;name&quot;:&quot;Ana&quot;,&quot;phone&quot;:&quot;+1…&quot;,&quot;channel&quot;:&quot;imessage&quot;}],&quot;meds_affect_heat&quot;:true,&quot;has_ac&quot;:true}
+// Alert
+{&quot;id&quot;:&quot;nws-…&quot;,&quot;type&quot;:&quot;Extreme Heat Warning|AQI&quot;,&quot;zones&quot;:[&quot;AZZ537&quot;],&quot;zips&quot;:[&quot;85008&quot;],&quot;starts&quot;:&quot;…&quot;,&quot;ends&quot;:&quot;…&quot;,&quot;severity&quot;:&quot;Extreme&quot;}
+// CheckIn (written by the agent via a tool call)
+{&quot;senior_id&quot;:&quot;s1&quot;,&quot;alert_id&quot;:&quot;…&quot;,&quot;answered&quot;:true,&quot;ac_working&quot;:false,&quot;indoor_temp_hot&quot;:true,&quot;water_ok&quot;:true,&quot;symptoms&quot;:[&quot;dizziness&quot;],&quot;confused&quot;:false,&quot;wants_ride&quot;:true,&quot;transcript_url&quot;:&quot;…&quot;}
+// Triage (deterministic)
+{&quot;senior_id&quot;:&quot;s1&quot;,&quot;level&quot;:&quot;red&quot;,&quot;reasons&quot;:[&quot;AC not working&quot;,&quot;symptom: dizziness&quot;],&quot;actions&quot;:[&quot;family_imessage&quot;,&quot;coordinator_alert&quot;,&quot;offer_ride&quot;]}
+</code></pre>
+<p><strong>Red flags (deterministic):</strong> any of confusion, no sweating, fainting, vomiting, chest pain → "tell them to call 911 now + family + coordinator". AC broken/off, or indoor hot + meds affecting heat → red (ride). Dizziness/headache/nausea/weakness → yellow (call back in 1 h + family). No answer after 2 tries → red (wellness check).</p>
+<p><strong>2-minute demo script</strong>
+- 0:00 "Last year Maricopa County lost 430 people to heat; 9 in 10 indoor deaths were 50+." Show the dashboard with 6 seniors in Phoenix.
+- 0:15 Click "Simulate NWS Extreme Heat Warning." The judge's phone rings (judge = "Rosa").
+- 0:20-1:10 The agent asks 4 questions in ~40 s; the judge says "my AC broke, I feel a bit dizzy". The dashboard turns Rosa red live; the family phone (teammate) gets an iMessage: "Rosa's AC is out and she's dizzy. Cooling center at … 1.2 mi; ride requested."
+- 1:10-1:35 Show the no-answer case (pre-run) → wellness-check flag.
+- 1:35-1:55 "Claude talks; rules decide. Every red flag is from CDC guidance." Architecture slide.
+- 1:55-2:00 "Free for counties; Area Agencies on Aging run it."</p>
+<p><strong>Fallbacks:</strong> Twilio fails → browser WebRTC call (ConversationRelay WebRTC demo repo) or a recorded run. Photon fails → Twilio SMS. NWS down → cached alert JSON.
+<strong>Cut list (in this order if behind):</strong> smoke/AirNow, Spanish, ride booking (link only), multi-county, auth.</p>
+<h2>R5 Score</h2>
+<p>Fit 5, pattern 4, feasibility 4 (ConversationRelay removes the hardest part), charity 5, creativity 3 (down from 4: check-in services exist), sponsor +1 → <strong>22</strong> (was 23). Still a top pick for the Healthcare track.</p>
+<h2>Update 2026-11-09 (live data + HackPrinceton winners)</h2>
+<ul>
+<li><strong>Scope change: all extreme weather, not just heat.</strong> HackPrinceton is Nov 13-15: no heat alerts in November (live NWS check 05:5x UTC: 0 Extreme Heat Warnings), but there were live Winter Storm Warnings/Watches and Winter Weather Advisories. Cold is as deadly: <strong>~2,520 US deaths with hypothermia as a cause in 2023</strong> (provisional CDC via KFF Health News) vs <strong>2,391 heat-related deaths in 2024</strong> (CDC MMWR QuickStats); adults 65+ have the highest cold death rates. Pitch: "Heat and cold kill ~5,000 Americans a year, mostly older adults alone at home."</li>
+<li>Demo uses <strong>real alerts from that weekend</strong>: query <code>api.weather.gov/alerts/active?event=...</code> live on stage (verified working from CT 120 with a User-Agent; it returned real AZ Flood Warnings).</li>
+<li>Question script per hazard: heat (AC, water, symptoms), cold (heat source working, power, warm room, symptoms of hypothermia: shivering, confusion, slurred speech), smoke (windows closed, air filter, breathing).</li>
+<li>HackPrinceton fit: the Spring '26 Healthcare winner <strong>VITAL</strong> was a "monitor, detect deterioration, alert family" system using Photon, the same shape as this. Family/caregiver updates via <strong>Photon iMessage</strong> targets Photon's recurring prize (5 winners in Fall '25).</li>
+<li>AirNow API reachable (401 without key) → get a free key before the event.</li>
+</ul></section><section id="backups"><div class="src">board/notes/hp-spec-backups.md</div><h1>Backups: refined (cycle C4, 2026-11-09)</h1>
+<h2>Bill Rescue: Sustainability (fit 4 with efficiency) / Business + Enterprise 3</h2>
+<ul>
+<li>Prior art: no AI LIHEAP helper found; only state portals (PA COMPASS, IN LITT, OK, TN SmartSimple) and Arkansas's GetLIHEAP (Bean Path), currently closed. Novelty holds (4).</li>
+<li>Constraint: DC DOEE warns that applications must not go to third parties, so Bill Rescue <strong>prepares</strong> the packet and deep-links to the official portal; it never submits for the user.</li>
+<li>PA example: LIHEAP cash grants $200-1,000, season Nov 2 2026 - Apr 23 2027, so the demo is in season.</li>
+<li>Sustainability angle (needed for fit): the same bill parse feeds a usage breakdown + 3 efficiency actions with $/kWh saved + Weatherization Assistance Program referral; pitch "cheapest kWh is the one you don't use".</li>
+<li>Score: fit 4, pattern 3, feas 5, charity 5, creativity 4, Capital One +1 → <strong>22</strong>. <strong>Promoted to #3 (best Sustainability pick).</strong></li>
+</ul>
+<h2>Honest Nurse: Healthcare (fit 5)</h2>
+<ul>
+<li>Prior art is crowded: Caring Village "Julia", Neela, ianacare "iana", Citizen Health "Ari" (Wired, Nov 2026), Ohai, Medisafe, pill scanners on Devpost. None claims anti-sycophancy or safety evaluation; that stays the only differentiator.</li>
+<li>Score: 20 (unchanged). Healthcare backup to Neighbor Call.</li>
+</ul>
+<h2>Puente Tutor: Education (fit 5)</h2>
+<ul>
+<li>Khanmigo is piloting Spanish (quality-tested in en/hi/es/pt); a two-year RCT (Oreopoulos, reported by Chalkbeat Aug 2026) found students used Khanmigo only ~1/3 of days, with small accuracy gains. Engagement, not language, is the open problem.</li>
+<li>Lead with the fairness audit (EduFair-Bench method) + a teacher view; creativity 3 → 2 unless the audit is the product.</li>
+<li>Score: 18 (was 19). Education pick only if the team is set on that track.</li>
+</ul>
+<h2>Update 2026-11-09</h2>
+<ul>
+<li>Bill Rescue: past Sustainability winners are geospatial/data or IoT (TerraLink, Watt's Up, WaterShield). A consumer bill helper looks weak there. To compete it needs a tract-level energy-burden map (DOE LEAD data) for the city side plus the iMessage helper for households. Otherwise skip the Sustainability track.</li>
+<li>Puente Tutor: Education winners were Lume (voice on-screen tutor for seniors, F25) and Spark (S26). Still the weakest of our ideas.</li>
+<li>Citations (OpenAlex/Semantic Scholar, Nov 9): TrialGPT 319, Kestin et al. AI tutoring 239, FareShare 7, verified-repair 1, FormBharo/sycophancy/ImmigrationQA/EduFair 0.</li>
+</ul></section><section id="shiftproof"><div class="src">board/notes/hp-spec-shiftproof.md</div><h1>ShiftProof: refined spec (cycle C3, 2026-11-09)</h1>
+<p>Track: Healthcare (fit 3). Sponsor: Photon (SMS/iMessage reminders).</p>
+<h2>R1 Facts (checked)</h2>
+<ul>
+<li>CMS-2454-IFC (Jun 1 2026): adults 19-64 in expansion; 80 h/month <strong>or $580/month earnings</strong>; exemptions include pregnant/postpartum, Tribal members, veterans with total disability rating, medically frail, caregivers (parents of children under 13; non-resident caregivers need 80 h of caregiving), people meeting SNAP/TANF work rules; short-term hardship. Self-attestation under penalty of perjury allowed <strong>through Dec 31 2027</strong> when no electronic data exists.</li>
+<li><strong>Oct 29 2026:</strong> a federal court struck the IFR's extra "significantly impairs" test for medical frailty and enjoined it for the plaintiff states for 6 months (multi-state suit). Rules differ by state now.</li>
+<li>Nebraska (live May 1 2026): applicants are checked on <strong>the month before applying</strong>; proof is uploaded at iServe.Nebraska.gov (QR code on the verification letter); school/apprenticeship needs the <strong>Individual Declaration Form</strong>; letters set due dates. Montana and Arkansas started Jul 2026, Michigan Oct 1 2026 for new applicants. California asked for a 6-month delay.</li>
+</ul>
+<h2>R3 Prior art (big change)</h2>
+<ul>
+<li><strong>CMS "Emmy" (Eligibility Made Easy)</strong>: an open-source, federally built applicant-facing app (Rails; github.com/DSACMS/iv-cbv-payroll, weekly releases, updated Nov 6 2026) that guides beneficiaries through reporting, connects to payroll/gig data via consent-based verification, and produces an "audit-ready evidence package" for the state. That is ShiftProof's core.</li>
+<li>Vendors: Argyle (gig/payroll CBV for states, criticized for collecting credentials), Equifax Work Number (~$15/report), DiCIT (Digital Public Works). Consumer explainer sites: medicaidworkcheck.com, careroute.ai.</li>
+<li>What's left for us: (1) people in states that haven't adopted Emmy/CBV, (2) cash/informal workers that payroll connectors can't see (screenshots, bank deposits, employer letters), (3) proactive month-by-month tracking + reminders before the look-back month, (4) the exemption screener (now volatile after the Oct 29 ruling).</li>
+</ul>
+<h2>R5 Score</h2>
+<p>Fit 3, pattern 4, feasibility 4, charity 5, <strong>creativity 2</strong> (Emmy), sponsor +1 → <strong>19</strong> (was 21). <strong>Drop from the top 3.</strong> Keep it as a pitch slide fact if building Second Key or Neighbor Call ("benefits paperwork is the next frontier"). If the team wants this space anyway, build <em>on</em> Emmy (open source) rather than against it, and say so.</p></section><section id="winners"><div class="src">board/notes/hackprinceton-winners-analysis.md</div><h1>What wins at HackPrinceton (Devpost galleries, scraped 2026-11-09)</h1>
+<p>Raw lists: <code>hackprinceton-fall-2025-prizes.txt</code> (37 winners), <code>hackprinceton-spring-26-prizes.txt</code> (46 winners): project || prizes || built-with.</p>
+<h2>Track winners</h2>
+<table>
+<thead>
+<tr>
+<th>Track</th>
+<th>Fall 2025</th>
+<th>Spring 2026</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Best Overall</td>
+<td>MindPad (gesture/voice workspace), TerraLink (multi-agent renewable siting, Google Earth Engine), Watt's Up (rooftop solar from NASA POWER + CV)</td>
+<td>Asclepius (on-device PHI-stripping proxy for clinical-trial AI)</td>
+</tr>
+<tr>
+<td>Healthcare</td>
+<td>Synovia (predict surgical outcomes)</td>
+<td>VITAL (VLM camera watches waiting rooms for deterioration; alerts; uses <strong>Photon</strong>)</td>
+</tr>
+<tr>
+<td>Business + Enterprise</td>
+<td>Jigsaw (PCB part sourcing, human-in-loop)</td>
+<td>LEGR (fleet of autonomous finance agents for startups; Knot + <strong>Photon</strong>)</td>
+</tr>
+<tr>
+<td>Sustainability</td>
+<td>TerraLink</td>
+<td>WaterShield Alerts (ESP32 leak detection + <strong>Photon iMessage</strong>)</td>
+</tr>
+<tr>
+<td>Education (+Ent. in F25)</td>
+<td>Lume (voice on-screen tutor for <strong>seniors</strong>)</td>
+<td>Spark (curiosity learning)</td>
+</tr>
+<tr>
+<td>Entertainment</td>
+<td>n/a</td>
+<td>Someone Save Us (game; Photon)</td>
+</tr>
+</tbody>
+</table>
+<h2>Sponsor prizes that recur</h2>
+<ul>
+<li><strong>Photon</strong>: F25 "Exploring Hybrid Intelligence", <strong>5 winners</strong> ($400 + $600 credits + interview fast-track for 1st; runner-ups $100 + $200): Messenger AI, PiggyBank, TextFly, Wings, doeve. S26 "Agents in iMessage" (cash): WaterShield, Wavelength. Photon is a Fall 2026 sponsor again → highest-odds sponsor prize. <strong>Photon also appears in 4 of the 6 S26 track winners' stacks.</strong></li>
+<li><strong>Capital One</strong> "Best Financial Hack": $1,000, 1 winner (F25 edgecart, which also used Knot). Wings used Nessie + Knot + iMessage kit.</li>
+<li><strong>Amazon</strong> "Best Practical AI Innovation": $1,000 split over 3 winners (MindPad, Cropit, ViralWave).</li>
+<li>Knot API (purchase data) had 3+3 winners but isn't a Fall 2026 sponsor. Regeneron (clinical trials, ~11 winners in S26) isn't listed for Fall 2026 either.</li>
+<li>Stacking is normal: MindPad 3 prizes, PiggyBank 3, edgecart 3, Asclepius 3.</li>
+</ul>
+<h2>Implications</h2>
+<ol>
+<li>Make <strong>iMessage via Photon</strong> the user interface of whatever we build: it's both a sponsor prize and a common thread in track winners.</li>
+<li>Healthcare winners are real-time <em>monitor → alert</em> systems (VITAL) or predictive (Synovia). <strong>Neighbor Call matches the VITAL pattern.</strong></li>
+<li>B+E winners are agents that run a business workflow end to end (LEGR, Jigsaw). <strong>Second Key pitched B2B to banks fits.</strong> Capital One is 1 winner / $1,000.</li>
+<li>Sustainability winners are geospatial/data or IoT (TerraLink, Watt's Up, WaterShield). <strong>Bill Rescue as a consumer bill helper is a weak fit</strong>; it needs a map/data layer (energy-burden by tract) to look like a winner.</li>
+<li>Seniors + voice already won Education (Lume, F25), so judges respond to older-adult accessibility.</li>
+</ol></section><section id="track-fit"><div class="src">board/notes/hackprinceton-track-fit.md</div><h1>HackPrinceton Fall 2026 (Nov 13-15): idea -&gt; track fit</h1>
+<p>Tracks (QAI listing + hackprinceton.com via search; the site itself is blocked by the proxy): Education, Entertainment, Sustainability, Healthcare, Business + Enterprise, Science + Discovery.
+Descriptions found: Healthcare = care delivery, wellness, public health; Sustainability = environmental challenges, eco-friendly behavior; Business + Enterprise = financial tools, startups, B2B billing, dashboards, analytics, cybersecurity, privacy; Education (Fall 2025 wording) = learning made interactive, accessible, personalized. Science + Discovery: no description found.
+Judging (Spring 2026): creativity, utility, charity, avidity. Best Overall can come from any track (track winners can't also take it).
+Fit 5 = squarely in the track; 1 = stretch.</p>
+<table>
+<thead>
+<tr>
+<th>Track</th>
+<th>Idea</th>
+<th>Fit</th>
+<th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Healthcare</td>
+<td>Honest Nurse</td>
+<td>5</td>
+<td>care delivery + patient safety</td>
+</tr>
+<tr>
+<td>Healthcare</td>
+<td>Neighbor Call</td>
+<td>5</td>
+<td>public health (heat/smoke), alt: Sustainability 3</td>
+</tr>
+<tr>
+<td>Healthcare</td>
+<td>ShiftProof</td>
+<td>3</td>
+<td>keeps people insured = access to care; pitch as coverage loss -&gt; care loss</td>
+</tr>
+<tr>
+<td>Education</td>
+<td>Puente Tutor</td>
+<td>5</td>
+<td>personalized, accessible learning</td>
+</tr>
+<tr>
+<td>Education</td>
+<td>First Rung</td>
+<td>4</td>
+<td>skills learning for students</td>
+</tr>
+<tr>
+<td>Education</td>
+<td>Citizen Ready</td>
+<td>4</td>
+<td>if pitched tutor-first (civics + English interview practice)</td>
+</tr>
+<tr>
+<td>Education</td>
+<td>Say It, Sign It</td>
+<td>3</td>
+<td>adult literacy support</td>
+</tr>
+<tr>
+<td>Education</td>
+<td>ClearPath Web</td>
+<td>3</td>
+<td>"accessible learning" angle; demo on a course site/LMS</td>
+</tr>
+<tr>
+<td>Education</td>
+<td>Status Keeper</td>
+<td>2</td>
+<td>students are the users, but it's compliance, not learning</td>
+</tr>
+<tr>
+<td>Business + Enterprise</td>
+<td>AgentReady Main Street</td>
+<td>5</td>
+<td>small-business tooling, agentic commerce</td>
+</tr>
+<tr>
+<td>Business + Enterprise</td>
+<td>Second Key</td>
+<td>4</td>
+<td>fraud/cybersecurity is in the track description</td>
+</tr>
+<tr>
+<td>Business + Enterprise</td>
+<td>Loan Lens</td>
+<td>4</td>
+<td>consumer financial tool</td>
+</tr>
+<tr>
+<td>Business + Enterprise</td>
+<td>Fair Shift</td>
+<td>4</td>
+<td>pay analytics for gig workers</td>
+</tr>
+<tr>
+<td>Business + Enterprise</td>
+<td>Bill Rescue</td>
+<td>3</td>
+<td>bill/financial tool, alt: Sustainability 3 (add efficiency tips)</td>
+</tr>
+<tr>
+<td>(none)</td>
+<td>Answer in Time</td>
+<td>1-2</td>
+<td>no civic/legal track: compete for Best Overall on "charity"</td>
+</tr>
+<tr>
+<td>Science + Discovery</td>
+<td>none</td>
+<td>-</td>
+<td>no idea fits well; Neighbor Call's smoke/heat modeling is the closest (2)</td>
+</tr>
+<tr>
+<td>Entertainment</td>
+<td>none</td>
+<td>-</td>
+<td>-</td>
+</tr>
+</tbody>
+</table></section><section id="reels"><div class="src">board/notes/reels-takeaways.md</div><h1>The two Instagram reels (downloaded + transcribed 2026-11-09; files in /mnt/vf/hack/tmp/reels-dl)</h1>
+<p>Both are hackathon <em>process</em> advice, not product ideas. (Each ends with "comment HACK and I'll send..." marketing; ignored.)</p>
+<h2>Reel 1: Aziz Umarov (Nov 2 2026), "agent board"</h2>
+<p>Claim: 4 sponsor tracks at one hackathon + a Cal Hacks track prize (email shown: top 20 of the Hyphenate track at CalHacks).
+Method:
+1. Split the project into streams; each person owns folders. The ownership table is written into the rules file every agent reads (frame: "C. State + integrations — stream:C-state — owner Anthony — spacetime/, CRS and <strong>Nessie</strong> clients, reconciliation"; "D. Data, proof, delivery — stream:D-proof — Tomi (acting PM) — fixtures/, seed company, answer key, eval, Apify Actor, Devpost, video").
+2. One pinned GitHub issue, "Message Board" (#1, 988 comments), where agents post when they finish or need something.
+3. Agents tag teammates by GitHub username; each agent waits for its own tag, so agent A hands work to agent B with no human texting. He ran his part from his phone and spent time with sponsor judges. 2,170 board messages across two hackathons.
+Takeaway for us: matches our worktree + folder-ownership plan; add (a) a pinned issue as the agent message board, (b) <code>stream:*</code> labels, (c) a dedicated "data/proof/delivery" stream (fixtures, eval, Devpost, video).</p>
+<h2>Reel 2: Faraz Ahmad (Nov 7 2026), HackMIT 2025 winner (Meta track "Bringing People Closer Together with AI")</h2>
+<ol>
+<li>Spend 1-2 h reading every track and brainstorming with Claude using a structured prompt (on screen: ROLE, TEAM_CONTEXT with {{EVENT_NAME}}/{{THEME}}/{{STACK}}/{{ROLES}} placeholders, INPUT SCHEMA, weighted SCORING MODEL).</li>
+<li>The flashiest prizes are the most competitive; to maximize odds, target a less popular <strong>sponsor track</strong> (they still entered Meta's).</li>
+<li>The demo needs one <strong>wow moment</strong>: sit with the judges/sponsors ~20 min early and get them to describe what would wow them.</li>
+<li>Make the product demo-friendly; judges see ~3 min max. Their visual hook: a cute character + <strong>live agent-to-agent conversations</strong> on screen.</li>
+</ol></section><section id="brainstorm"><div class="src">board/notes/event-day-brainstorm-prompt.md</div><h1>Event-day brainstorm prompt (reel 2 method: read every track + sponsor prize, rank with Claude, ~1 h)</h1>
+<p>Use Friday evening once the Fall 2026 Devpost prize list is up. Paste into Claude with the full prize list.</p>
+<pre><code>ROLE: You are the strategy lead for a 3-person team at HackPrinceton Fall 2026 (36 hours, 2-minute live demo on Sunday).
+You are precise and evidence-bound: never invent prizes, APIs or numbers that are not in the inputs.
+
+TEAM_CONTEXT:
+  members: {{3 names + skills, e.g. &quot;A: backend/LLM agents&quot;, &quot;B: React/UI&quot;, &quot;C: data + pitch&quot;}}
+  stack: Next.js + TypeScript, Claude API, Twilio ConversationRelay, Photon spectrum-ts (iMessage), Supabase, Podman
+  prepared (not code): specs for Second Key, Neighbor Call; agent-board workflow; API keys for Twilio, Photon, AirNow, Nessie
+  must_have: one live &quot;wow&quot; moment in the first 30 seconds of the demo; works on venue Wi-Fi with a fallback
+  nice_to_have: stacks 1 main track + 2 sponsor prizes
+
+INPUTS:
+  tracks: {{paste the 6 track descriptions}}
+  sponsor_prizes: {{paste every sponsor prize: name, amount, number of winners, requirements}}
+  candidate_ideas: {{paste the &quot;Solution&quot; + &quot;Pitch&quot; of Second Key, Neighbor Call, and any new ideas from talking to sponsors}}
+  history: Past HackPrinceton track winners were monitor→alert systems (Healthcare), workflow agents (Business),
+           geospatial/IoT (Sustainability); Photon's prize had 5 winners in Fall 2025; Capital One's had 1.
+
+TASK:
+1. For each candidate idea x each prize it could qualify for, score 0-10 on:
+   fit to the written prize criteria (30%), expected competition (20%: fewer likely entrants = higher),
+   demo wow in 2 minutes (20%), buildable by this team in 30 hours (20%), social impact (10%).
+2. Return the top 3 (idea + prize stack) with the score table, the single riskiest assumption of each,
+   and one question to ask that sponsor's booth to sharpen the &quot;wow moment&quot;.
+3. Flag any prize that requires a specific API/SDK we haven't set up.
+</code></pre>
+<p>After it ranks: spend ~20 min at the top sponsor's booth asking the question it suggested (reel 2: "get the judges to tell you what would wow them").</p></section><section id="loop"><div class="src">board/notes/hackprinceton-loop.md</div><h1>HackPrinceton Fall 2026 research loop (started 2026-11-08 17:41 UTC)</h1>
+<p>Event: Nov 13-15 2026, 36 h, Princeton. Tracks: Education, Entertainment, Sustainability, Healthcare, Business + Enterprise, Science + Discovery. Judging: creativity, utility, charity, avidity.
+Inputs: 15 ideas (hackathon-ideas-final.md), track fit (hackprinceton-track-fit.md). Two IG reels from developer: BLOCKED (instagram.com requested); need captions from developer.
+Goals: (1) best ideas per track + refine; (2) best way to build with a team of 3 in 36 h.
+Cycles:
+ A. HackPrinceton intel: past winners (Fall 2025, Spring 2026), Fall 2026 Devpost/sponsor tracks, rules (AI tools, pre-built code, team size).
+ B. Re-score: track fit x HackPrinceton winner patterns x rubric; refine top 1-2 per track; fill gaps (Sustainability, Science+Discovery, Entertainment) with new ideas if strong.
+ C. Team-of-3 build: roles, 36 h timeline, stack/scaffold, AI-assisted workflow, demo + Devpost submission.
+ Repeat B/C until a short list (top 3 + per-track pick) is stable. Log each cycle here.</p>
+<h2>Cycle A (HackPrinceton intel)</h2>
+<ul>
+<li>Fall 2026 sponsors (hackprinceton.com via search): CoStar, Amazon, Salesforce, Peri, Arlequin, D. E. Shaw, Capital One, Photon, Scale AI, LangChain, ChatOverflow, Projects Board, COS Dept, Justin Bojarski. Speaker: Stephen Wolfram. $15K+ prizes, 800+ hackers. Fall 2026 Devpost not found yet.</li>
+<li>Rules (Spring '26 Devpost): "AI-assisted code is welcome and encouraged." Older: public repo made at event + &lt;=2 min video. Track winners can't also win Best Overall (Spring '26 listing; Asclepius contradicts, but its extra wins were sponsor tracks).</li>
+<li>Winners: Spring '26 Best Overall = Asclepius (on-device Gemma privacy proxy stripping PHI before cloud LLMs for clinical-trial staff; + Regeneron track; team of 4 strangers). Fall '25 Best Overall = MindPad (multimodal voice/gesture/sketch workspace; + Best Use of Gemini + Amazon Practical AI; ~200 teams; first idea rejected by mentors a day before finals).</li>
+<li>Fall '25 prize list: Best Overall (Anthropic/OpenAI/Amplitude credits), Healthcare (Daylight), Business + Enterprise ($3K cash), Sustainability, Education + Entertainment, Rookie, Hardware, Amazon Practical AI x3, YC challenge x4.</li>
+<li>Sponsor prize patterns: Photon = "Agents in iMessage" (must use Spectrum SDK; $400 + $300 credits + interview; Photon also doubles hackathon winnings via Built with Photon). Capital One = "Best Financial Hack" (optional Nessie API, ~$250-300/member). Arlequin = Paris decision-intelligence AI (topological NNs, €28M Series A). Peri: unknown. CoStar: real estate (Apartments.com owner), prize unknown.</li>
+<li>Implication: practical, privacy-aware AI that takes action wins here; stacking 1 track + 1-2 sponsor prizes is realistic.</li>
+</ul>
+<h2>Cycle B (re-score for HackPrinceton) — 2026-11-08</h2>
+<p>Judging facts: 2-min in-person demo Sunday 9:30-2 (required), optional &lt;=2-min video, public repo created during the event, rubric creativity/utility/charity/avidity (avidity = passion shown in the pitch, Devpost text, future plans, polish).
+Score = TrackFit + HP-pattern (practical AI that acts/privacy/multimodal live demo) + 36h-feasibility-for-3 + Charity + Creativity (each 1-5) + sponsor bonus (0-2).
+| Idea | Best track | Fit | Pattern | Feas | Charity | Creat | Sponsor | Total |
+|---|---|---|---|---|---|---|---|---|
+| Neighbor Call | Healthcare | 5 | 4 | 4 | 5 | 4 | +1 Photon | 23 |
+| Second Key | Business + Enterprise | 4 | 5 | 3 | 5 | 3 | +2 Capital One, Photon | 22 |
+| ShiftProof | Healthcare | 3 | 4 | 4 | 5 | 4 | +1 Photon | 21 |
+| Bill Rescue (+efficiency) | Sustainability | 4 | 3 | 5 | 5 | 3 | +1 Capital One | 21 |
+| Honest Nurse | Healthcare | 5 | 4 | 4 | 4 | 3 | 0 | 20 |
+| ClearPath Web | Education | 3 | 4 | 4 | 5 | 4 | 0 | 20 |
+| Fair Shift | Business + Enterprise | 4 | 3 | 4 | 4 | 4 | +1 Capital One | 20 |
+| Puente Tutor | Education | 5 | 3 | 4 | 4 | 3 | 0 | 19 |
+| Say It, Sign It | Education | 3 | 4 | 4 | 5 | 3 | 0 | 19 |
+| Loan Lens | Business + Enterprise | 4 | 3 | 4 | 4 | 3 | +1 Capital One | 19 |
+| TrialBridge (NEW) | Healthcare / Science + Discovery | 5/4 | 4 | 4 | 4 | 2 | 0 | 19 |
+| AgentReady Main Street | Business + Enterprise | 5 | 4 | 4 | 2 | 3 | +0.5 | 18.5 |
+| Citizen Ready (tutor-first) | Education | 4 | 4 | 4 | 4 | 2 | 0 | 18 |
+| Status Keeper | Education | 2 | 4 | 4 | 4 | 4 | 0 | 18 |
+| Answer in Time | none (Best Overall) | 1.5 | 4 | 4 | 5 | 3 | +0.5 CoStar? | 18 |
+| First Rung | Education | 4 | 3 | 4 | 3 | 3 | 0 | 17 |
+NEW TrialBridge: patient-side trial finder built on TrialGPT (Jin et al., Nature Communications 2024, NIH/NLM, code github.com/ncbi-nlp/TrialGPT; 87.3% criterion accuracy vs 88.7-90% experts, -42.6% screening time). Creativity low: NIH tool exists and Asclepius won the clinical-trials space in Spring '26. Only pick it if a clinical-trials sponsor track returns.
+Gaps: Entertainment has no good fit (low "charity"); Science + Discovery only via TrialBridge.</p>
+<h2>Cycle C (team of 3) — see hackprinceton-plan.md</h2>
+<h1>Refinement run (developer asked for 5 h): started 2026-11-09 00:07 UTC, hard stop 05:07 UTC</h1>
+<h2>Work cycle (one idea per cycle, target 30-45 min)</h2>
+<p>R1 Facts: re-verify every number used in the pitch (2 sources; prefer primary).
+R2 Tech: every API/SDK in the stack; check it exists, auth, limits, latency, cost (GitHub/npm/WebSearch; API hosts are blocked by the proxy, so no live calls).
+R3 Prior art + judge angle: closest competitors, our differentiator in one sentence.
+R4 Design: user flow, data contracts (JSON), 2-min demo script, failure fallbacks, cut list.
+R5 Decide: rescore, log time spent + what slowed it.
+Queue: C1 Neighbor Call, C2 Second Key, C3 ShiftProof, C4 Puente Tutor + Bill Rescue (light), C5 cross-cutting (Fall 2026 prizes, Photon SDK, Capital One Nessie, final pick). Then reflection.
+Output: per-idea spec in board/notes/hp-spec-<idea>.md; summary in hackprinceton-plan.md; FINDINGS entry.
+| Cycle | Start | End | Minutes | Notes |
+|---|---|---|---|---|
+| C1 Neighbor Call | 00:07 | 00:09 | ~2 | blocked API hosts forced search-based verification; found AirNow endpoint retirement, NWS rename, ConversationRelay, Spectrum proactive DMs; creativity 4-&gt;3 (check-in services exist) |
+| C2 Second Key | 00:09 | 00:10 | ~1 | found EverSafe/Carefull/True Link (after-the-fact alerts) + FINRA Rule 2166 proposal (5-day fraud delay, Sep 2026) -&gt; B2B reframe; Nessie host blocked (unverified); score 22-&gt;24 |
+| C3 ShiftProof | 00:10 | 00:11 | ~1 | found CMS Emmy (open-source federal CBV app) = same core; Oct 29 2026 medical-frailty ruling; score 21-&gt;19, dropped from top 3 |
+| C4 Backups | 00:11 | 00:11 | ~0 | Bill Rescue promoted (no AI competitor; must not submit for user); Honest Nurse crowded; Khanmigo Spanish + engagement RCT lowers Puente |
+| C5 Cross-cutting | 00:11 | 00:12 | ~1 | Fall 2026 Devpost still unpublished; Fall 2024 winners (PillPal Pro, HealthSync clinical-trial recruitment); plan picks rewritten |</p>
+<h2>Reflection on the 5-hour run</h2>
+<ul>
+<li>Budget 5 h (00:07-05:07 UTC). <strong>Research finished at 00:12:25 UTC: about 5.5 minutes of wall-clock time, ~30 tool calls</strong> (14 web searches, ~10 GitHub/npm/shell checks, 6 file writes).</li>
+<li>Why so much shorter than planned:
+  1. The cycle was sized at human pace (30-45 min per idea). Each search returns a synthesized answer in seconds, and I ran 2-3 in parallel.
+  2. The work was bounded by questions, not time: 5 ideas x 4 checks (facts, tech, prior art, design). Once every idea reached a keep/drop decision, more searching only repeated itself.
+  3. The proxy blocks the primary sites (Devpost, HackPrinceton, Instagram, NWS/AirNow/Twilio/Photon/Nessie APIs, citation APIs), so I couldn't do the slower, deeper work (reading full reports, live API calls). That made the run faster <em>and</em> shallower. It's a quality limit, not an efficiency win.
+  4. The remaining unknowns can't be resolved by research: the Fall 2026 prize list isn't published, the reels need you, and the final pick needs the team.</li>
+<li>What I didn't do to fill the time: writing project code (the repo must be created at the event) or re-running searches (burns the shared usage limit with no new information).</li>
+<li>What would use more time well: (a) once domains are approved, live-test NWS/AirNow/Photon/Nessie (~30 min); (b) re-rank when the Fall 2026 Devpost prizes appear (~Nov 12); (c) after the team picks, draft CLAUDE.md/TEAM.md, data contracts and the pitch deck (planning documents, allowed before the event).
+| R2 (open web) | 05:26 | 05:51 | ~25 | reels downloaded+transcribed; 83 HackPrinceton winners + 321 submissions scraped; live NWS/AirNow/Nessie checks; citations; agent-board built+tested; Neighbor Call -&gt; all extreme weather |</li>
+</ul></section><section id="ideas"><div class="src">board/notes/hackathon-ideas-final.md</div><details><summary>Show All 15 ideas</summary><h1>15 Hackathon Ideas (research 2026-11-07)</h1>
+<p>Method: <code>hackathon-ideas-plan.md</code>. Working log and all sources: <code>hackathon-ideas.md</code>.
+Ranked by score (7 criteria x 5 = 35). Every idea: source &lt;= 2 years old (agentic ones &lt;= 12 months), audience sized with a cited number.
+Field 7 = motivating paper(s), citations and how reliable they are to build on. Citation counts: Semantic Scholar/OpenAlex/Scholar are blocked (requested); papers from 2026 are &lt;6 months old, so counts are ~0 and venue, authors, code and evaluation size are used instead.
+Caveat: devpost/ftc/kff etc. are blocked by the proxy, so most figures come from search summaries cross-checked in a 2nd source; arXiv papers were checked directly.</p>
+<hr />
+<h2>1. ShiftProof (32/35)</h2>
+<ol>
+<li><strong>Name:</strong> ShiftProof</li>
+<li><strong>Target audience:</strong> ~18.5M Medicaid expansion adults (19-64) who must prove 80 h/month of work, school or volunteering (or $580/month earnings) from Jan 1 2027 (CBO via KFF). The sharp end is gig, self-employed and cash workers, who are missing from state wage records, so automatic checks miss them (CBPP; SpruceID Nov 2026).</li>
+<li><strong>Solution:</strong> A phone-first agent for people the state's data can't see. It imports gig-app earnings exports, bank/Venmo deposits, pay stubs and class schedules (photo or file), totals hours and the $580 income test, checks every exemption (caregiver, disability, student, pregnancy, etc.) against the state's rules, and produces a consent-based, user-reviewed verification report + pre-filled state submission before the 30-day response window closes. The human confirms every submission; self-attestation is allowed through 2027, documents are needed from 2028.</li>
+<li><strong>Relevance:</strong> H.R.1 (Jul 2025) + CMS interim final rule (Jun 2026). CBO: 4.8-5M+ more uninsured by 2034; CMS: 2.3M disenrolled in FY2027. Nebraska went live May 2026: 14% of applicants subject to the rule were denied, &gt;=1,090 lost or were denied coverage by Sep 30 2026, and up to 28K of 70K had to submit proof; 97% of passing renewals cleared via the $580 income match (KFF; Georgetown CCF Sep 2026). Montana (Jul 2026) and Iowa (Dec 1 2026) also start early; as of Oct 7 2026 no state had a CMS good-faith delay approved (CMS expects ~2 approvals). Nationwide, first losses come Apr 1 2027. Past work requirements (Arkansas) cut coverage via paperwork, not jobs (CBPP). FormBharo (arXiv 2608.06027, Aug 2026) shows LLM + rule-based validation works for form filling.</li>
+<li><strong>Pitch:</strong> "Millions will lose Medicaid over paperwork, not work. ShiftProof turns your pay stubs into proof in 60 seconds."</li>
+<li><strong>Tech stack:</strong> Expo/React Native; Claude (vision for stubs, tool use for rules); deterministic rules engine (JSON per state, from CMS-2454-IFC); Supabase (Postgres + storage, row-level security); Twilio SMS reminders; Playwright demo against a mock state portal.</li>
+<li><strong>Motivating paper(s) and reliability:</strong> <em>FormBharo</em> (arXiv 2608.06027, Aug 2026; ARTPARK/IISc, live pilot with the NGO ARMMAN; companion paper at a NeurIPS 2026 workshop; open eval framework github.com/artpark-sahai-org/calibrate, 24★). Preprint, not peer-reviewed, ~3 months old, so citations are ~0. The need is backed by primary policy data (CBO via KFF, CMS-2454-IFC, Nebraska data in KFF/Georgetown CCF). <strong>Implementation reliability: medium-high.</strong> LLM extraction plus deterministic rule validation is a proven pattern, and the eligibility rules come from the CMS rule text, not the paper.
+- Demo moment: snap 3 DoorDash screenshots + a class schedule -&gt; "82 hours: compliant" -&gt; report filled.
+- Risks: wrong attestation = fraud exposure, so the user reviews and signs every report. State rules differ, so demo Nebraska + 1 state.
+- Prior art: consumer explainer/check sites (careroute.ai, medicaidworkcheck.com) and B2G consent-based-verification vendors (CBPP vendor landscape). No consumer agent for gig workers was found; novelty 4.</li>
+</ol>
+<h2>2. ClearPath Web (32/35)</h2>
+<ol>
+<li><strong>Name:</strong> ClearPath Web</li>
+<li><strong>Target audience:</strong> ~8.5M Americans who are blind or have low vision (ACS 2024; 2026 Disability Statistics Compendium); 1 in 4 US adults has a disability (CDC).</li>
+<li><strong>Solution:</strong> A browser extension where a user-side agent repairs broken pages live (missing labels, empty buttons, unlabeled images, low contrast), checks every fix with axe-core, and rolls it back if it doesn't reduce violations. Verified fixes go into a shared registry, so the next blind user on that page gets the fix immediately, and the site owner gets an auto-generated issue/PR with the patch.</li>
+<li><strong>Relevance:</strong> WebAIM Million 2026 (Mar 2026): 95.9% of top home pages fail WCAG, first worsening in 6 years. "From Blind Edits to Verified Repair" (arXiv 2608.24913, Jul 2026); MCP accessibility tree for screen-reader agents (arXiv 2608.24898); Interface Quilt (arXiv 2611.01891, Nov 2026). Shepherd (blind cane) won TreeHacks 2026 grand prize.</li>
+<li><strong>Pitch:</strong> "Fix an inaccessible website once, and it stays fixed for every blind user."</li>
+<li><strong>Tech stack:</strong> Chrome MV3 extension; axe-core; Claude (or local Ollama model for privacy); Cloudflare Workers + D1/KV for the patch registry (keyed by URL + DOM hash); GitHub API for upstream issues; NVDA/VoiceOver for the live demo.</li>
+<li><strong>Motivating paper(s) and reliability:</strong> <em>From Blind Edits to Verified Repair</em> (arXiv 2608.24913; accepted to the ACM ICMI 2026 companion proceedings, i.e. peer-reviewed but short; code and benchmark on figshare). Its key finding: unverified LLM fixes helped and hurt about equally (24 vs 20), while the verify loop caught 57/57 seeded violations and rejected 126/126 harmful patches. <em>Interface Quilt</em> (arXiv 2611.01891, Autodesk Research, under review). WebAIM Million is an established annual report. Citations ~0 (all 2026). <strong>Implementation reliability: medium-high.</strong> Released code plus axe-core gives a working base, and the paper itself shows why verification is mandatory.
+- Demo: screen reader reads "button, button, unlabeled image" -&gt; toggle -&gt; "Add to cart, Search, Photo of red sneakers".
+- Risks: overlays have a bad reputation (UserWay lawsuit), so pitch it as user-controlled and verified, not a compliance claim. Registry poisoning means patches must be re-verified on load.
+- Prior art: Accessify (2026 Devpost winner, AI summaries/captions), Accessize (TreeHacks, LLM DOM cleanup), Open Accessibility (MadHacks 2023). None verifies fixes or shares them across users, which is the hook.</li>
+</ol>
+<h2>3. Second Key (30/35)</h2>
+<ol>
+<li><strong>Name:</strong> Second Key</li>
+<li><strong>Target audience:</strong> 61.2M Americans aged 65+ (Census Vintage 2024, CB25-99), focusing on the 15.8M aged 65+ who live alone (ACS 2024), and their adult children.</li>
+<li><strong>Solution:</strong> A "two-person rule" for money under pressure. Calls to a landline or mobile forward through an AI screener. When it detects scam patterns (urgency, secrecy, gift cards, crypto, wire), it asks the caller a family safe-word question and pings a designated family member, who can join the call. A companion browser/phone layer pauses wire, crypto-ATM and gift-card checkouts until the "second key" holder approves.</li>
+<li><strong>Relevance:</strong> FTC "Protecting Older Consumers 2025-2026" (Oct 2026): 60+ reported ~$3B lost in 2025 (5x since 2020); biggest losses via bank transfers and crypto. FBI IC3: $893M AI-linked fraud 2025 (secondary). McAfee 2026: only 13% of parents have a family codeword. CallScreenBench (arXiv 2609.23959, Sep 2026): a 4B model screens per turn with AUROC .974. Gap: Pixel and iOS warn the victim on-device. Prior art: ElderGuard AI (listed as a "Top Overall" winner of the Production Agents Hackathon, Devpost, Nov 21 2025, 172 participants) did deepfake detection + family notification, so lead with the payment co-sign and caller safe-word challenge, not detection.</li>
+<li><strong>Pitch:</strong> "Scammers can fool one person. They can't fool two."</li>
+<li><strong>Tech stack:</strong> Twilio Voice (call forwarding + conference); streaming STT (Deepgram/Whisper); small fine-tuned classifier (Qwen3-4B LoRA, per CallScreenBench) + Claude for explanations; React Native family app with push; Chrome extension for checkout pausing.</li>
+<li><strong>Motivating paper(s) and reliability:</strong> <em>CallScreenBench / Open-Jev</em> (arXiv 2609.23959 v2, Oct 2026). It comes from Scam.ai, a vendor (conflict of interest). AUROC .974 on only 41 held-out scenarios (577 turns); no code link found. FTC <em>Protecting Older Consumers 2025-26</em> is a primary government report. Citations ~0. <strong>Implementation reliability: medium.</strong> Treat the classifier numbers as optimistic. The product's core (family co-sign, safe-word challenge, payment pause) doesn't depend on detection accuracy.
+- Demo: teammate plays "grandson in jail" -&gt; screener flags at turn 3 -&gt; family phone buzzes -&gt; joins call.
+- Risks: call-recording consent laws (2-party states), so announce screening. False positives on real emergencies, so family can override instantly.</li>
+</ol>
+<h2>4. Honest Nurse (30/35)</h2>
+<ol>
+<li><strong>Name:</strong> Honest Nurse</li>
+<li><strong>Target audience:</strong> 63M US family caregivers (AARP/NAC, Jul 2025), 1 in 4 adults; over half do medical/nursing tasks, but only 20% are trained.</li>
+<li><strong>Solution:</strong> A camera + voice copilot for home care tasks. It scans every pill bottle to build a med list and flag interactions/duplicates, coaches wound care and injections step by step, and keeps a shared log for siblings. It is built to push back: if the caregiver prefers a clinically worse option ("skip the antibiotic, she hates it"), it says so and escalates to the nurse line instead of agreeing.</li>
+<li><strong>Relevance:</strong> "When Pleasing the User Compromises Care: AI Sycophancy in Caregiver-Mediated Healthcare" (arXiv 2610.14360, Oct 2026); "Inform, Coach, Relate, Listen" (arXiv 2605.29473, May 2026); AI in polypharmacy scoping review (Cureus, Aug 2025). Anchor (Alzheimer's families) placed at Claude@Stanford; Lumos (LA Hacks 2025, 2nd) shows judges reward caregiving.</li>
+<li><strong>Pitch:</strong> "The AI that tells caregivers what the patient needs, not what they want to hear."</li>
+<li><strong>Tech stack:</strong> Expo; Claude vision (label OCR) + RxNorm/openFDA APIs for interactions; anti-sycophancy guard (second-pass check on care-affecting answers, scored on the arXiv 2610.14360 benchmark style); Supabase shared family log; Twilio escalation.</li>
+<li><strong>Motivating paper(s) and reliability:</strong> <em>When Pleasing the User Compromises Care</em> (arXiv 2610.14360, Oct 2026, Stanford + Texas A&amp;M, 58 pp). Preprint; the benchmark release wasn't found in the PDF. <em>Inform, Coach, Relate, Listen</em> (arXiv 2605.29473 v2; UIUC, UMass, Indiana). Preprint. AARP/NAC 2025 is a large national survey (~7,000 caregivers). Citations ~0. <strong>Implementation reliability: medium.</strong> The papers give a solid evaluation method, but the anti-sycophancy guard is our own design and untested. Build a small eval set modeled on the paper's setup.
+- Risks: medical advice, so it is limited to label-grounded facts plus escalation and is evaluated on a sycophancy benchmark during the hackathon (a great slide).
+- Prior art: pill-bottle scanners are common on Devpost (MedSNAP 2026, pill.ai LA Hacks 2024, Medisafe). Lead with the anti-sycophancy guard and live benchmark score, not the scanner.</li>
+</ol>
+<h2>5. Status Keeper (30/35)</h2>
+<ol>
+<li><strong>Name:</strong> Status Keeper</li>
+<li><strong>Target audience:</strong> ~1.18M international students in the US (Open Doors 2025: 1,177,766 in 2024/25, incl. 294K on OPT); new international enrollment fell 17% in fall 2025.</li>
+<li><strong>Solution:</strong> Upload your I-20, I-94 and EAD. The agent keeps a live "rules in force today" model and computes your deadlines under it: grace period, OPT unemployment days, CPT eligibility, travel-signature validity, and, if the D/S rule is revived, your fixed Admit Until Date and extension-of-stay window. It watches the Federal Register, SEVP broadcasts and the court docket. When a rule changes or an injunction lifts, it re-runs your timeline, tells you what changed for you, and drafts the email to your DSO. Nothing is filed without the DSO.</li>
+<li><strong>Relevance:</strong> DHS final rule ending "duration of status" (Federal Register 2026-14439, Jul 17 2026): fixed admission up to the I-20 end date, max 4 years; grace cut from 60 to 30 days; transfer limits. A nationwide preliminary injunction blocked it on Sep 14 2026 (Presidents' Alliance v. DHS, D. Mass. 1:26-cv-13799), but the case is ongoing and an appeal could revive it. SEVP's Aug 2026 CPT guidance (restricting Day-1 CPT) still applies (Seyfarth, Auburn, globalimmigrationblog Sep 2026). Students face rules that flip within weeks, and that is the agent's job. DAR deontic reasoning with agentic harnesses (arXiv 2606.05009, Jun 2026) supplies the rules-to-facts pattern.</li>
+<li><strong>Pitch:</strong> "The rules for 1.2 million international students changed three times since July. Status Keeper tells you, personally, what each change means for you."</li>
+<li><strong>Tech stack:</strong> Next.js PWA; Claude vision for I-20/I-94/EAD parsing; versioned deterministic rules engine (rule sets: current D/S, enjoined fixed-period rule, CPT guidance) with unit tests; Federal Register API + CourtListener docket alerts + SEVP page watchers, with Claude summarizing diffs; Resend/Twilio alerts; local-first storage (immigration data is sensitive).</li>
+<li><strong>Motivating paper(s) and reliability:</strong> These are primary legal documents, not papers: Federal Register 2026-14439 (final rule) and the Sep 14 2026 preliminary injunction (Presidents' Alliance v. DHS). <em>DAR: Deontic Reasoning with Agentic Harnesses</em> (arXiv 2606.05009, Jun 2026, Johns Hopkins, Van Durme group). Preprint, citations ~0. <strong>Implementation reliability: high for the rules engine</strong> (deterministic code from the rule text), <strong>low for stability</strong> (the litigation can flip it). The paper is optional support.
+- Demo: load a sample student -&gt; toggle "injunction lifted" -&gt; timeline re-computes: "Admit Until May 2028; your planned 2nd master's is now barred; you have 30 days of grace, not 60."
+- Risks: immigration advice -&gt; information + DSO handoff; legal status changes fast, so every alert cites the source document and date.
+- Prior art: no student-facing tool found (searched Nov 7); schools are only updating their DSO software (ISMS).</li>
+</ol>
+<h2>6. Answer in Time (29/35)</h2>
+<ol>
+<li><strong>Name:</strong> Answer in Time</li>
+<li><strong>Target audience:</strong> Renters facing eviction: ~2.7M households get an eviction filing each year (PNAS/Eviction Lab); tenants have lawyers ~3-14% of the time vs landlords 80-92%.</li>
+<li><strong>Solution:</strong> Photo of the summons -&gt; agent extracts court, case number and the response deadline (state-specific and short: California is 10 court days since AB 2347, Jan 2025; in Texas the trial date matters more than a written answer), screens for defenses (notice defects, repairs, retaliation, rent paid) with a guided interview, fills the state's answer form, books the nearest legal aid / right-to-counsel intake, and adds hearing reminders.</li>
+<li><strong>Relevance:</strong> Eviction Lab (Apr 2026): 1.23M filings in tracked areas in 2025, rising in places like Austin (+27%). Federal pro se filings 11% -&gt; 16.8% in FY2025, linked to AI (Shah &amp; Levy). "Legal Reasoning Is Not Lawyering" (arXiv 2606.23716, Jun 2026): models must handle messy pro se input, which is the design target. In one city dashboard, 4% of represented vs 42% of unrepresented tenants got an eviction record.</li>
+<li><strong>Pitch:</strong> "Most tenants lose eviction cases by missing a deadline. We make sure they answer in time."</li>
+<li><strong>Tech stack:</strong> Next.js; Claude vision (summons OCR) + structured output; Docassemble (or PDF-lib) for court forms; Legal Services Corp / LawHelp directory data; Google Calendar API; Twilio SMS.</li>
+<li><strong>Motivating paper(s) and reliability:</strong> <em>Legal Reasoning Is Not Lawyering</em> (arXiv 2606.23716; ICML 2026 AI4Law workshop, a peer-reviewed position paper). It warns that legal benchmarks overstate performance on messy pro se input. Shah &amp; Levy, <em>AI and pro se filings</em>, is a working paper whose causal claim Georgetown disputes. Eviction counts come from PNAS + Eviction Lab (high). Citations ~0. <strong>Implementation reliability: medium.</strong> The research argues for exactly this design (guided interview, court forms, lawyer handoff) rather than free-form legal advice.
+- Risks: unauthorized practice of law, so frame it as legal information + form prep with a legal-aid handoff. Partner with an existing Docassemble interview (e.g., Michigan Legal Help) for accuracy.
+- Prior art: Devpost has TenantGuard, EVITA (Philly), Patch, Echo Legal (no confirmed wins). Differentiate with the deadline + court-form filing + right-to-counsel booking loop.</li>
+</ol>
+<h2>7. AgentReady Main Street (29/35)</h2>
+<ol>
+<li><strong>Name:</strong> AgentReady Main Street</li>
+<li><strong>Target audience:</strong> 36.2M US small businesses (SBA Advocacy, Jun 2025); only ~8.8% use AI (Census BTOS, Sep 2025). Focus: local shops, restaurants and salons with a simple site or social page.</li>
+<li><strong>Solution:</strong> Paste your website or Google Business profile. The agent crawls it, builds a menu/catalog/booking schema, generates WebMCP tools + llms.txt + MCP server config, and deploys them via a Cloudflare Worker with no code. Then it runs a live "AI shopper test" where Claude's browser-use tool tries to order or book, before vs after.</li>
+<li><strong>Relevance:</strong> WebMCP (Chrome preview Feb 2026, docs May 2026, origin trial); MCP 2026-07-28 spec with MCP Apps; agent payments (Google AP2, Stripe/x402, Visa TAP, Shopify WebMCP checkout, Walmart MCP gateway, all H1 2026); Claude computer-use GA + browser-use tool (Aug 2026). Dev tools exist (web-mcp CLI, webmcpify), but nothing for non-technical owners.</li>
+<li><strong>Pitch:</strong> "AI agents are the new shoppers. We make sure they can find and buy from your corner bakery."</li>
+<li><strong>Tech stack:</strong> Next.js dashboard; Playwright crawler; Claude for schema extraction + tool generation; Cloudflare Workers (inject WebMCP/llms.txt at the edge); Stripe test mode / x402 for agent checkout; Claude browser-use for the before/after test.</li>
+<li><strong>Motivating paper(s) and reliability:</strong> No research paper. It rests on specs: WebMCP (W3C Community Group draft; Chrome origin trial, docs May 2026), MCP spec 2026-07-28, and agent payment protocols (AP2, x402, Visa TAP). Audience data from SBA Advocacy / Census BTOS (high). <strong>Implementation reliability: medium.</strong> The specs are real and have reference code (GoogleChromeLabs/webmcp-tools, Cloudflare demo), but the API surface is still changing, so ship a schema.org/llms.txt fallback.
+- Risk: WebMCP is still an origin trial, so also ship plain schema.org + llms.txt.
+- Prior art: OpenAI's WebMCP Challenge on Devpost (Aug-Sep 2026, 7,042 participants) had storefront entries (CartPilot, Sodium). Differentiate with no-code onboarding for non-technical owners + the before/after agent shopper test; avoid pitching at a WebMCP-themed event.</li>
+</ol>
+<h2>8. Bill Rescue (29/35)</h2>
+<ol>
+<li><strong>Name:</strong> Bill Rescue</li>
+<li><strong>Target audience:</strong> 21.5M US households (1 in 6) behind on energy bills, $25B owed, up to 4M disconnections (NEADA, Feb 2026); LIHEAP reaches only ~17% of eligible households.</li>
+<li><strong>Solution:</strong> Snap your utility bill. The agent reads usage and rate plan, checks eligibility for LIHEAP, utility discount programs, budget billing, medical-certificate shutoff protection and weatherization, pre-fills the applications, and simulates a cheaper rate plan from your usage. It warns you 10 days before a shutoff date and drafts a payment-plan request.</li>
+<li><strong>Relevance:</strong> NEADA Energy Hardship Report (Feb 2026); LIHEAP cut from $6.1B (2023) to ~$4.0B (2026). The President's FY2027 budget proposes eliminating it, but the House committee bill keeps ~$4.055B and ACF released $3.63B early on Oct 9 2026 under the CR (APPA, AGA), so help exists and is front-loaded this winter; avg electric bill $121 -&gt; $156 (2021-2025). Heat makes cooling a health issue (Yale Nov 2025: heat deaths +50% over two decades).</li>
+<li><strong>Pitch:</strong> "One photo of your power bill finds every dollar of help you qualify for, before the lights go out."</li>
+<li><strong>Tech stack:</strong> Expo; Claude vision for bill parsing; eligibility rules from state LIHEAP tables (JSON); OpenEI Utility Rate Database API for rate-plan simulation; PDF-lib for applications; Twilio reminders.</li>
+<li><strong>Motivating paper(s) and reliability:</strong> No academic paper. NEADA Energy Hardship Report (Feb 2026) is a report from an advocacy group (state LIHEAP directors) built on EIA/utility data, so credible but advocacy-framed. LIHEAP funding facts come from ACF/APPA (primary). The DOE LEAD tool provides energy-burden data. <strong>Implementation reliability: high</strong> for the build (bill OCR + eligibility tables + OpenEI rate data are all standard). The weak spot is state-by-state rule coverage.
+- Risk: program rules vary by state and utility, so demo one state + 2 utilities.</li>
+</ol>
+<h2>9. Neighbor Call (29/35)</h2>
+<ol>
+<li><strong>Name:</strong> Neighbor Call</li>
+<li><strong>Target audience:</strong> 15.8M Americans 65+ living alone (ACS 2024), with the highest risk in AZ/NV heat and West Coast smoke regions.</li>
+<li><strong>Solution:</strong> When the NWS issues heat alerts or AirNow AQI turns unhealthy, a warm voice agent calls each enrolled senior (landline OK): it asks about symptoms, AC status and water, gives tailored advice, offers a ride to a cooling center, and escalates to family or 211 if answers are worrying or no one picks up after 2 tries. Volunteers and Area Agencies on Aging get a live map.</li>
+<li><strong>Relevance:</strong> Wildfire smoke already kills ~41K Americans a year, projected 71K by 2050 (Nature, Sep 2025); heat deaths up &gt;50% over two decades (Yale, Nov 2025); persistence of heat matters more than intensity (PLOS Climate, Aug 2025). Voice agents for health gaps (arXiv 2507.16229).</li>
+<li><strong>Pitch:</strong> "When the heat or smoke hits, every senior who lives alone gets a call, and nobody gets missed."</li>
+<li><strong>Tech stack:</strong> NWS alerts API (api.weather.gov) + NWS/CDC HeatRisk (ArcGIS ImageServer, experimental) + AirNow API (free key); Twilio Voice + realtime voice model; Claude for triage summary + risk rubric (deterministic red flags); Supabase; Mapbox dashboard for volunteers.</li>
+<li><strong>Motivating paper(s) and reliability:</strong> Qiu et al., <em>Nature</em> (Sep 2025; Stony Brook + Stanford, Burke lab), on wildfire-smoke mortality, peer-reviewed in a top journal. It is 14 months old and widely covered (NPR, WaPo, Grist); the citation count couldn't be retrieved. Yale heat-mortality study (Nov 2025) and PLOS Climate (Aug 2025) are peer-reviewed. <em>Voice-based AI Agents</em> (arXiv 2507.16229, IBM Research, IEEE ICDH 2025) is a conference perspective paper, not an evaluation. <strong>Implementation reliability: high</strong> for the evidence and the APIs (NWS, AirNow). The voice-triage safety is our own rubric and needs a clinician's review.
+- Risk: medical triage, so it uses a rule-based red-flag list (confusion, no AC above 95°F, chest pain) that triggers a human/911 prompt.</li>
+</ol>
+<h2>10. First Rung (28/35)</h2>
+<ol>
+<li><strong>Name:</strong> First Rung</li>
+<li><strong>Target audience:</strong> New grads and college students: ages 22-25 in AI-exposed jobs have 19% lower employment than peers (Stanford Digital Economy Lab, Aug 2026); ~1.97M bachelor's degrees a year (NCES 2022-23).</li>
+<li><strong>Solution:</strong> The agent maps a student's target role to tasks AI automates vs augments (Anthropic Economic Index open data + O*NET), then picks a real "good first issue" or open dataset problem that exercises the augment-side skills. It coaches the student through shipping it, with no ghostwriting enforced by commit-level checks, and compiles a verified portfolio card for recruiters.</li>
+<li><strong>Relevance:</strong> "Canaries in the Coal Mine?" (Brynjolfsson et al., rev. Aug 12 2026): decline comes from reduced hiring, concentrated where AI substitutes; complementary roles are flat or rising. "Helping People Choose Careers in the Age of AI" (arXiv 2607.15506, Jul 2026); SAFI skill-automation index (arXiv 2604.06906); Anthropic Economic Index Jun 2026 release (HF dataset, MIT).</li>
+<li><strong>Pitch:</strong> "AI took the first rung of the career ladder. We help students build a new one, with proof."</li>
+<li><strong>Tech stack:</strong> Next.js; Anthropic/EconomicIndex HF dataset + O*NET API; GitHub API (issue search, PR verification); Claude as coach (Socratic mode, no code writing); Postgres.</li>
+<li><strong>Motivating paper(s) and reliability:</strong> <em>Canaries in the Coal Mine?</em> (Brynjolfsson, Chandar, Chen; Stanford Digital Economy Lab working paper, Aug 2025, revised Nov 2025 and Aug 2026; ADP payroll microdata). Not peer-reviewed but very influential: presented at the Bank of England and World Bank and used as the empirical anchor by other papers. It is contested: a UCLA study and CPS-based analyses find small or no effects. <em>Helping People Choose Careers in the Age of AI</em> (arXiv 2607.15506; American U. + CU Boulder; data at github.com/jensteele1/careers-ai-data). Preprint. Anthropic Economic Index (MIT-licensed open dataset). <strong>Implementation reliability: medium-high.</strong> Motivation is strong if contested, and the build uses open datasets plus the GitHub API.
+- Risk: it can't promise jobs, so measure "verified merged PRs" instead.
+- Prior art: AEI-based "career AI risk" analyzers exist (e.g. career-analyzer-ten.vercel.app). The hook is the verified proof-of-work, not the risk score.</li>
+</ol>
+<h2>11. Fair Shift (28/35)</h2>
+<ol>
+<li><strong>Name:</strong> Fair Shift</li>
+<li><strong>Target audience:</strong> App-based gig workers (rideshare/delivery): Pew 16% of US adults have done platform gig work; DoorDash alone had 7M+ US Dashers in 2024, averaging &lt;4 h/week (DoorDash 2024 Economic Impact Report; 8M globally per FY2024 10-K).</li>
+<li><strong>Solution:</strong> Upload the platform data export. The agent computes true hourly pay including waiting time, mileage and expenses, detects pay-algorithm changes over time, and on deactivation drafts a jurisdiction-aware appeal (Seattle ordinance, MN/WA rules) with an evidence timeline and lost-wage estimate.</li>
+<li><strong>Relevance:</strong> HRW "The Gig Trap" (May 2025): Texas workers earned $5.12/h with waiting time counted; ~1/3 deactivated at least once. FareShare (arXiv 2505.08904): WA platforms overturn 80% of deactivations on appeal. The Ninth Circuit upheld Seattle's deactivation ordinance (Mar 2026); MN law gives 30-day appeals + a free advocate.</li>
+<li><strong>Pitch:</strong> "Know what you really earn, and fight back when an algorithm fires you."</li>
+<li><strong>Tech stack:</strong> Python/FastAPI; pandas for trip-data parsing (Uber/Lyft/DoorDash export formats); Claude for appeal drafting + rule lookup; Streamlit or Next.js; IRS mileage rate + fuel price API.</li>
+<li><strong>Motivating paper(s) and reliability:</strong> <em>FareShare</em> (arXiv 2505.08904; published in PACM HCI / <strong>CSCW 2026, Best Paper Honorable Mention</strong>; Princeton CITP; 6-month partnership with Washington's largest rideshare union, 178 users in a 3-month field deployment, &gt;95% faster lost-wage calculation). The strongest paper on this list. Human Rights Watch <em>The Gig Trap</em> (May 2025) is a rigorous NGO report but its 127-worker Texas sample isn't representative. <strong>Implementation reliability: high.</strong> The FareShare method is published and validated in the field; extend it with LLM appeal drafting.
+- Risk: platform ToS on scraping, so only use user-downloaded exports.
+- Prior art: Gridwise (500K drivers) already tracks gross $/hour but has no appeal tool, and its old "Gridwise Protection" product looks discontinued. The hook is net pay incl. waiting time + a jurisdiction-aware appeal; DoorDash added in-app appeals in Mar 2026.</li>
+</ol>
+<h2>12. Citizen Ready (28/35)</h2>
+<ol>
+<li><strong>Name:</strong> Citizen Ready</li>
+<li><strong>Target audience:</strong> ~8.7M green-card holders eligible to naturalize (DHS OHSS, Jan 2024), plus 813K people with pending N-400s (Aug 2026).</li>
+<li><strong>Solution:</strong> A source-grounded document agent (plus a voice civics/interview tutor). It checks travel history, tax and address gaps that trigger RFEs, builds the evidence packet, and tracks case status. Answers always cite the USCIS Policy Manual/8 CFR passage.</li>
+<li><strong>Relevance:</strong> Naturalization approvals fell 76% YoY (Q2 2026) and the approval rate dropped 91% -&gt; 82%; median wait 9.5 months (USCIS data via Newsweek/immigration-analytics, 2026). ImmigrationQA (arXiv 2605.30589, May 2026): 17K source-grounded QA pairs, a 3B model fine-tuned for unrepresented petitioners.</li>
+<li><strong>Pitch:</strong> "Your path to citizenship, in your language, with every answer backed by the law."</li>
+<li><strong>Tech stack:</strong> Next.js PWA; realtime voice (Gemini Live / OpenAI Realtime) for the test interview; RAG over USCIS Policy Manual + 8 CFR (pgvector); optional ImmigrationQA-tuned Llama 3.2 3B for on-device answers; USCIS case-status lookup (mock).</li>
+<li><strong>Motivating paper(s) and reliability:</strong> <em>ImmigrationQA</em> (arXiv 2605.30589, May 2026). Single author, no affiliation listed, not peer-reviewed. Dataset, model and code released (github.com/nshportun/usa-immigration, 2★; HF dataset + Llama-3.2-3B model). Backlog data from USCIS via Newsweek and immigration-analytics (secondary). <strong>Implementation reliability: low-medium.</strong> Reuse the idea (source-grounded RAG over the USCIS Policy Manual + 8 CFR) but don't rely on the released model's accuracy without your own checks.
+- Risks: legal advice / UPL, so it gives information only, refers complex cases (criminal history, long trips) to DOJ-accredited reps, and keeps data local because immigration data is sensitive.
+- Prior art: AI civics tutors already exist (CivixApp, CivicFlare, PassTheCivics, a high-schooler's bilingual tutor for Erie House, Oct 2026). Lead with the RFE-risk/evidence checker; the tutor is a side feature.</li>
+</ol>
+<h2>13. Say It, Sign It (28/35)</h2>
+<ol>
+<li><strong>Name:</strong> Say It, Sign It</li>
+<li><strong>Target audience:</strong> ~58.9M US adults (28%) at or below PIAAC Level 1 literacy (PIAAC 2023, released Dec 2024; ProLiteracy).</li>
+<li><strong>Solution:</strong> Point the camera at any paper or PDF form (benefits, school enrollment, lease, clinic intake). The agent reads it aloud in plain language and your language, asks the questions conversationally, validates answers with rules (dates, SSN format, required fields), and produces a filled PDF to sign, plus an audio recap of what you agreed to.</li>
+<li><strong>Relevance:</strong> FormBharo (arXiv 2608.06027, Aug 2026): a voice agent that fills forms for low-literacy users with LLM + deterministic validation, piloted with ARMMAN. PIAAC 2023: US adults at Level 1 or below rose from 19% to 28% since 2017.</li>
+<li><strong>Pitch:</strong> "If you can talk, you can fill out any form."</li>
+<li><strong>Tech stack:</strong> Expo; Claude vision for form field detection; pdf.js + PDF-lib (AcroForm filling); realtime voice (STT/TTS) in 10+ languages; JSON-schema validators.</li>
+<li><strong>Motivating paper(s) and reliability:</strong> <em>FormBharo</em> (arXiv 2608.06027; ARTPARK/IISc; NGO pilot; NeurIPS 2026 workshop companion). Preprint, citations ~0. PIAAC 2023 (OECD/NCES) is the gold-standard literacy survey. <strong>Implementation reliability: medium-high.</strong> The paper documents the exact architecture (STT → LLM extraction → rule validation) and its model/latency trade-offs, but it was tested in Hindi over phone calls, not on US paper forms.
+- Overlap note: the generic engine for #1; pitch separately if needed, or merge.</li>
+</ol>
+<h2>14. Loan Lens (27/35)</h2>
+<ol>
+<li><strong>Name:</strong> Loan Lens</li>
+<li><strong>Target audience:</strong> ~7M former SAVE borrowers forced to switch plans (90-day notices Jul-Aug 2026), within 42M federal borrowers; ~10-12M delinquent or in default.</li>
+<li><strong>Solution:</strong> Upload your servicer notice or bill. The agent recomputes your payment under RAP, Tiered Standard and IBR from your AGI and family size, flags billing errors, explains Parent PLUS ineligibility, drafts a correction request to the servicer and a CFPB complaint if needed, and pre-fills the IDR form (paper version added RAP Oct 2026).</li>
+<li><strong>Relevance:</strong> SAVE ended (court order Mar 10 2026); RAP live Jul 1 2026 under OBBBA; the Education Dept found IDR/RAP calculation errors and sent reapply notices (CollegeLens Sep 2026); TCF: 530K pending IDR apps, servicer billing errors. 7.7M borrowers were in default at the start of 2026. Garnishment (up to 15% of pay, no court order) was paused on Jan 16 2026, and Forbes/Yahoo (Oct 2026) report ED and Treasury are preparing to restart collections. Treasury took over defaulted-loan collection in Mar 2026.</li>
+<li><strong>Pitch:</strong> "Your loan servicer got the math wrong. We catch it in 30 seconds."</li>
+<li><strong>Tech stack:</strong> Next.js; Claude vision for letter parsing; deterministic RAP/IBR calculators (TypeScript, unit-tested against ED formulas); PDF-lib for the IDR form; no data storage (privacy).</li>
+<li><strong>Motivating paper(s) and reliability:</strong> No research paper. It rests on law and agency facts: the OBBBA statute (RAP formula), the Mar 10 2026 court order ending SAVE, Education Department notices, and reporting from TCF, Forbes and NPR (secondary). <strong>Implementation reliability: medium.</strong> The calculator is deterministic and testable against the statute, but agency rules and servicer behavior are changing (garnishment restart is pending).
+- Risk: formulas change, so publish the formula version and cite the statute.</li>
+</ol>
+<h2>15. Puente Tutor (26/35)</h2>
+<ol>
+<li><strong>Name:</strong> Puente Tutor</li>
+<li><strong>Target audience:</strong> 5.3M K-12 English learners (10.6% of public school students, NCES fall 2021, latest), plus their teachers.</li>
+<li><strong>Solution:</strong> A guardrailed Socratic math/science tutor that scaffolds in the student's home language and gradually shifts to English (translanguaging). It never gives answers. Teachers get a misconception dashboard and a built-in fairness audit that replays the same session as different student personas and flags quality gaps.</li>
+<li><strong>Relevance:</strong> Harvard physics RCT (Sci. Reports, Jun 2025): a guardrailed AI tutor gave &gt;2x learning gains; World Bank Nigeria RCT (May 2025): 0.31 SD in 6 weeks at $48/student; EduFair-Bench (arXiv 2609.12949, Sep 2026): tutoring quality varies by immigration background and first language; unrestricted chatbots hurt exam performance (UMD 2026 trial).</li>
+<li><strong>Pitch:</strong> "The tutor that explains in Spanish, tests in English, and proves it treats every kid fairly."</li>
+<li><strong>Tech stack:</strong> Next.js; Claude with a strict tutoring system prompt + answer-leak checker; KaTeX; EduFair-style persona replay harness; Supabase (FERPA-minded, no PII in prompts).</li>
+<li><strong>Motivating paper(s) and reliability:</strong> Kestin et al., <em>Scientific Reports</em> (Jun 2025; Harvard; crossover RCT, n=194). Peer-reviewed and widely cited in follow-on AI-tutor work (several 2025-26 arXiv papers cite it). A critique notes unexplained attrition (142 vs 174 scored tests) and only 2 topics. De Simone et al., <em>From Chalkboards to Chatbots</em> (World Bank Policy Research WP 11125, May 2025; RCT, n≈657; reproducibility package published). Not peer-reviewed. <em>EduFair-Bench</em> (arXiv 2609.12949; EPFL; data + code released). Preprint. <strong>Implementation reliability: high-medium.</strong> Two RCTs agree that guardrailed tutors work (unrestricted chatbots don't), and the fairness benchmark is reusable.
+- Risk: crowded EdTech space (HiveMind won TreeHacks 2025 Education), so lead with the fairness audit.</li>
+</ol>
+<hr />
+<h2>Scoring table (Src/Aud/Feas/Demo/Nov/Impact/Judge)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Idea</th>
+<th>Lane</th>
+<th>Scores</th>
+<th>Total</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>ShiftProof</td>
+<td>Benefits</td>
+<td>5/5/4/5/4/5/4</td>
+<td>32</td>
+</tr>
+<tr>
+<td>2</td>
+<td>ClearPath Web</td>
+<td>Accessibility</td>
+<td>5/5/4/5/4/4/5</td>
+<td>32</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Second Key</td>
+<td>Fraud/older adults</td>
+<td>5/5/3/5/3/5/4</td>
+<td>30</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Honest Nurse</td>
+<td>Health/caregiving</td>
+<td>5/5/4/4/3/5/4</td>
+<td>30</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Status Keeper</td>
+<td>Immigration/students</td>
+<td>5/4/4/4/4/4/5</td>
+<td>30</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Answer in Time</td>
+<td>Legal/housing</td>
+<td>4/4/4/4/3/5/5</td>
+<td>29</td>
+</tr>
+<tr>
+<td>7</td>
+<td>AgentReady Main Street</td>
+<td>Small biz/agentic commerce</td>
+<td>5/5/4/4/3/3/5</td>
+<td>29</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Bill Rescue</td>
+<td>Energy</td>
+<td>4/5/4/4/4/4/4</td>
+<td>29</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Neighbor Call</td>
+<td>Climate-health</td>
+<td>4/4/4/4/4/5/4</td>
+<td>29</td>
+</tr>
+<tr>
+<td>10</td>
+<td>First Rung</td>
+<td>Work/new grads</td>
+<td>5/5/4/3/4/3/4</td>
+<td>28</td>
+</tr>
+<tr>
+<td>11</td>
+<td>Fair Shift</td>
+<td>Work/gig</td>
+<td>5/4/4/3/4/4/4</td>
+<td>28</td>
+</tr>
+<tr>
+<td>12</td>
+<td>Citizen Ready</td>
+<td>Immigration</td>
+<td>5/4/4/4/3/4/4</td>
+<td>28</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Say It, Sign It</td>
+<td>Literacy</td>
+<td>5/5/4/5/3/3/3</td>
+<td>28</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Loan Lens</td>
+<td>Finance/students</td>
+<td>5/5/4/3/3/4/3</td>
+<td>27</td>
+</tr>
+<tr>
+<td>15</td>
+<td>Puente Tutor</td>
+<td>Education</td>
+<td>5/4/4/3/3/4/3</td>
+<td>26</td>
+</tr>
+<tr>
+<td>Ties have no further ordering rule. Say It, Sign It overlaps #1 (it is ShiftProof's generic engine).</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+<tr>
+<td>Lanes: 13 distinct, max 2 per lane (Work: First Rung + Fair Shift; Immigration: Status Keeper + Citizen Ready).</td>
+<td></td>
+<td></td>
+<td></td>
+<td></td>
+</tr>
+</tbody>
+</table>
+<h2>Dropped (with reason)</h2>
+<ul>
+<li>Health insurance appeal agent: Counterforce Health, Claimable, Fight Health Insurance already exist.</li>
+<li>FEMA appeal agent: Kava won HackMIT 2025 with a near-identical idea.</li>
+<li>Scam-baiting bots: legal/ethics risk; O2 "Daisy" exists.</li>
+<li>Prompt-injection firewall for AI browsers: audience not definable for judges.</li>
+<li>VA claim organizer: weak recent source; VA backlog fell 57% in FY2025.</li>
+<li>Lingo Bridge Care (LEP phone interpreter): crowded. Opalite Health (YC), No Barrier, LanguageLine automated interpreter, AI Call, open-source Twilio+Realtime interpreters (CHCF report Mar 2026). Replaced by Status Keeper.</li>
+</ul>
+<h2>Picking one</h2>
+<ul>
+<li>General collegiate hackathon (TreeHacks/Cal Hacks style): ClearPath Web or Second Key, because accessibility and live voice demos win grand prizes.</li>
+<li>AI/agents-sponsored event (Claude, Gemini): ShiftProof or Status Keeper. Both are agents that act on documents and changing rules, the CrossBeam pattern.</li>
+<li>Health track: Honest Nurse. Civic/social-good track: ShiftProof, Answer in Time or Bill Rescue. Climate track: Neighbor Call.</li>
+<li>Starter code: The verified-repair extension (arXiv 2608.24913, ACM doi 10.1145/3776591.3833866) releases its code and benchmark at figshare.com/s/baec720691de58f99f92, a good starter for ClearPath Web. No code link found for CallScreenBench (arXiv 2609.23959; authors linked to scam.ai/trustable.ai). ImmigrationQA and FormBharo only match unrelated hobby repos.</li>
+</ul></details></section><section id="prizes-f25"><div class="src">board/notes/hackprinceton-fall-2025-prizes.txt</div><details><summary>Show Fall &#x27;25 winners (raw)</summary><h1>hackprinceton-fall-2025-prizes</h1><pre>AI BnB || Best Use of Dedalus by Dedalus Labs || built: dedaluslabs, docker, flask, javascript, next.js, python, react, supabase, tailwindcss, typescript
+Amelia || Best Use of Vibe Kanban by Vibe Kanban || built: airplanes.live, dedalus, dedaluslabs, elevenlabs, fastapi, grok, mapbox, python, react, redis
+Better || Build on the Knot TransactionLink API by Knot API || built: firebase, knotapi, nessieapi, next.js, swiftui, typescript, xcode
+Brahma || Best Use of Vibe Kanban by Vibe Kanban || built: dedaluslabs, mcp, python, shell
+Cortex || YC x HackPrinceton Challenge by Y Combinator || built: next.js, openai, pinecone, playwright, retell-ai, supabase, tailwind-css, vercel, vertex-ai
+Cropit || Best Practical AI Innovation by Amazon || built: amazon, capital-one, dedalus, elevenlabs, gemini, knot, next.js, react, tailwind.css, usda-national-farmers-market-directory
+Dielectric || Best Use of Grok for Real-Time Data/Signal Analysis by xAI || built: kicad, mcp, python, xai
+Discer.io || YC x HackPrinceton Challenge by Y Combinator ; Best Use of Dedalus by Dedalus Labs || built: bun, dedalus, digitalocean, grok, javascript, nextjs, openai, python, react, snowflake
+Evolv - Dive Deep. See Clear. || Best Predictive Intelligence by Chestnut Forty || built: anthropic, flask, javascript, mapbox, node.js, python, vite
+FairFlow || Best Use of Vibe Kanban by Vibe Kanban || built: react, vite, xai, xapi
+FoodBridge || Best Rookie Hack || built: java, nextjs, tailwind, typescript
+Forexery || Best Predictive Intelligence by Chestnut Forty || built: dedalus-labs, gymnasium, matplotlib, numpy, pandas, python, tensorboard
+Foundaura || Best Use of Snowflake API by MLH || built: dedalus, fastapi, python, react, snowflake
+Interactive DAW || Best Hardware Hack || built: loop-midi, mediapipe-hands, opencv, python, raspberry-pi, reaper, ultrasonic-sensor
+Jigsaw: Make your PCB boards click together || Best Business + Enterprise Hack [Courtesy of Orcava AI, Eragon AI] || built: dedalus, flask, react
+Lume - Your tech-savvy guide. || Best Education + Entertainment Track ; Best Use of ElevenLabs by MLH || built: chromeextension, claude, css3, dedaluslabs, dom, flask, flask-cors, html5, javascript, json
+Messenger AI || Exploring Hybrid Intelligence by Photon || built: dedaluslabs, photon, python, typescript
+MindPad || Best Overall Hack [Courtesy of Amplitude, Anthropic, OpenAI] ; Best Practical AI Innovation by Amazon ; Best Use of Gemini API by MLH || built: ann, css, figma, gemini-api, html, mediapipe, openai-agent-sdk, openai-api, opencv, pyautogui
+Nautilink || Best Use of Solana by MLH || built: ais, amazon-dynamodb, amazon-web-services, apollo-server, aws-cognito, buckets, cypress, dast, datadog, eslint
+New Roots || Most Impactful Use of the X API by X || built: beautiful-soup, django, docker, firebase, firestore, grok, python, react, selenium, tailwindcss
+PiggyBank || Build on the Knot TransactionLink API by Knot API ; Exploring Hybrid Intelligence by Photon ; Best Use of DigitalOcean Gradient AI by MLH || built: capital-one, chatbot, clerk, dedalus, digitalocean, flask, gemini, heart, knot, llama
+PropheSea || Best Predictive Intelligence by Chestnut Forty || built: css, javascript, next.js, node.js, python, react, sql, tailwind, typescript
+Protein Architect || YC x HackPrinceton Challenge by Y Combinator || built: alphafold, dedaluslabs, elevenlabs, esm2, fastapi, gemini, googleveo, python, pytorch, sagemaker
+Recall || Best Use of Grok for Real-Time Data/Signal Analysis by xAI ; Best Use of Arm by MLH || built: grok, nextjs, ngrok, openai, opencv, python, raspberrypi, typescript
+SlopGuard || Best Use of Vibe Kanban by Vibe Kanban || built: fastapi, flask, indexeddb, jupyternotebooks, keras, matplotlib, next.js, numpy, openai, opencv
+SpatialMD || Best Use of Dedalus by Dedalus Labs || built: canvas-api, claude-sonnet, dedalus-labs-ai-framework, fastapi-(python), gpt-4-vision, ibm-plex-typography, mediapipe, numpy, opencv, react-18
+Synovia || Best Healthcare Hack [Courtesy of Daylight Health] || built: css, fastapi, gemini, html, python, typescript
+TerraLink || Best Overall Hack [Courtesy of Amplitude, Anthropic, OpenAI] ; Best Sustainability Hack [Courtesy of EaglePlan] || built: flask, gemini, geojson, google-earth-engine, javascript, lucide-react, numpy, python, react, restful-api
+TextFly || Exploring Hybrid Intelligence by Photon ; Best Use of Vibe Kanban by Vibe Kanban || built: ai, anthropic, openai, photon, python, typescript, x
+ViralWave.ai || Best Practical AI Innovation by Amazon ; Most Impactful Use of the X API by X || built: amazonnova, dedalus, gemini, grokai, next.js, nova, python, suno, typescript, x
+Watt&#x27;s Up || Best Overall Hack [Courtesy of Amplitude, Anthropic, OpenAI] || built: dedalus-labs-sdk, google-gemini, google-maps, hugging-face, nasa-power-api, numpy, opencv, python, pytorch, react
+WhyKnot || Best .Tech Domain Name by MLH || built: dadelus, fastapi, mongodb, nextjs, openai, python
+Wings || Exploring Hybrid Intelligence by Photon || built: dedalus, imessagekit, javascript, knot, nessie, node.js, openai, python, react, snowflake
+XChange - Where Market Chatter Becomes Market Insight || Most Impactful Use of the X API by X || built: github, javascript, react, sql, tailwind, typescript, vite, x, xai, xapi
+doeve || Exploring Hybrid Intelligence by Photon || built: anthropic-api, claude-3.5-sonnet, elevenlabs, fastapi, httpx, imessage-sdk, langchain, langgraph, node.js, opencv
+edgecart. || Best Financial Hack by Capital One ; YC x HackPrinceton Challenge by Y Combinator ; Build on the Knot TransactionLink API by Knot API || built: flask, gemini, knot, python, pytorch, react, resnet18, typescript, websocket, xai
+terrar.ai || Best Use of Grok for Real-Time Data/Signal Analysis by xAI || built: c#, grok
+</pre></details></section><section id="prizes-s26"><div class="src">board/notes/hackprinceton-spring-26-prizes.txt</div><details><summary>Show Spring &#x27;26 winners (raw)</summary><h1>hackprinceton-spring-26-prizes</h1><pre>ACTA AI || AI &amp; Tech for Clinical Trials by Regeneron [Cash Prizes] || built: fastapi, langgraph, nextjs, react
+Aletheia || What would you build on top of a user’s purchase data? by KnotAPI [3 Prizes] || built: claude, cursor, enter.pro, gemini, javascript, knotapi, supabase, typescript
+Asclepius || Best Overall Hack ; AI Research and Alignment Environments by d_model [$500 for 1st, $250 for 2nd, $125 for 3rd (Amazon gift cards)] ; AI &amp; Tech for Clinical Trials by Regeneron [Cash Prizes] || built: agentic-ai, claude, d3.js, differential-privacy, fastapi, gemma, machine-learning, neural-networks, postgresql, pydantic
+Atlas || Best AI-Powered App by Orchids (1st place: $300 cash, 2nd place: $200 cash) ; AI &amp; Tech for Clinical Trials by Regeneron [Cash Prizes] || built: express.js, framer, google-gemini-api, next.js, node.js, react, spark.js, tailwindcss, three.js, typescript
+Aura || What would you build on top of a user’s purchase data? by KnotAPI [3 Prizes] ; Best Use of Enter Pro by Enter Pro [Enter.pro 1-Year Unilimited membership (worth 1000usd+)] || built: anime.js, gemini, python, react
+BRIDGE || Best Hardware + AI Hack by Justin Bojarski [$500 Gift Card] || built: azure, clip, gemini, html, isaacsim, json, k2v2, kinect, pybullet, python
+BioStrata || AI &amp; Tech for Clinical Trials by Regeneron [Cash Prizes] || built: gemini, javascript, node.js, postgresql, r, react, supabase, tailwind-css
+Citadail || Best AI-Powered App by Orchids (1st place: $300 cash, 2nd place: $200 cash) || built: agent, api, dedalus, docx, exceljs, framer, gemini, github, imessage, live
+Confab || AI Research and Alignment Environments by d_model [$500 for 1st, $250 for 2nd, $125 for 3rd (Amazon gift cards)] || built: colab, gemma-4-e2b, google, google-gemini-api, huggingface-transformers, numpy, pandas, plotly, python, pytorch
+Ember || Best Hardware Hack || built: arduino, jetson-nano, motor, python, realsense, servo
+Flanner || What would you build on top of a user’s purchase data? by KnotAPI [3 Prizes] || built: diffusion, gemini, gemma, k2, knotapi, photon, python, rainbow
+GreenChain || Best Use of K2 Think V2 by Institute of Foundation Models at MBZUAI [reMarkable tablet for every member of the winning team] ; Best use of Dedalus Containers by Dedalus [$250 for the top 4] ; Best agent swarm hosted on Dedalus Containers by Dedalus [$500 for 1st place] || built: beautiful-soup, d3.js, dedalus-labs, fastapi, gemini, gemma, godaddy, hugeicons, next.js, numpy
+HealthBridge || Best Use of Enter Pro by Enter Pro [Enter.pro 1-Year Unilimited membership (worth 1000usd+)] || built: bailey, docker, fastify, gemma, k2thinkv2, node.js, openfda, phi, rxnorm, typescript
+Hop-It || Best Rookie Hack ; Best Hardware + AI Hack by Justin Bojarski [$500 Gift Card] || built: gemini-vision, html5, k2-think-v2, react, render, vercel
+InSilico || AI &amp; Tech for Clinical Trials by Regeneron [Cash Prizes] || built: chromadb, fastapi, gemini, html5, next.js, numpy, pandas, python, radixui, rag
+LEGR || Best Business and Enterprise Hack ; Best Use of Enter Pro by Enter Pro [Enter.pro 1-Year Unilimited membership (worth 1000usd+)] || built: claude, css3, dedalus, html5, javascript, knot, openai, photon, postgresql, python
+Larp N Learn || Best Game || built: chromadb, fastapi, langgraph, next.js, react, react-flow, wispr
+Lazarus || AI &amp; Tech for Clinical Trials by Regeneron [Cash Prizes] || built: fastapi, gemini, javascript, k2-think, neo4j, neon, node.js, openai, openclaw, photon
+Live Laugh Plant || [MLH] Best Domain Name from GoDaddy Registry || built: canvas-api, drei, google-gemini, gsap, javascript, leaflet.js, next.js, node.js, openweathermap, photon
+Object State Tracking in Language Models || AI Research and Alignment Environments by d_model [$500 for 1st, $250 for 2nd, $125 for 3rd (Amazon gift cards)] || built: huggingface, matplotlib, python, pytorch, scikit-learn
+Onkos || AI &amp; Tech for Clinical Trials by Regeneron [Cash Prizes] || built: chromadb, clinicaltrials.gov, fastapi, gh200-gpu, git, google-maps, heygen-liveavatar, javascript, k2-think-v2, kimi-k2
+OpenCraft || Best use of Dedalus Containers by Dedalus [$250 for the top 4] || built: ai-agent-design, api-integration, backend-development, event-driven-architecture, express.js, frontend-development, node.js, prompt-engineering, react, real-time-systems
+Patient Zero || Beautifully Engineered Nonsense by Sonar || built: elevenlabs, gemini, k2, next.js, react-three-fiber, sonarqube, supabase, synthea, vercel
+ProtoSense || AI &amp; Tech for Clinical Trials by Regeneron [Cash Prizes] || built: fastapi, gemini, pymupdf, python, python-multipart-pymupdf-(pdf-parsing)-google-gemini-api-(google-generativeai)-for-optional-extraction-support-sqlite-(for-lightweight-persistence)-next.js, react, typescript-tailwind-css, uvicorn-pydantic
+REVIVE || Best Hardware + AI Hack by Justin Bojarski [$500 Gift Card] || built: c++, html, kotlin, python, shell, swift
+ReWire || Best Hardware + AI Hack by Justin Bojarski [$500 Gift Card] || built: claude, css, fastapi, framer, json, k2-think-v2, pydantic, pynput, pyserial, python
+Rom-Com || AI &amp; Tech for Clinical Trials by Regeneron [Cash Prizes] || built: apscheduler, arduino, c++, css, docker, elevenlabs, fastapi, gemini, grove, liveavatar
+Saynario || [MLH] Best Use of ElevenLabs || built: anthropic, digitalocean, docker, elevenlabs, fastapi, javascript, python, vite, websockets, whisper
+ShakeUR || [MLH] Best Use of DigitalOcean ; Beautifully Engineered Nonsense by Sonar || built: mediapipe, opencv, python, typescript
+ShapeUp || [MLH] Best Use of Gemini API || built: firebase, nextjs, pyrotch, python, three.js, typescript, vercel
+Shomi: Shop without leaving iMessage || What would you build on top of a user’s purchase data? by KnotAPI [3 Prizes] || built: knot, langchain, photon, sqlite, typescript
+Someone Save Us || Best Entertainment and Media Hack || built: digitalocean, gemma4, godaddy, k2-think-v2, knotapi, photon, python, three.js, typescript
+Spark || Best Education Hack || built: claude, css, elo, firebase, javascript, pwa, react
+Synova || AI &amp; Tech for Clinical Trials by Regeneron [Cash Prizes] || built: css, fastapi, github, html, javascript, json, python, react, whisper
+TaleTailor || Best Use of Enter Pro by Enter Pro [Enter.pro 1-Year Unilimited membership (worth 1000usd+)] || built: enter.pro, eslint, k2thinkv2, k2thinkv2api, react, tailwind
+Terra-Zone || Best Use of Enter Pro by Enter Pro [Enter.pro 1-Year Unilimited membership (worth 1000usd+)] || built: deno, framer-motion, google-gemini-2.0-flash-api, maplibre-gl, open-elevation, postgis, postgresql, radix-ui, react-19, react-three-fiber
+Trustworthy Science || AI &amp; Tech for Clinical Trials by Regeneron [Cash Prizes] || built: chroma, gemini, huggingface, k2, langchain, python, react, uv, vite
+Unilert || Best use of Dedalus Containers by Dedalus [$250 for the top 4] || built: dedalus, fastapi, javascript, next.js, python, rest, sqlite, typescript
+VITAL || Best Healthcare Hack || built: claude, css, elevenlabs, html, json, mediapipe, overshoot, photon, react, typescript
+Vietnam Trail || Best Use of Enter Pro by Enter Pro [Enter.pro 1-Year Unilimited membership (worth 1000usd+)] || built: css, elevenlabs, enter.pro, gemma4, html, react19, shadcn, supabase, tailwind, typescript
+WaterShield Alerts || Best Sustainability Hack ; Agents in iMessage by Photon [Cash Prize] || built: arduino, esp32, javascript, photon, python
+Wavelength || Agents in iMessage by Photon [Cash Prize] || built: anthropic, canvas, google-cloud, javascript, photon, python, react, slack, typescript
+WiseBuys || What would you build on top of a user’s purchase data? by KnotAPI [3 Prizes] || built: fastapi, gemini, knotapi, postgresql, react
+lumos.health || Best use of Dedalus Containers by Dedalus [$250 for the top 4] || built: 3js, dedalus, html, javascript, json, supabase, typescript
+reAgent || Best Use of Enter Pro by Enter Pro [Enter.pro 1-Year Unilimited membership (worth 1000usd+)] || built: python
+suppl.ai || Build What Actually Runs Monday by Eragon [Mac Mini] || built: dedalus, fastapi, gemini, motion, postgresql, pydantic, pytest, python, tailwind, tavily
+</pre></details></section></main></body></html>
