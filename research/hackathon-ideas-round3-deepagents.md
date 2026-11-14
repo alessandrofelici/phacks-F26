@@ -1,0 +1,59 @@
+# Round 3: ideas for a LangChain Deep Agents focus (2026-11-13, event day)
+Goal: pick an idea that shows off **LangChain Deep Agents** (`deepagents`, built on LangGraph). It ships with planning (a todo tool), a file system for context (in-memory, disk, store or sandbox backends), subagents that take heavy subtasks and return only results, persistent memory and human-in-the-loop approval ([docs](https://docs.langchain.com/oss/python/deepagents)).
+
+Note: the Fall '26 Devpost (`prizes/hackprinceton-fall-26-prizes.txt`) lists only MLH prizes so far. LangChain is a listed sponsor, but its prize wording isn't posted yet. Confirm it at the opening ceremony.
+
+## Best fit among the round-2 ideas
+1. **Repro Bot (§12)** is the clearest fit. Reproducing a paper is long-horizon agent work: plan, clone into a sandbox, read the README and configs as files, run, compare. Subagents for environment setup, running, and comparing against the paper's table. Weakness: lowest buildability (only if someone has done agent + Docker work).
+2. **Group Chat Game Master (§1)** is the runner-up and much easier. World state lives in the agent file system; one subagent per player keeps each player's secrets out of the other players' context, so context isolation enforces "who knows what".
+3. The rest are mostly a deterministic data pipeline or a single LLM call, with little for an agent to orchestrate.
+
+## Three new ideas
+Same format as round 1. Researched with web searches on 2026-11-13, but lighter than round 1. The "Check" lines need confirming before committing.
+
+| Idea | Track | Deep-agent fit | Gap | Notes |
+|---|---|---|---|---|
+| Odyssey | Healthcare | 5 | 3 | The agent design comes from a published, validated system (DeepRare) |
+| Council Thread | Entertainment (media literacy, fit ~3) | 5 | 3-4 | Fills the empty Entertainment slot; the hook is verified claims |
+| IEP Case File | Education | 4 | 2-3 | Strongest need, most prior art |
+
+---
+
+## A. Odyssey (Healthcare)
+1. **Name:** Odyssey
+2. **Target audience:** families of people with an undiagnosed rare disease. Average time to diagnosis is **4.7 years**, and **10.4 years for adolescents** (Rare Barometer survey, *Eur J Hum Genet* 2024, [PubMed 38755315](https://pubmed.ncbi.nlm.nih.gov/38755315/)). About 300M people worldwide live with a rare disease. *Check:* a US figure. The often-quoted ~25-30M didn't come up in my searches.
+3. **Solution:** The family uploads years of visit notes, labs and genetic reports. The agent builds a symptom timeline, maps it to standard phenotype terms (HPO), and ranks candidate diagnoses with evidence for and against each. The output is a referral packet for a geneticist: missing tests, which specialist, and questions to ask. It never gives a diagnosis.
+4. **Relevance:** **DeepRare** ([arXiv 2506.20430](https://arxiv.org/abs/2506.20430v1), v3 Feb 2026) is a multi-agent system with specialist parts. It averaged 57.18% Recall@1 across 8 datasets and beat Exomiser 70.6% vs 53.2% on 109 whole-exome cases; 95.4% of its reasoning chains agreed with clinical experts across 180 cases. Press coverage says it was published in *Nature* and beat physicians 64.4% vs 54.6% on first guess ([TNW](https://thenextweb.com/news/how-an-ai-system-beat-experienced-doctors-at-diagnosing-rare-diseases)). *Check:* the Nature version before citing those numbers.
+5. **Pitch:** "Five years and twelve doctors. Odyssey reads all of it, so the thirteenth visit is the last."
+6. **Tech stack:** `deepagents` with one subagent per record batch (protects the context window), a phenotype subagent (HPO), a literature/OMIM subagent, and a reviewer subagent that checks every claim against the source record. The patient file lives in the agent file system; human approval before the packet is exported. Claude or Gemini for vision on scanned records (Gemini qualifies for the MLH prize). Synthetic records for the demo.
+7. **Motivating paper(s) and reliability:** DeepRare: preprint with three versions, expert review of reasoning chains, and reported Nature publication plus a deployed platform (600+ institutions, per press). **Implementation reliability: medium-high.** The architecture is published and validated. The medical-claim risk is real, so pitch it as preparation for the specialist visit, not diagnosis.
+- Demo: drop in a synthetic 6-year record folder, watch the todo list and subagents work, and get a one-page referral packet with 3 ranked hypotheses, each citing the record pages behind it.
+- Risks: medical advice (frame it as visit prep with sources); privacy (synthetic data only in the demo; local storage).
+- Prior art: [DxGPT](https://globalrarediseasecommission.com/wp-content/uploads/2024/10/Case-study-DxGPT.pdf) (Foundation29, clinicians and families), [Probably Genetic](https://www.probablygenetic.com/blog-posts/the-end-of-the-diagnostic-odyssey-starts-with-data), [Abbey AI](https://solve.mit.edu/solutions/92168) (MIT Solve). A [JMIR 2026](https://www.jmir.org/2026/1/e109380) review warns experts may defer to AI even when it's wrong, which argues for the reviewer subagent. The hook is the full-record timeline plus the referral packet, not the guess.
+
+## B. Council Thread (Entertainment: "media literacy platforms", fit ~3)
+1. **Name:** Council Thread
+2. **Target audience:** ~**50M Americans** with limited or no local news. **213 counties** have no local news source and **1,524** have only one ([Medill State of Local News, Oct 2025](https://localnewsinitiative.northwestern.edu/projects/state-of-local-news/2025/)).
+3. **Solution:** Pick a town and an issue (a rezoning, a contract, a budget line). The agent reads every agenda packet, transcript and set of minutes where it comes up across months, follows the item from first mention to vote to budget line, and writes a plain-language brief in which every claim links to the page or video timestamp it came from.
+4. **Relevance:** The closest product, Civic Sunlight (~20 towns in Maine and New England), estimates its own accuracy at 90-95% and says that isn't good enough; the *Concord Monitor* flagged one of its errors ([CJR, May 2025](https://www.cjr.org/analysis/ai-local-news-civic-sunlight-maine.php)). A verification step is the open problem.
+5. **Pitch:** "Your town decided $4M of your money in 11 meetings nobody covered. Here's the thread."
+6. **Tech stack:** `deepagents` with one subagent per meeting (packets run to hundreds of pages), a case file in the agent file system that persists across months (LangGraph store), and a **verification subagent** that rejects any claim without a page or timestamp citation. Whisper for video without transcripts; pdf parsing for packets; MongoDB Atlas or Postgres for the citation index (MLH prize stack).
+7. **Motivating paper(s) and reliability:** NLP for local governance meeting records, a survey (arXiv 2602.08162, Feb 2026); **Gavel** ([arXiv 2601.04424](https://arxiv.org/abs/2601.04424), Jan 2026), where an agent uses six document tools to pull checklist items from long legal files, which is the design pattern here; Nie et al., *J. Planning Education and Research* (Nov 2025), used ChatGPT on 4,000+ US planning-meeting transcripts ([record](https://researchconnect.buffalo.edu/en/publications/evaluating-citizen-participation-in-local-public-meetings-explori/)); MeetingBank ([arXiv 2305.17529](https://arxiv.org/pdf/2305.17529), 2023, 1,366 council meetings from 6 cities) as an eval set. **Implementation reliability: medium.** The pattern is supported, but no paper tests agents on council records specifically.
+- Demo: pick a real Princeton or Trenton issue, run the agent live, open the brief, and click any sentence to jump to the exact video timestamp.
+- Risks: wrong facts about real people. Every claim must cite, and uncited claims are dropped, not hedged.
+- Prior art: [Hamlet](https://govlaunch.com/projects/saratoga-ca-uses-ai-to-summarize-council-meetings-and-open-government-records-to-residents) (Saratoga and Palo Alto), Civic Sunlight, citymeetings.nyc. They summarize one meeting at a time; the hook is following an issue across meetings with every claim verified.
+
+## C. IEP Case File (Education)
+1. **Name:** IEP Case File
+2. **Target audience:** families of the **8.2M students** served under IDEA in 2024, up 3.8% (Advocacy Institute analysis via [Disability Scoop](https://www.disabilityscoop.com/2026/03/06/special-ed-enrollment-tops-8-million-nationwide/31889/); the [2025 report to Congress](https://sites.ed.gov/idea/2025-annual-report-to-congress-on-the-individuals-with-disabilities-education-act-idea/) says over 8M). Disputes are rising: **9,927** written state complaints in 2023-24, 79% above the 10-year average ([K-12 Dive](https://www.k12dive.com/news/special-education-state-complaints-jump-nearly-50/827463/)), and **23,656** due-process complaints in 2024-25 ([K-12 Dive](https://www.k12dive.com/news/special-education-disputes-continue-to-rise/872923/), CADRE data). *Check:* the CADRE figures directly.
+3. **Solution:** The parent uploads the whole multi-year file: evaluations, every IEP, progress reports and emails. The agent audits the file against IDEA rules (evaluation deadlines, evaluator recommendations that never became services, goals copied year to year with no progress), builds a timeline, and drafts letters (independent evaluation request, prior written notice request). The parent approves each letter before it is sent.
+4. **Relevance:** An AERA 2026 paper found that the IEPs of Black students used more jargon and distancing language than those of White students (36 IEPs, LLM analysis; [summary](https://convention2.allacademic.com/one/aera/aera26/online_program_direct_link/view_paper/2287303/)). Winterman & Rosas ([JAASEP 2025](https://www.naset.com/publications/jaasep-research-based-journal-in-special-education/jaasep-winter-2025/the-best-kept-secret-readability-and-accessibility-of-ieps)) found parent-facing IEP materials hard for most parents to read. A CDT survey found 64% of IEP/504 parents consider AI help a good idea ([EdWeek](https://www.edweek.org/teaching-learning/teachers-are-using-ai-to-help-write-ieps-advocates-have-concerns/2025/10)).
+5. **Pitch:** "The school brings a team of experts to the IEP meeting. Now the parent does too."
+6. **Tech stack:** `deepagents` with a plan over the file, one subagent per document type, a deterministic IDEA rules module (deadlines, required components) as a tool, the case file in the agent file system, and human approval before any letter is exported. PDF-lib for letters.
+7. **Motivating paper(s) and reliability:** The AERA 2026 paper and JAASEP 2025 article support the need, not the agent design; CDT supports parent demand. **Implementation reliability: medium.** The rules come from IDEA itself and are deterministic, but no paper tests an agent on full case files.
+- Demo: a synthetic 4-year file goes in, and out comes "3 issues: speech therapy recommended in the 2024 evaluation never appears in the IEP; reading goal unchanged for 3 years; re-evaluation is 2 months overdue", plus a drafted letter.
+- Risks: legal advice (information and letter prep only, with links to the state's parent training center); sensitive child data (local storage, synthetic demo data).
+- Prior art: **crowded.** [Undivided IEP Assistant](https://www.undivided.io/iep-assistant/) ($19/month), [AIEP](https://innovateschools.org/aiep/) (free, open source, Northeastern Burnes Center), [AdvocateIQ](https://lifestyle.capitalcityrock.com/story/130593/advocateiq-launches-new-platform-to-help-texas-parents-navigate-special-education/) (launched March 2026). The hook has to be auditing the whole multi-year file, not summarizing one IEP.
+
+## Recommendation
+For a Deep Agents focus: **Odyssey**, then **Council Thread**, then **IEP Case File**. **Repro Bot** stays competitive with Odyssey if the team can build it.
