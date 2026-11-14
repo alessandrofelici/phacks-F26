@@ -1,0 +1,13 @@
+{
+  "contract_version": 1,
+  "task_id": "toy-linreg",
+  "title": "Toy linear regression",
+  "source": "fixture",
+  "paper_url": null,
+  "instructions": "Run run.py with seed 0.",
+  "questions": [
+    {"id": "q1", "text": "Report the test R^2 printed by run.py.", "type": "number"},
+    {"id": "q2", "text": "Report the name of the selected model.", "type": "string"}
+  ],
+  "limits": {"max_minutes": 15, "gpu": false, "network": true}
+}

@@ -1,0 +1,7 @@
+{
+  "id": "a1",
+  "kind": "long_run",
+  "summary": "Run python run.py --seed 0 (est. 1 min)",
+  "command": "python run.py --seed 0",
+  "diff": null
+}

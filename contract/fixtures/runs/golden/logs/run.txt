@@ -1,0 +1,5 @@
+val r2 [ols]: 0.4950
+val r2 [ridge-weak]: 0.5784
+val r2 [ridge-strong]: 0.2985
+best model: ridge-weak
+test r2: 0.4555
