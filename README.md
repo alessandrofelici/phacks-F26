@@ -9,6 +9,7 @@ HackPrinceton research.
 - [research/hackathon-ideas-round2.md](research/hackathon-ideas-round2.md): 12 new event-day ideas (brainstorm, not researched), covering Entertainment, Science & Discovery and Sustainability
 - [research/hackathon-ideas-round3-deepagents.md](research/hackathon-ideas-round3-deepagents.md): best Deep Agents fit among round 2, plus 3 new researched ideas (Odyssey, Council Thread, IEP Case File)
 - [research/langchain-deepagents-eval.md](research/langchain-deepagents-eval.md): LangChain deepagents track only: Repro Bot vs Second Key vs Cash Drawer, scored on the track questions + rubric; pick is Repro Bot on CORE-Bench tasks
+- [research/repro-bot-build-plan.md](research/repro-bot-build-plan.md): build plan for Repro Bot (plan only, nothing built): two roles (Agent, Harness), a frozen file-based contract between them, continuous loops, MVP human-testable at T+14 h
 - [research/hackprinceton-plan.md](research/hackprinceton-plan.md): build plan for a team of 3
 - [research/specs/](research/specs/): specs for Second Key, Neighbor Call, ShiftProof and backups
 - [research/prizes/](research/prizes/): prize lists from Fall 2025, Spring 2026 and Fall 2026 (tracks and MLH prizes; the sponsor tracks are in the special-tracks file above)
