@@ -1,5 +1,6 @@
 HackPrinceton Fall '26 Devpost (https://hackprinceton-fall-26.devpost.com/), fetched 2026-11-13 (event day).
 Submissions "open soon". 8 non-cash prizes listed, all MLH. Photon / Capital One / Amazon / other sponsor prizes are NOT on the page yet.
+Update 2026-11-13: the sponsor tracks and prizes are now in hackprinceton-fall-26-special-tracks.md, and the full judging criteria wording is in ../judging-criteria.md.
 
 TRACKS (official wording, abridged)
 - Healthcare: healthcare delivery, wellness, public health. e.g. telehealth, AI diagnostics, mental health, fitness tracking.
