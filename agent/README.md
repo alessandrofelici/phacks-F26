@@ -31,6 +31,7 @@ python -m agent.check --call      # also sends one tiny request to the model
 | `LANGSMITH_AGENT_ID` + `LANGSMITH_AGENT_ENVIRONMENT` | In an agent-based LangSmith workspace | Which LangSmith agent receives the traces. Leave `LANGSMITH_PROJECT` unset then; `.env.example` explains both workspace kinds |
 
 Nothing else needs a key: the sandbox is local Podman, and the docs MCP servers are public.
+A linked git worktree has no `.env` or `agent/.venv` of its own; it uses the main checkout's.
 Keys stay in the agent's own process. Commands in the sandbox never see them.
 
 ## Run

@@ -13,7 +13,7 @@ import os
 import shutil
 import sys
 
-from agent.run import REPO_ROOT, ensure_dependencies, load_dotenv
+from agent.run import ensure_dependencies, env_file, load_dotenv
 
 
 def _mask(value: str) -> str:
@@ -26,8 +26,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--call", action="store_true", help="send one small request to the model")
     args = parser.parse_args(argv)
 
-    env_file = REPO_ROOT / ".env"
-    load_dotenv(env_file)
+    env = env_file()
+    load_dotenv(env)
     ensure_dependencies(argv, module="agent.check")
 
     from agent import models
@@ -40,7 +40,7 @@ def main(argv: list[str] | None = None) -> int:
     )
 
     ok = True
-    print(f".env file:      {'found' if env_file.is_file() else 'not found'} ({env_file})")
+    print(f".env file:      {'found' if env.is_file() else 'not found'} ({env})")
     name = models.chosen_model()
     print(f"model:          {name}" + ("" if os.environ.get("REPRO_MODEL") else "  (default for the key that is set)"))
     sub = models.chosen_subagent_model()
@@ -50,7 +50,7 @@ def main(argv: list[str] | None = None) -> int:
             continue
         var = models.missing_key(model_name)
         if var:
-            print(f"key:            MISSING for {label}: put {var} in {env_file}")
+            print(f"key:            MISSING for {label}: put {var} in {env}")
             ok = False
         else:
             provider = model_name.split(":", 1)[0]

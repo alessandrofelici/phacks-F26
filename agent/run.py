@@ -20,6 +20,33 @@ AGENT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = AGENT_DIR.parent
 
 
+def main_checkout(root: Path | None = None) -> Path | None:
+    """The main checkout when ``root`` is a linked git worktree, else None.
+
+    A worktree has no copy of the gitignored ``.env`` or ``agent/.venv``; both are borrowed
+    from the main checkout so an agent working in a worktree can run without setup.
+    """
+    git = (root or REPO_ROOT) / ".git"
+    if not git.is_file():  # a directory (main checkout) or missing (not a git checkout)
+        return None
+    text = git.read_text(encoding="utf-8").strip()
+    if not text.startswith("gitdir:"):
+        return None
+    gitdir = ((root or REPO_ROOT) / text.removeprefix("gitdir:").strip()).resolve()  # <main>/.git/worktrees/<name>
+    commondir = gitdir / "commondir"
+    common = (gitdir / commondir.read_text(encoding="utf-8").strip()).resolve() if commondir.is_file() else gitdir.parent.parent
+    return common.parent
+
+
+def env_file() -> Path:
+    """The repo's ``.env``; in a worktree without one, the main checkout's."""
+    own = REPO_ROOT / ".env"
+    main = main_checkout()
+    if not own.is_file() and main is not None and (main / ".env").is_file():
+        return main / ".env"
+    return own
+
+
 def load_dotenv(path: Path) -> None:
     """Read KEY=VALUE lines from the repo's .env without overriding the environment."""
     if not path.is_file():
@@ -40,6 +67,9 @@ def ensure_dependencies(argv: list[str], module: str = "agent.run") -> None:
     if importlib.util.find_spec("deepagents") is not None:
         return
     venv_python = AGENT_DIR / ".venv" / "bin" / "python"
+    main = main_checkout()
+    if not venv_python.exists() and main is not None:  # a worktree: use the main checkout's venv
+        venv_python = main / "agent" / ".venv" / "bin" / "python"
     if venv_python.exists() and not os.environ.get("REPRO_REEXEC"):
         os.environ["REPRO_REEXEC"] = "1"
         os.execv(str(venv_python), [str(venv_python), "-m", module, *argv])
@@ -59,7 +89,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--auto-approve", action="store_true", help="approve every gated action (batch runs)")
     args = parser.parse_args(argv)
 
-    load_dotenv(REPO_ROOT / ".env")
+    load_dotenv(env_file())
     ensure_dependencies(argv)
 
     from agent.rundir import RunDirError
