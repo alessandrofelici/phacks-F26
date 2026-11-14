@@ -37,6 +37,7 @@ output, but no LLM is involved, so it only proves the plumbing.
 | `REPRO_MODEL` | `anthropic:claude-opus-5-5` | Any LangChain `provider:model` string, or `scripted` |
 | `REPRO_WORK_ROOT` | system temp dir | Where the private copy of the task's repo is made |
 | `REPRO_KEEP_WORK` | unset | Set to keep that copy after the run, for debugging |
+| `REPRO_MEMORY_DIR` | `agent/.memory` | Where fixes remembered across runs are kept (gitignored) |
 | `REPRO_SHORT_TIMEOUT` | `90` | Seconds a command may run without an approval |
 | `REPRO_APPROVAL_TIMEOUT` | `600` | Seconds to wait for a decision (contract: 10 minutes) |
 | `REPRO_DEBUG` | unset | Print the agent's raw stream updates to stderr |
@@ -58,7 +59,8 @@ agent/.venv/bin/python -m unittest discover -s agent/tests -t .  # plus end-to-e
 ## Files
 
 - `run.py`: the command. `runner.py`: one run from start to report.
-- `deep.py`: prompt, tools, approvals, stream-to-events mapping.
+- `deep.py`: prompts, tools, subagents, approvals, stream-to-events mapping.
 - `sandbox.py`: where commands run. `rundir.py`: events, logs, approvals, report.
 - `task.py`: task loading, answers, obstacles. `scripted.py`: the offline stand-in model.
+- `skills/`: how-to notes the agent loads when a setup matches (old pins, conda, R, notebooks).
 - `NOTES.md`: decisions and failures. `BACKLOG.md`: what's next.

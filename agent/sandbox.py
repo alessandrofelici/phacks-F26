@@ -8,6 +8,7 @@ runs need a real sandbox (see BACKLOG.md).
 
 from __future__ import annotations
 
+import math
 import os
 import shutil
 import tempfile
@@ -82,17 +83,24 @@ class LoggingShellBackend(LocalShellBackend):
         self._writer = writer
         self._deadline = deadline  # time.monotonic() value for the whole run
         self.commands: list[CommandRecord] = []
+        self.out_of_time = False  # set when a command was refused because the run's time is used up
 
     def execute(self, command: str, *, timeout: int | None = None) -> ExecuteResponse:
         effective = timeout if timeout is not None else SHORT_TIMEOUT_S
         if self._deadline is not None:
             # Never let one command outlive the run's time budget.
-            remaining = int(self._deadline - time.monotonic())
+            remaining = self._deadline - time.monotonic()
             if remaining <= 0:
+                self.out_of_time = True
                 return ExecuteResponse(output="Error: the run's time limit is used up; nothing was run.", exit_code=124)
-            effective = min(effective, remaining)
+            effective = max(1, min(effective, math.ceil(remaining)))
         response = super().execute(command, timeout=effective)
-        log = self._writer.save_log(command, f"$ {command}\n{response.output}\n")
+        text = f"$ {command}\n{response.output}\n"
+        log = self._writer.save_log(command, text)
+        # Same file inside the workspace, so the agent can grep it as /logs/...
+        mirror = Path(self.cwd) / log
+        mirror.parent.mkdir(exist_ok=True)
+        mirror.write_text(text, encoding="utf-8")
         self.commands.append(CommandRecord(command, response.exit_code, log, response.output))
         return response
 

@@ -12,7 +12,7 @@ from typing import Any
 
 from langgraph.types import Command
 
-from agent.deep import EventMapper, approval_request, build_agent
+from agent.deep import MEMORY_FILE, MEMORY_HEADER, SKILLS_DIR, EventMapper, approval_request, build_agent
 from agent.rundir import APPROVAL_TIMEOUT_S, RunWriter
 from agent.sandbox import LoggingShellBackend, make_workdir
 from agent.task import Findings, Task
@@ -54,6 +54,16 @@ def resolve_model(task: Task) -> tuple[Any, str]:
     return init_chat_model(name, max_tokens=16000), name
 
 
+def _memory_dir() -> Path:
+    """Where fixes remembered across runs live; created with an empty list on first use."""
+    path = Path(os.environ.get("REPRO_MEMORY_DIR") or Path(__file__).resolve().parent / ".memory")
+    path.mkdir(parents=True, exist_ok=True)
+    fixes = path / "fixes.md"
+    if not fixes.exists():
+        fixes.write_text(MEMORY_HEADER, encoding="utf-8")
+    return path
+
+
 def run_task(task_dir: Path | str, run_dir: Path | str, *, auto_approve: bool = False) -> int:
     """Run the task and write the run directory. Returns the process exit code."""
     task = Task.load(task_dir)
@@ -72,12 +82,22 @@ def run_task(task_dir: Path | str, run_dir: Path | str, *, auto_approve: bool = 
     backend = LoggingShellBackend(work, writer, deadline=deadline)
     mapper = EventMapper(writer, backend)
     writer.event("run_started", {"task_id": task.task_id, "run_id": run_id, "model": model_label})
+    memory_dir = _memory_dir()
+    remembered = sum(1 for line in (memory_dir / "fixes.md").read_text(encoding="utf-8").splitlines() if line.startswith("- "))
+    if remembered:
+        note = f"{remembered} fix{'es' if remembered != 1 else ''} from earlier runs loaded into the agent's instructions"
+        writer.event("memory_read", {"path": MEMORY_FILE, "note": note})
 
     rejected: list[str] = []
     why_missing = "the agent finished without answering it"
     try:
-        agent = build_agent(model, backend, findings)
-        _drive(agent, task, run_id, writer, mapper, deadline, rejected)
+        # The agent gets a throwaway copy of the skills, so it can't change the ones in this repository.
+        skills_dir = work.with_name(work.name + "-skills")
+        shutil.copytree(SKILLS_DIR, skills_dir)
+        agent = build_agent(model, backend, findings, memory_dir, skills_dir)
+        _drive(agent, task, run_id, writer, mapper, deadline, rejected, work)
+        if backend.out_of_time or time.monotonic() > deadline:
+            raise RunTimeout
         if findings.missing() and rejected:
             status = "rejected"
             why_missing = f"approval {', '.join(rejected)} was rejected and the run could not continue without it"
@@ -111,6 +131,7 @@ def run_task(task_dir: Path | str, run_dir: Path | str, *, auto_approve: bool = 
         print(f"workspace kept at {work}", file=sys.stderr)
     else:
         shutil.rmtree(work, ignore_errors=True)
+    shutil.rmtree(work.with_name(work.name + "-skills"), ignore_errors=True)
     print(f"{status}: report written to {run_dir}/report.json")
     return 0
 
@@ -123,25 +144,34 @@ def _drive(
     mapper: EventMapper,
     deadline: float,
     rejected: list[str],
+    work: Path,
 ) -> None:
     """Stream the agent, pausing at each approval until the run ends."""
     config = {"configurable": {"thread_id": run_id}, "recursion_limit": 400}
     payload: Any = {"messages": [{"role": "user", "content": task.prompt()}]}
     while True:
-        interrupts: list[Any] = []
+        interrupts: dict[str, Any] = {}  # by id: a subagent's interrupt can surface at more than one level
         for namespace, chunk in agent.stream(payload, config, stream_mode="updates", subgraphs=True):
             mapper.handle(namespace, chunk)
-            interrupts.extend(chunk.get("__interrupt__") or ())
+            for interrupt in chunk.get("__interrupt__") or ():
+                interrupts.setdefault(getattr(interrupt, "id", None) or str(id(interrupt)), interrupt)
             if time.monotonic() > deadline:
                 raise RunTimeout
         if not interrupts:
             return
-        decisions = []
-        for interrupt in interrupts:
+        resume: dict[str, Any] = {}
+        for interrupt_id, interrupt in interrupts.items():
+            decisions: list[dict[str, Any]] = []
+            resume[interrupt_id] = {"decisions": decisions}
             for action in interrupt.value.get("action_requests", []):
-                request = approval_request(action)
+                request = approval_request(action, work)
                 decision = writer.request_approval(
-                    request["kind"], request["summary"], command=request["command"], deadline=deadline
+                    request["kind"],
+                    request["summary"],
+                    command=request["command"],
+                    diff=request["diff"],
+                    agent=mapper.current_agent(),
+                    deadline=deadline,
                 )
                 if decision["decision"] == "approve":
                     decisions.append({"type": "approve"})
@@ -149,7 +179,8 @@ def _drive(
                     rejected.append(decision["id"])
                     who = "Nobody answered the approval request in time" if decision["by"] == "timeout" else "A human rejected this"
                     note = f" Their note: {decision['note']}" if decision["note"] and decision["by"] != "timeout" else ""
-                    decisions.append({"type": "reject", "message": f"{who}, so the command was not run.{note}"})
+                    decisions.append({"type": "reject", "message": f"{who}, so it was not done.{note}"})
         if time.monotonic() > deadline:
             raise RunTimeout
-        payload = Command(resume={"decisions": decisions})
+        # One pending interrupt resumes with its value alone; several need the map by interrupt id.
+        payload = Command(resume=next(iter(resume.values())) if len(resume) == 1 else resume)

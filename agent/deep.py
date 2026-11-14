@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import difflib
 import os
 import sys
+from pathlib import Path
 from typing import Any
 
 from deepagents import create_deep_agent
+from deepagents.backends import CompositeBackend, FilesystemBackend
 from langchain.agents.middleware import TodoListMiddleware
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.tools import tool
@@ -15,6 +18,10 @@ from langgraph.checkpoint.memory import InMemorySaver
 from agent.rundir import RunWriter
 from agent.sandbox import SHORT_TIMEOUT_S, LoggingShellBackend
 from agent.task import Findings
+
+SKILLS_DIR = Path(__file__).resolve().parent / "skills"
+MEMORY_FILE = "/memories/fixes.md"
+MEMORY_HEADER = "# Fixes that worked\n"
 
 SYSTEM_PROMPT = f"""You are Repro Bot. You check whether a paper's published code produces the numbers \
 the task asks about. You get a private copy of the paper's repository and a list of questions. \
@@ -27,7 +34,8 @@ code comments or memory. If the code can't be made to run, the honest result is 
 reason. A plausible number that the run didn't produce is the worst outcome.
 - Don't change files that came with the repository, code or data, to make it run or to make numbers \
 match. Fix the environment in new files (for example a separate requirements file) and leave the \
-originals as they are. If nothing works without changing a source file, record that as an obstacle.
+originals as they are. Writing inside `/repo` with the file tools asks a human for approval and shows \
+them the change, so only do it when nothing else works, and record it as an obstacle either way.
 
 Your workspace:
 - File tools see the workspace as `/`: the repository is `/repo`, and `/paper.md` exists when the \
@@ -44,7 +52,25 @@ a longer `timeout` is allowed for slow installs, and a human is asked to approve
 it before it runs, so give an honest time estimate and say what it will do.
 - If an approval is rejected, don't retry the same thing. Find another way, or finish with what you have.
 
+How to split the work (each helper starts with only the message you give it, so include the \
+file paths, commands and question texts it needs):
+- `paper-reader` first: it finds which command produces each asked value and what the repository \
+needs to run. It reads and never runs anything.
+- `env-builder`: it gets the environment installed and tells you how to start the code.
+- `runner`: it runs the experiment through `run_experiment` and reports where the output is.
+- `result-judge`: it finds each answer in the output and records it with its evidence.
+For a small repository you may do a step yourself when delegating would only add a round trip.
+
+What carries over between papers:
+- `/memories/fixes.md` lists fixes that worked on earlier papers; its content is included below when \
+there is any. When a problem is solved in a way that would help with another repository, add one \
+line: the symptom, then the fix. Keep it general (package and version, not this paper's file names).
+- `/skills` holds short how-to notes for setups that come up often (old Python pins, conda, R, \
+notebooks). Read the matching one before improvising.
+
 Recording results:
+- Every command's output is saved under `/logs`, one file per command, so you and the helpers can \
+search it.
 - When something fails, read the error, fix the cause, and call `record_obstacle` with what happened \
 and what fixed it. Obstacles are part of the report, including the ones you couldn't fix.
 - For each question call `record_answer` with the value and the exact line of output it came from. \
@@ -56,7 +82,9 @@ When every question has an answer or a recorded reason for not having one, reply
 sentence summary and stop."""
 
 
-def build_tools(backend: LoggingShellBackend, findings: Findings) -> list[Any]:
+def build_tools(backend: LoggingShellBackend, findings: Findings, agent: str = "main") -> dict[str, Any]:
+    """The custom tools, bound to the agent that will call them (so events name the right one)."""
+
     @tool
     def run_experiment(command: str, est_minutes: float, why: str) -> str:
         """Run the command that produces the paper's results. A human approves it before it runs.
@@ -80,7 +108,7 @@ def build_tools(backend: LoggingShellBackend, findings: Findings) -> list[Any]:
             quote: The exact text from this run's command output that the answer came from.
             confidence: "high", "medium" or "low".
         """
-        return findings.record_answer(question_id, value, quote, confidence)
+        return findings.record_answer(question_id, value, quote, confidence, agent)
 
     @tool
     def record_obstacle(stage: str, summary: str, fix: str | None = None, resolved: bool = False) -> str:
@@ -94,7 +122,7 @@ def build_tools(backend: LoggingShellBackend, findings: Findings) -> list[Any]:
         """
         return findings.record_obstacle(stage, summary, fix, resolved)
 
-    return [run_experiment, record_answer, record_obstacle]
+    return {"run_experiment": run_experiment, "record_answer": record_answer, "record_obstacle": record_obstacle}
 
 
 def _needs_long_run_approval(request: Any) -> bool:
@@ -103,36 +131,165 @@ def _needs_long_run_approval(request: Any) -> bool:
     return isinstance(timeout, (int, float)) and timeout > SHORT_TIMEOUT_S
 
 
-def build_agent(model: Any, backend: LoggingShellBackend, findings: Findings) -> Any:
+_WORKSPACE_NOTE = (
+    "File tools see the workspace as `/` (the repository is `/repo`, saved command output is under `/logs`). "
+    "Shell commands start in that same directory but need relative paths (`repo/run.py`, not `/repo/run.py`)."
+)
+
+SUBAGENTS: list[dict[str, Any]] = [
+    {
+        "name": "paper-reader",
+        "description": "Reads the repository and paper text to find which command produces each asked value. Runs nothing.",
+        "tools": [],
+        "system_prompt": f"""You read a paper's repository to work out how to produce specific values. {_WORKSPACE_NOTE}
+
+Read the README, the entry-point scripts, the dependency files and `/paper.md` if it exists. Do not run anything.
+
+Report, for each question you were given: the exact command that produces the value, what the output \
+line or output file looks like, and anything that has to happen first (data to fetch, a config, a seed). \
+Then list what the environment needs: language and version hints, dependency files, and anything in \
+them that looks unlikely to install today.
+
+If the paper states the value, you may mention it as the published claim, labelled as such. It is \
+never the answer: the answer has to come from running the code.""",
+    },
+    {
+        "name": "env-builder",
+        "description": "Installs what the repository needs so its code can run, and reports how to start it.",
+        "tools": ["record_obstacle"],
+        "skills": ["/skills/"],
+        "system_prompt": f"""You set up the environment so a paper's code can run. {_WORKSPACE_NOTE}
+
+Before installing anything, read `/memories/fixes.md`: fixes that worked on earlier papers. If one \
+matches what the dependency files show, apply it straight away without rediscovering it. After you \
+fix something new that would help with another repository, add one line there (symptom, then fix).
+
+For Python, create a virtual environment in the workspace (`python3 -m venv .venv`) and install into it. \
+Otherwise try the documented install first. When it fails, read the error and fix the cause with the smallest \
+change that works. Never edit files that came with the repository: put relaxed pins in a new \
+requirements file and install from that.
+
+`execute` stops a command after {SHORT_TIMEOUT_S} seconds; a longer `timeout` is allowed for slow \
+installs and a human approves it first.
+
+Call `record_obstacle` (stage "env" or "data") for each problem you hit, including any you could not \
+fix. Finish by reporting the exact way to start the code (for example `.venv/bin/python`) and \
+every change you made.""",
+    },
+    {
+        "name": "runner",
+        "description": "Runs the experiment command (after human approval) and reports where its output is.",
+        "tools": ["run_experiment", "record_obstacle"],
+        "skills": ["/skills/"],
+        "system_prompt": f"""You run a paper's experiment. {_WORKSPACE_NOTE}
+
+Use `run_experiment` for the command that produces the results. A human approves it before it runs, \
+so give an honest time estimate. If the approval is rejected, do not retry: report that it was rejected.
+
+If the command fails, report the error text. Don't change the paper's code to get past it; a missing \
+package or path is the environment's problem, and the caller decides what to do. Record what went \
+wrong with `record_obstacle` (stage "run").
+
+Finish by reporting the exit status, roughly how long it took, and which file under `/logs` holds the output.""",
+    },
+    {
+        "name": "result-judge",
+        "description": "Finds each answer in the run's saved output and records it with the line that proves it.",
+        "tools": ["record_answer", "record_obstacle"],
+        "system_prompt": f"""You extract answers from the output of a paper's code. {_WORKSPACE_NOTE}
+
+Search `/logs` (every command's output is saved there) and any files the run wrote. For each question \
+call `record_answer` with the value and the exact line it came from. The quote is checked against the \
+saved output and refused if it isn't there. Keep the precision the output shows; don't round.
+
+If the paper text states a value, say in your report whether the output agrees with it. The recorded \
+answer is always what the run printed. If the output doesn't contain an answer, say so and call \
+`record_obstacle` (stage "extract"); never fill a gap from the paper.""",
+    },
+]
+
+
+def _writes_into_repo(request: Any) -> bool:
+    """File-tool writes under /repo need approval; new files elsewhere in the workspace don't."""
+    path = str((request.tool_call.get("args") or {}).get("file_path") or "")
+    return ("/" + path.lstrip("/")).startswith("/repo/")
+
+
+def build_agent(model: Any, shell: LoggingShellBackend, findings: Findings, memory_dir: Path, skills_dir: Path) -> Any:
+    """The deep agent. ``shell`` is the workspace; memory and skills are mounted next to it."""
     decisions = ["approve", "reject"]
+    backend = CompositeBackend(
+        default=shell,
+        routes={
+            "/memories/": FilesystemBackend(root_dir=memory_dir, virtual_mode=True),
+            "/skills/": FilesystemBackend(root_dir=skills_dir, virtual_mode=True),
+        },
+    )
+    subagents = []
+    for spec in SUBAGENTS:
+        tools = build_tools(shell, findings, agent=spec["name"])
+        subagents.append({**spec, "tools": [tools[name] for name in spec["tools"]]})
     return create_deep_agent(
         model=model,
-        tools=build_tools(backend, findings),
+        tools=list(build_tools(shell, findings).values()),
         system_prompt=SYSTEM_PROMPT,
         # Planning is opt-in in deepagents 0.7.38: without this there is no `write_todos` tool.
         middleware=[TodoListMiddleware()],
+        subagents=subagents,
+        skills=["/skills/"],
+        memory=[MEMORY_FILE],
         backend=backend,
+        # Subagents inherit these, so an approval inside `runner` pauses the whole run.
         interrupt_on={
             "run_experiment": {"allowed_decisions": decisions},
             "execute": {"allowed_decisions": decisions, "when": _needs_long_run_approval},
+            # Changing a file inside the paper's repository pauses for an `edit_source` approval.
+            # (`permissions=` would be the deepagents way, but 0.7.38 refuses permissions on a
+            # backend that can execute commands.)
+            "write_file": {"allowed_decisions": decisions, "when": _writes_into_repo},
+            "edit_file": {"allowed_decisions": decisions, "when": _writes_into_repo},
         },
         checkpointer=InMemorySaver(),  # interrupts need one; state lives only for this process
         name="repro-bot",
     )
 
 
-def approval_request(action: dict[str, Any]) -> dict[str, Any]:
+def approval_request(action: dict[str, Any], work: Path) -> dict[str, Any]:
     """Turn a paused tool call into the fields of a contract approval request."""
+    name = action.get("name")
     args = action.get("args") or {}
+    if name in ("write_file", "edit_file"):
+        path = str(args.get("file_path") or "")
+        summary = f"Change {path} (a file inside the paper's repository)"
+        return {"kind": "edit_source", "summary": summary, "command": None, "diff": _diff(name, args, work)}
     command = str(args.get("command") or "")
-    if action.get("name") == "run_experiment":
+    if name == "run_experiment":
         minutes = args.get("est_minutes")
         estimate = f" (est. {minutes:g} min)" if isinstance(minutes, (int, float)) else ""
         why = f": {args['why']}" if args.get("why") else ""
         summary = f"Run {command}{estimate}{why}"
     else:
         summary = f"Run {command} (allowed up to {args.get('timeout')} s)"
-    return {"kind": "long_run", "summary": summary, "command": command or None}
+    return {"kind": "long_run", "summary": summary, "command": command or None, "diff": None}
+
+
+def _diff(name: str, args: dict[str, Any], work: Path) -> str:
+    """A unified diff of what the file tool would change, for the human who approves it."""
+    path = str(args.get("file_path") or "")
+    target = work / path.lstrip("/")
+    try:
+        before = target.read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        before = ""
+    if name == "write_file":
+        after = str(args.get("content") or "")
+    else:
+        old, new = str(args.get("old_string") or ""), str(args.get("new_string") or "")
+        after = before.replace(old, new) if args.get("replace_all") else before.replace(old, new, 1)
+    lines = difflib.unified_diff(
+        before.splitlines(keepends=True), after.splitlines(keepends=True), fromfile=f"a{path}", tofile=f"b{path}"
+    )
+    return "".join(lines)[:20000] or "(no textual change)"
 
 
 def _text(content: Any) -> str:
@@ -160,6 +317,10 @@ class EventMapper:
         self.tokens = 0
         self._calls: dict[str, dict[str, Any]] = {}  # tool_call_id -> {name, args, agent}
         self._subagents: list[str] = []  # names of running subagents, newest last
+
+    def current_agent(self) -> str:
+        """Who is acting right now: the newest running subagent, else main."""
+        return self._subagents[-1] if self._subagents else "main"
 
     def _agent(self, namespace: tuple[str, ...]) -> str:
         # Updates from inside a subagent arrive under a non-empty namespace.
@@ -219,6 +380,19 @@ class EventMapper:
             self.writer.event("subagent_finished", {"name": sub, "summary": _one_line(text, 400)}, call["agent"])
             return
         ok = message.status != "error" and not text.lstrip().startswith("Error")
+        path = str(args.get("file_path") or "")
+        if ok and path.startswith("/memories/") and name in ("read_file", "write_file", "edit_file"):
+            if name == "read_file":
+                count = sum(1 for line in text.splitlines() if "- `" in line[:16] or line.lstrip().startswith("- "))
+                note = f"{count} remembered fix{'es' if count != 1 else ''} on file" if count else "Nothing remembered yet"
+                self.writer.event("memory_read", {"path": path, "note": note}, call["agent"])
+            else:
+                added = str(args.get("content") or args.get("new_string") or "")
+                lines = [ln.strip().lstrip("-# ").strip() for ln in added.splitlines()]
+                lines = [ln for ln in lines if ln and ln != MEMORY_HEADER.strip("# \n")]
+                note = _one_line(lines[-1] if lines else "updated", 300)
+                self.writer.event("memory_written", {"path": path, "note": note}, call["agent"])
+            return
         data: dict[str, Any] = {"tool": name}
         if name in ("execute", "run_experiment"):
             command = str(args.get("command", ""))

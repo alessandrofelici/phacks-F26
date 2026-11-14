@@ -5,11 +5,12 @@ Top item first. Done items stay, checked, so a restart can see where the loop is
 - [x] Slice 1: single deep agent, local shell, toy task passes the validator
 - [x] Approvals: wait and resume, reject, timeout, `--auto-approve`
 - [x] `todo_updated` and `tool_call` events
-- [ ] Subagents: paper-reader, env-builder, runner, result-judge, with events attributed to them
+- [x] Subagents: paper-reader, env-builder, runner, result-judge, with events attributed to them
 - [ ] Isolated sandbox with Podman (answer keys and the rest of the disk out of reach)
-- [ ] Memory of fixes across runs (`/memories/fixes.md`, `memory_read` / `memory_written` events)
-- [ ] Source files protected: edits need an `edit_source` approval; changed files listed in the report
-- [ ] Skills (`SKILL.md` for conda, R, headless notebooks, pinned Python packages)
+- [x] Memory of fixes across runs (`/memories/fixes.md`, `memory_read` / `memory_written` events)
+- [x] Source files protected: edits through file tools need an `edit_source` approval
+- [ ] Files changed by shell commands are listed in the report
+- [x] Skills (`SKILL.md` for conda, R, headless notebooks, pinned Python packages)
 - [ ] Background runs so a long experiment doesn't block the agent
 - [ ] Feature map: which deepagents feature shows where in a run (`FEATURES.md`)
 

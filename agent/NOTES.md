@@ -83,6 +83,40 @@ they're wrong.
 18. **Commands get a small environment**: PATH, a private HOME, proxy variables. API keys are not
     passed, so the paper's code can't read them.
 
+### Subagents, memory, skills, source protection (slice 2)
+
+19. **Four subagents, as the plan names them**: `paper-reader` (no custom tools, told to run
+    nothing), `env-builder` (`record_obstacle`), `runner` (`run_experiment`, `record_obstacle`),
+    `result-judge` (`record_answer`, `record_obstacle`). The main agent keeps every tool and may
+    do a step itself on a small repository; forcing four round trips on a toy wastes tokens.
+20. **Custom tools are created once per agent**, so `answer_found` and other events name the
+    agent that acted. Steps inside a subagent are attributed through the stream's namespace.
+21. **An approval inside a subagent pauses the whole run.** Subagents inherit `interrupt_on`.
+    The same interrupt can surface at more than one level of the stream, so interrupts are
+    de-duplicated by id before any request file is written.
+22. **Command output is saved twice**: in the run directory's `logs/` (for the harness and the
+    evidence) and under `/logs` in the workspace (so `result-judge` can search it with file tools).
+23. **Memory is one Markdown file, `/memories/fixes.md`**, kept in `REPRO_MEMORY_DIR` (default
+    `agent/.memory`, gitignored) and mounted with a `CompositeBackend` route. It is loaded into
+    the main agent's instructions with deepagents' `memory=` option, and `env-builder` reads it
+    before installing and adds a line after a new fix. Events: `memory_read` at the start of a
+    run when there is something remembered and on every read, `memory_written` on every write.
+    Two batch runs writing at the same moment could lose a line; accepted for now.
+24. **Skills are `SKILL.md` files in `agent/skills/`** (old Python pins, conda environment
+    files, R projects, headless notebooks), mounted at `/skills` from a per-run copy so the
+    agent can't change the ones in the repository.
+25. **Edits to the paper's files go through `interrupt_on`, not `permissions=`.** A `when` rule
+    on `write_file` and `edit_file` pauses any write under `/repo` for an `edit_source` approval
+    whose `diff` is a unified diff of the change. deepagents 0.7.38 raises `NotImplementedError`
+    when `permissions=` is combined with a backend that can run commands, so the permissions
+    feature can't be used with a sandbox at all in this version.
+26. **No deepagents async subagents.** `AsyncSubAgent` talks to an Agent Protocol server
+    (LangGraph Platform or self-hosted). A one-shot command has no such server, so long runs in
+    the background are done with the agent's own tools instead.
+27. **The scripted model is one generator that speaks for the main agent and all subagents.**
+    Their turns happen in a fixed order, so one script with normal `if` branches covers the
+    remembered-fix path, the rejected-approval path and the edit-source test switch.
+
 ## Failures and what changed
 
 For `FAILURES.md` (the "what did you try and fail on" question).
@@ -98,11 +132,29 @@ For `FAILURES.md` (the "what did you try and fail on" question).
   build it, with a long traceback. Anything that matches one specific error text is brittle;
   the fix has to come from reading the output.
 
+- **`permissions=` can't be used together with `execute`.** The feature map promised "deny
+  writes to the paper's result files" through filesystem permissions. deepagents 0.7.38 refuses
+  the combination outright. Replaced by an approval rule on the file tools (decision 25) plus a
+  check at the end of the run for files that changed anyway.
+- **The time limit ended runs as `failed`, not `timeout`.** The seconds left were rounded down,
+  so with 0.7 s left every command was refused, the agent "finished" at once with no answers,
+  and the report said `failed`. Now the remainder is rounded up and a refused command marks the
+  run as out of time.
+- **The result-judge found nothing and the run still validated.** The file `grep` tool matches
+  literal text, so the pattern `test r2:|best model:` matched no line. No answer was recorded,
+  the report was valid, the status was `failed`. Two lessons: search for one literal at a time,
+  and a valid run directory says nothing about whether the questions got answered.
+
 ## What is verified (scripted model, CT 120, 2026-11-14)
 
 - `python -m agent.run` on the toy task writes a run directory that `contract/validate.py`
   accepts, with q1 = 0.4555 and q2 = ridge-weak parsed from the real output of `run.py`.
+- The four subagents run in order, and every step is attributed to the subagent that did it.
 - Approval paths: auto-approve, a human approve, a human reject (status `rejected`, null
-  answers), no decision (rejected by timeout).
+  answers), no decision (rejected by timeout), and an approval raised inside a subagent.
+- A write into `/repo` raises an `edit_source` approval with the diff; rejecting it is not fatal.
+- A second run reads the remembered numpy fix and skips the install that fails (16 s down to 10 s).
 - Run over `limits.max_minutes` ends with status `timeout`.
-- 11 tests: 6 on the writer and findings (standard library), 5 end-to-end.
+- 13 tests: 6 on the writer and findings (standard library), 7 end-to-end.
+
+None of this says how a real model behaves with these prompts. That needs a key.

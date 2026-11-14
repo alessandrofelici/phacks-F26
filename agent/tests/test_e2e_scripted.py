@@ -43,7 +43,13 @@ class ScriptedToyRun(unittest.TestCase):
         self.run_dir = self.tmp / "run"
 
     def start(self, *flags: str, task: Path = TOY, **env: str) -> subprocess.Popen:
-        full_env = {**os.environ, "REPRO_MODEL": "scripted", "REPRO_WORK_ROOT": str(self.tmp / "work"), **env}
+        full_env = {
+            **os.environ,
+            "REPRO_MODEL": "scripted",
+            "REPRO_WORK_ROOT": str(self.tmp / "work"),
+            "REPRO_MEMORY_DIR": str(self.tmp / "memory"),  # each test starts with nothing remembered
+            **env,
+        }
         return subprocess.Popen(
             [sys.executable, "-m", "agent.run", "--task", str(task), "--run", str(self.run_dir), *flags],
             cwd=REPO_ROOT,
@@ -59,14 +65,14 @@ class ScriptedToyRun(unittest.TestCase):
         self.assertEqual(validate.validate_run(self.run_dir, task), [], output)
         return json.loads((self.run_dir / "report.json").read_text())
 
-    def decide(self, decision: str, note: str = "") -> None:
-        """Play the harness: answer the first approval request when it appears."""
-        request = self.run_dir / "approvals" / "a1.request.json"
+    def decide(self, decision: str, note: str = "", approval_id: str = "a1") -> None:
+        """Play the harness: answer an approval request when it appears."""
+        request = self.run_dir / "approvals" / f"{approval_id}.request.json"
         deadline = time.time() + 300
         while not request.exists() and time.time() < deadline:
             time.sleep(0.2)
-        payload = {"id": "a1", "decision": decision, "note": note, "by": "human"}
-        (self.run_dir / "approvals" / "a1.decision.json").write_text(json.dumps(payload))
+        payload = {"id": approval_id, "decision": decision, "note": note, "by": "human"}
+        (self.run_dir / "approvals" / f"{approval_id}.decision.json").write_text(json.dumps(payload))
 
     def test_auto_approve_reproduces_the_toy(self) -> None:
         report = self.finish(self.start("--auto-approve"))
@@ -80,12 +86,67 @@ class ScriptedToyRun(unittest.TestCase):
         self.assertTrue(any(o["stage"] == "env" and o["resolved"] for o in report["obstacles"]))
         events = events_of(self.run_dir)
         types = [e["type"] for e in events]
-        for wanted in ("todo_updated", "tool_call", "approval_requested", "approval_resolved", "answer_found"):
+        for wanted in (
+            "todo_updated",
+            "subagent_started",
+            "subagent_finished",
+            "tool_call",
+            "approval_requested",
+            "approval_resolved",
+            "memory_read",
+            "memory_written",
+            "answer_found",
+        ):
             self.assertIn(wanted, types)
+        started = [e["data"]["name"] for e in events if e["type"] == "subagent_started"]
+        self.assertEqual(started, ["paper-reader", "env-builder", "runner", "result-judge"])
+        doers = {e["agent"] for e in events if e["type"] == "tool_call"}
+        self.assertEqual(doers, {"paper-reader", "env-builder", "runner", "result-judge"}, "steps name the subagent that did them")
+        self.assertEqual({e["agent"] for e in events if e["type"] == "answer_found"}, {"result-judge"})
         resolved = next(e for e in events if e["type"] == "approval_resolved")
         self.assertEqual(resolved["data"]["by"], "auto")
         original = (TOY / "repo" / "requirements.txt").read_text()
         self.assertEqual(original.strip(), "numpy==1.19.5", "the task directory must stay untouched")
+
+    def test_second_run_reuses_the_remembered_fix(self) -> None:
+        first = self.finish(self.start("--auto-approve"))
+        self.assertTrue(first["obstacles"], "the first run hits the numpy pin")
+        first_commands = [e["data"]["summary"] for e in events_of(self.run_dir) if e["data"].get("tool") == "execute"]
+        self.assertTrue(any("repo/requirements.txt" in c for c in first_commands))
+
+        self.run_dir = self.tmp / "run2"
+        second = self.finish(self.start("--auto-approve"))
+        self.assertEqual(second["status"], "completed")
+        self.assertEqual({a["question_id"]: a["value"] for a in second["answers"]}, {"q1": 0.4555, "q2": "ridge-weak"})
+        events = events_of(self.run_dir)
+        reads = [e for e in events if e["type"] == "memory_read"]
+        self.assertTrue(any("1 " in e["data"]["note"] for e in reads), "the remembered fix is reported as read")
+        commands = [e["data"] for e in events if e["data"].get("tool") == "execute"]
+        self.assertFalse(any("repo/requirements.txt" in c["summary"] for c in commands), "the failing install is skipped")
+        self.assertTrue(all(c["ok"] for c in commands))
+        self.assertEqual(second["obstacles"], [])
+
+    def test_changing_a_repo_file_needs_an_edit_source_approval(self) -> None:
+        process = self.start(REPRO_SCRIPT_EDIT_SOURCE="1")
+
+        def harness() -> None:
+            self.decide("reject", "leave the paper's files alone", "a1")
+            self.decide("approve", "", "a2")
+
+        threading.Thread(target=harness, daemon=True).start()
+        report = self.finish(process)
+        self.assertEqual(report["status"], "completed", "a rejected edit is not fatal when another way works")
+        request = json.loads((self.run_dir / "approvals" / "a1.request.json").read_text())
+        self.assertEqual(request["kind"], "edit_source")
+        self.assertIn("/repo/requirements.txt", request["summary"])
+        self.assertIn("-numpy==1.19.5", request["diff"])
+        self.assertIn("+numpy>=1.26", request["diff"])
+        events = events_of(self.run_dir)
+        edit = next(e for e in events if e["data"].get("tool") == "edit_file")
+        self.assertFalse(edit["data"]["ok"], "the rejected edit shows as not done")
+        asked = [e for e in events if e["type"] == "approval_requested"]
+        self.assertEqual([e["data"]["kind"] for e in asked], ["edit_source", "long_run"])
+        self.assertEqual({e["agent"] for e in asked}, {"env-builder", "runner"})
 
     def test_human_approval_resumes_the_run(self) -> None:
         process = self.start()
