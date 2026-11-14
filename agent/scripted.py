@@ -98,7 +98,7 @@ def _todos(done: int) -> AIMessage:
 
 
 def _toy_flow() -> Flow:
-    yield  # primed by scripted_model_for; the first send() delivers the first conversation
+    yield say("")  # discarded: scripted_model_for primes the flow, so send() delivers the first conversation
 
     # --- main: plan, then hand the reading to paper-reader
     yield _todos(0)
@@ -201,7 +201,7 @@ def _toy_flow() -> Flow:
             est_minutes=1,
             why="prints the selected model and its test R^2 (q1, q2)",
         )
-        ran = bool(re.search(r"^test r2:", last_result(messages, "run_experiment"), flags=re.M))
+        ran = bool(re.search(r"^test r2:", last_result(messages, "run_experiment"), flags=re.MULTILINE))
     if not ran:
         yield say("The experiment was not run: the approval was rejected, so there is no output.")
         yield say("The run stopped because the experiment was not approved. No question could be answered.")

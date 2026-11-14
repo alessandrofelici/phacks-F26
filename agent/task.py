@@ -71,9 +71,11 @@ class Task:
             lines.append(f"- {q['id']} ({q['type']}): {q['text']}{figure}")
         lines += [
             "",
-            f"Limits: {self.max_minutes:g} minutes for the whole run, "
-            f"GPU {'allowed' if self.gpu else 'not allowed'}, "
-            f"network {'allowed' if self.network else 'not allowed'}.",
+            (
+                f"Limits: {self.max_minutes:g} minutes for the whole run, "
+                f"GPU {'allowed' if self.gpu else 'not allowed'}, "
+                f"network {'allowed' if self.network else 'not allowed'}."
+            ),
         ]
         return "\n".join(lines)
 

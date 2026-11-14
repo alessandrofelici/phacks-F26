@@ -31,7 +31,13 @@ def main(argv: list[str] | None = None) -> int:
     ensure_dependencies(argv, module="agent.check")
 
     from agent import models
-    from agent.tracing import tracing_on
+    from agent.tracing import (
+        available_agents,
+        confirm_received,
+        destination,
+        run_trace,
+        tracing_on,
+    )
 
     ok = True
     print(f".env file:      {'found' if env_file.is_file() else 'not found'} ({env_file})")
@@ -59,21 +65,44 @@ def main(argv: list[str] | None = None) -> int:
     else:
         print("sandbox:        REPRO_SANDBOX=podman but podman is not installed")
         ok = False
-    print(f"LangSmith:      {'tracing on, project ' + os.environ.get('LANGSMITH_PROJECT', 'repro-bot') if tracing_on() else 'off (trace_url will be null)'}")
+    tracing = tracing_on()
+    if tracing:
+        where, problem = destination()
+        if problem:
+            print(f"LangSmith:      MISCONFIGURED ({where}): {problem}")
+            if "AGENT_ID" in problem:
+                agents = available_agents()
+                shown = ", ".join(agents) or "none yet (create one: Tracing > Connect an agent)"
+                print(f"                agent IDs in this workspace: {shown if isinstance(agents, list) else agents}")
+            ok = False
+        else:
+            print(f"LangSmith:      tracing on, {where}")
+    else:
+        print("LangSmith:      off (trace_url will be null; set LANGSMITH_TRACING=true and LANGSMITH_API_KEY)")
 
     if args.call and ok and name != "scripted":
-        for label, model_name in (("main", name), ("subagents", sub)):
-            if not model_name:
-                continue
-            try:
-                model = models.make_model(model_name)
-                reply = model.invoke("Reply with the single word: ready")
-                text = reply.content if isinstance(reply.content, str) else str(reply.content)
-                usage = getattr(reply, "usage_metadata", None) or {}
-                print(f"model call:     {label} ({model_name}) answered {text.strip()[:40]!r}, {usage.get('total_tokens', '?')} tokens")
-            except Exception as exc:
-                print(f"model call:     {label} ({model_name}) FAILED: {type(exc).__name__}: {str(exc)[:300]}")
+        # With tracing on, the test call is itself traced, so the printed link proves LangSmith works.
+        with run_trace("agent.check", "check", name) as trace:
+            for label, model_name in (("main", name), ("subagents", sub)):
+                if not model_name:
+                    continue
+                try:
+                    model = models.make_model(model_name)
+                    reply = model.invoke("Reply with the single word: ready")
+                    text = reply.content if isinstance(reply.content, str) else str(reply.content)
+                    usage = getattr(reply, "usage_metadata", None) or {}
+                    tokens = usage.get("total_tokens", "?")
+                    print(f"model call:     {label} ({model_name}) answered {text.strip()[:40]!r}, {tokens} tokens")
+                except Exception as exc:  # noqa: BLE001 - report any failure as "not ready"
+                    print(f"model call:     {label} ({model_name}) FAILED: {type(exc).__name__}: {str(exc)[:300]}")
+                    ok = False
+        if tracing:
+            problem = confirm_received(trace["run_id"]) if trace.get("run_id") else "no trace was started"
+            if problem:
+                print(f"LangSmith:      trace NOT received ({problem})")
                 ok = False
+            else:
+                print(f"LangSmith:      trace received: {trace['url'] or '(no link)'}")
     elif args.call and name == "scripted":
         print("model call:     skipped (REPRO_MODEL=scripted uses no LLM)")
 

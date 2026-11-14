@@ -28,6 +28,7 @@ python -m agent.check --call      # also sends one tiny request to the model
 | `OPENROUTER_API_KEY` | Yes (or `ANTHROPIC_API_KEY`) | The model. Default `openrouter:anthropic/claude-opus-5.5` |
 | `ANTHROPIC_API_KEY` | Only when `REPRO_MODEL` starts with `anthropic:` | Anthropic's API directly |
 | `LANGSMITH_API_KEY` + `LANGSMITH_TRACING=true` | Optional | One LangSmith trace per run, linked from `trace_url` |
+| `LANGSMITH_AGENT_ID` + `LANGSMITH_AGENT_ENVIRONMENT` | In an agent-based LangSmith workspace | Which LangSmith agent receives the traces. Leave `LANGSMITH_PROJECT` unset then; `.env.example` explains both workspace kinds |
 
 Nothing else needs a key: the sandbox is local Podman, and the docs MCP servers are public.
 Keys stay in the agent's own process. Commands in the sandbox never see them.

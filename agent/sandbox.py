@@ -26,6 +26,7 @@ import time
 import uuid
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 from deepagents.backends import LocalShellBackend
 from deepagents.backends.protocol import ExecuteResponse
@@ -308,7 +309,7 @@ def snapshot(repo: Path) -> dict[str, str]:
     return marks
 
 
-def changed_files(repo: Path, before: dict[str, str]) -> list[dict[str, str]]:
+def changed_files(repo: Path, before: dict[str, str]) -> list[dict[str, Any]]:
     """Original files that were modified or deleted since ``before``. New files are not listed."""
     after = snapshot(repo)
     changes = []

@@ -25,6 +25,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 TOY = REPO_ROOT / "contract" / "fixtures" / "tasks" / "toy-linreg"
 
 _spec = importlib.util.spec_from_file_location("contract_validate", REPO_ROOT / "contract" / "validate.py")
+assert _spec is not None and _spec.loader is not None
 validate = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(validate)
 
@@ -202,7 +203,7 @@ class ScriptedToyRun(unittest.TestCase):
         probe = next(e for e in events if e["data"].get("tool") == "execute" and "host-only" in e["data"]["summary"])
         self.assertFalse(probe["data"]["ok"], "a file outside the workspace can't be read from the sandbox")
         self.assertNotIn("answer key stand-in", probe["data"].get("detail", ""))
-        leftovers = subprocess.run(["podman", "ps", "-q", "--filter", "name=repro-"], capture_output=True, text=True)
+        leftovers = subprocess.run(["podman", "ps", "-q", "--filter", "name=repro-"], capture_output=True, text=True, check=False)
         self.assertEqual(leftovers.stdout.strip(), "", "the container is removed after the run")
 
     def test_tracing_with_a_bad_key_does_not_break_the_run(self) -> None:

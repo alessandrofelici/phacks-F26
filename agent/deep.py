@@ -8,9 +8,14 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from deepagents import create_deep_agent
+from deepagents import SubAgent, create_deep_agent
 from deepagents.backends import CompositeBackend, FilesystemBackend
-from langchain.agents.middleware import TodoListMiddleware
+from langchain.agents.middleware import (
+    InterruptOnConfig,
+    TodoListMiddleware,
+    ToolCallRequest,
+)
+from langchain.agents.middleware.human_in_the_loop import DecisionType
 from langchain_core.messages import AIMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.checkpoint.memory import InMemorySaver
@@ -169,7 +174,7 @@ def build_tools(backend: LoggingShellBackend, findings: Findings, agent: str = "
     }
 
 
-def _needs_long_run_approval(request: Any) -> bool:
+def _needs_long_run_approval(request: ToolCallRequest) -> bool:
     """`execute` asks for approval only when the model raises the timeout past the short limit."""
     timeout = (request.tool_call.get("args") or {}).get("timeout")
     return isinstance(timeout, (int, float)) and timeout > SHORT_TIMEOUT_S
@@ -257,7 +262,7 @@ answer is always what the run printed. If the output doesn't contain an answer, 
 ]
 
 
-def _writes_into_repo(request: Any) -> bool:
+def _writes_into_repo(request: ToolCallRequest) -> bool:
     """File-tool writes under /repo need approval; new files elsewhere in the workspace don't."""
     path = str((request.tool_call.get("args") or {}).get("file_path") or "")
     return ("/" + path.lstrip("/")).startswith("/repo/")
@@ -276,7 +281,7 @@ def build_agent(
     ``subagent_model`` is an optional cheaper model for the four subagents; by default they
     use the main model.
     """
-    decisions = ["approve", "reject"]
+    decisions: list[DecisionType] = ["approve", "reject"]
     backend = CompositeBackend(
         default=shell,
         routes={
@@ -284,13 +289,30 @@ def build_agent(
             "/skills/": FilesystemBackend(root_dir=skills_dir, virtual_mode=True),
         },
     )
-    subagents = []
+    subagents: list[SubAgent] = []
     for spec in SUBAGENTS:
         tools = build_tools(shell, findings, agent=spec["name"])
-        subagent = {**spec, "tools": [tools[name] for name in spec["tools"]]}
+        subagent = SubAgent(
+            name=spec["name"],
+            description=spec["description"],
+            system_prompt=spec["system_prompt"],
+            tools=[tools[name] for name in spec["tools"]],
+        )
+        if "skills" in spec:
+            subagent["skills"] = spec["skills"]
         if subagent_model is not None:
             subagent["model"] = subagent_model
         subagents.append(subagent)
+    interrupt_on: dict[str, bool | InterruptOnConfig] = {
+        "run_experiment": {"allowed_decisions": decisions},
+        "start_background_run": {"allowed_decisions": decisions},
+        "execute": {"allowed_decisions": decisions, "when": _needs_long_run_approval},
+        # Changing a file inside the paper's repository pauses for an `edit_source` approval.
+        # (`permissions=` would be the deepagents way, but 0.7.38 refuses permissions on a
+        # backend that can execute commands.)
+        "write_file": {"allowed_decisions": decisions, "when": _writes_into_repo},
+        "edit_file": {"allowed_decisions": decisions, "when": _writes_into_repo},
+    }
     return create_deep_agent(
         model=model,
         tools=list(build_tools(shell, findings).values()),
@@ -302,16 +324,7 @@ def build_agent(
         memory=[MEMORY_FILE],
         backend=backend,
         # Subagents inherit these, so an approval inside `runner` pauses the whole run.
-        interrupt_on={
-            "run_experiment": {"allowed_decisions": decisions},
-            "start_background_run": {"allowed_decisions": decisions},
-            "execute": {"allowed_decisions": decisions, "when": _needs_long_run_approval},
-            # Changing a file inside the paper's repository pauses for an `edit_source` approval.
-            # (`permissions=` would be the deepagents way, but 0.7.38 refuses permissions on a
-            # backend that can execute commands.)
-            "write_file": {"allowed_decisions": decisions, "when": _writes_into_repo},
-            "edit_file": {"allowed_decisions": decisions, "when": _writes_into_repo},
-        },
+        interrupt_on=interrupt_on,
         checkpointer=InMemorySaver(),  # interrupts need one; state lives only for this process
         name="repro-bot",
     )
@@ -381,6 +394,7 @@ class EventMapper:
         self.tokens = 0
         self._calls: dict[str, dict[str, Any]] = {}  # tool_call_id -> {name, args, agent}
         self._subagents: list[str] = []  # names of running subagents, newest last
+        self._seen_ai: set[str] = set()  # ids of AIMessages already handled
 
     def current_agent(self) -> str:
         """Who is acting right now: the newest running subagent, else main."""
@@ -409,11 +423,18 @@ class EventMapper:
                     self._on_tool(message, agent)
 
     def _on_ai(self, message: AIMessage, agent: str) -> None:
+        # After an approval, HumanInTheLoopMiddleware.after_model sends the same AIMessage again
+        # (with the reviewed tool calls); count its tokens and start its subagents only once.
+        if message.id is not None:
+            if message.id in self._seen_ai:
+                return
+            self._seen_ai.add(message.id)
         usage = getattr(message, "usage_metadata", None) or {}
         self.tokens += int(usage.get("total_tokens") or 0)
         for call in message.tool_calls:
             args = call.get("args") or {}
-            self._calls[call["id"]] = {"name": call["name"], "args": args, "agent": agent}
+            if call["id"] is not None:  # a ToolMessage is matched to its call by this id
+                self._calls[call["id"]] = {"name": call["name"], "args": args, "agent": agent}
             if call["name"] == "task":
                 name = str(args.get("subagent_type") or "subagent")
                 self._subagents.append(name)

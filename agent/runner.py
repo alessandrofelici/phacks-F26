@@ -13,11 +13,26 @@ from typing import Any
 from langgraph.types import Command
 
 from agent import models
-from agent.deep import MEMORY_FILE, MEMORY_HEADER, SKILLS_DIR, EventMapper, approval_request, build_agent
+from agent.deep import (
+    MEMORY_FILE,
+    MEMORY_HEADER,
+    SKILLS_DIR,
+    EventMapper,
+    approval_request,
+    build_agent,
+)
 from agent.rundir import APPROVAL_TIMEOUT_S, RunWriter
-from agent.sandbox import SandboxError, changed_files, make_backend, make_workdir, remove_workdir, snapshot
+from agent.sandbox import (
+    SandboxError,
+    changed_files,
+    make_backend,
+    make_workdir,
+    remove_workdir,
+    snapshot,
+)
 from agent.task import Findings, Task
 from agent.tracing import run_trace
+
 
 class ConfigError(RuntimeError):
     """The run can't start (no model key, bad task). Exits non-zero before any event is written."""
@@ -111,7 +126,7 @@ def run_task(task_dir: Path | str, run_dir: Path | str, *, auto_approve: bool = 
         status = "timeout"
         why_missing = f"the run went over its {task.max_minutes:g} minute limit"
         writer.event("error", {"message": why_missing, "fatal": True})
-    except Exception as exc:  # report the failure instead of crashing: exit code 0 means a report exists
+    except Exception as exc:  # noqa: BLE001 - report the failure instead of crashing: exit 0 means a report exists
         traceback.print_exc()
         status = "failed"
         why_missing = f"the run stopped on an error: {type(exc).__name__}: {exc}"

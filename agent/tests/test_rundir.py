@@ -20,6 +20,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 TOY = REPO_ROOT / "contract" / "fixtures" / "tasks" / "toy-linreg"
 
 _spec = importlib.util.spec_from_file_location("contract_validate", REPO_ROOT / "contract" / "validate.py")
+assert _spec is not None and _spec.loader is not None
 validate = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(validate)
 

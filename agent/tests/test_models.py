@@ -60,6 +60,7 @@ class ChooseModel(unittest.TestCase):
             capture_output=True,
             text=True,
             timeout=120,
+            check=False,
         )
         if (REPO_ROOT / ".env").is_file() and "MISSING" not in result.stdout:
             self.skipTest("a real key is configured in .env")

@@ -12,6 +12,7 @@ then Anthropic.
 from __future__ import annotations
 
 import os
+import sys
 from typing import Any
 
 OPENROUTER_DEFAULT = "openrouter:anthropic/claude-opus-5.5"
@@ -72,11 +73,16 @@ def make_model(name: str) -> Any:
     kwargs: dict[str, Any] = {}
     try:
         # deepagents' per-provider defaults (for OpenRouter: app attribution, no Azure routing).
-        from deepagents.profiles.provider.provider_profiles import apply_provider_profile
+        from deepagents.profiles.provider.provider_profiles import (
+            apply_provider_profile,
+        )
 
         kwargs.update(apply_provider_profile(name))
-    except Exception:  # a beta API; the model works without it
-        pass
+    except Exception as exc:  # noqa: BLE001 - a beta API; the model works without it
+        print(f"agent: provider defaults not applied ({type(exc).__name__}: {exc})", file=sys.stderr)
+    # The profile's app_title ("Deep Agents") would override OPENROUTER_APP_TITLE from .env.
+    if name.startswith("openrouter:") and os.environ.get("OPENROUTER_APP_TITLE"):
+        kwargs["app_title"] = os.environ["OPENROUTER_APP_TITLE"]
     kwargs.setdefault("max_tokens", MAX_TOKENS)
     try:
         return init_chat_model(name, **kwargs)
