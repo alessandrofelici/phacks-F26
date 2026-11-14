@@ -10,5 +10,4 @@ HackPrinceton research.
 - [research/specs/](research/specs/): specs for Second Key, Neighbor Call, ShiftProof and backups
 - [research/prizes/](research/prizes/): prize lists from Fall 2025, Spring 2026 and Fall 2026 (MLH prizes only so far)
 - [research/hackprinceton-winners-analysis.md](research/hackprinceton-winners-analysis.md): what past winners built
-- [research/hackathon-ideas-round3-deepagents.md](research/hackathon-ideas-round3-deepagents.md): best Deep Agents fit among round 2, plus 3 new researched ideas (Odyssey, Council Thread, IEP Case File)
 - research/hackprinceton-materials.html: everything above as one page (download and open in a browser)
