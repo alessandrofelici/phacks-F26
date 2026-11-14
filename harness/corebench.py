@@ -92,7 +92,7 @@ def extract(archive: Path, dest: Path) -> Path:
     return inner[0] if len(inner) == 1 else dest
 
 
-def apply_level(capsule: Path, level: str) -> None:
+def apply_level(capsule: Path, level: str) -> list[str]:
     """Same removals as CORE-Bench's benchmark.py."""
     if level != "easy":
         shutil.rmtree(capsule / "results", ignore_errors=True)
@@ -104,6 +104,16 @@ def apply_level(capsule: Path, level: str) -> None:
             (capsule / "code" / name).unlink(missing_ok=True)
     for junk in capsule.rglob(".DS_Store"):
         junk.unlink()
+    removed = []
+    if level != "easy":
+        # Some capsules also ship the authors' saved output inside the code folder
+        # (e.g. code/results/output.txt in capsule-2011424), which gives the answers
+        # away. CORE-Bench leaves these in; we remove them so the score stays honest.
+        for extra in sorted(capsule.rglob("results")):
+            if extra.is_dir() and extra != capsule / "results":
+                removed.append(str(extra.relative_to(capsule)))
+                shutil.rmtree(extra)
+    return removed
 
 
 def build_task(entry: dict, level: str) -> str:
@@ -113,7 +123,7 @@ def build_task(entry: dict, level: str) -> str:
 
     staging = CACHE / f"extract-{task_id}"
     capsule = extract(download(cid), staging)
-    apply_level(capsule, level)
+    removed_extra = apply_level(capsule, level)
     if tdir.exists():
         shutil.rmtree(tdir)
     tdir.mkdir(parents=True)
@@ -141,7 +151,8 @@ def build_task(entry: dict, level: str) -> str:
         "instructions": entry["task_prompt"].strip() + LAYOUT_NOTE,
         "questions": questions,
         "limits": {"max_minutes": 30, "gpu": False, "network": True},
-        "core_bench": {"capsule_id": cid, "level": level, "field": entry.get("field"), "language": entry.get("language")},
+        "core_bench": {"capsule_id": cid, "level": level, "field": entry.get("field"), "language": entry.get("language"),
+                       "saved_outputs_removed": removed_extra},
     }
     write_json_atomic(tdir / "task.json", task)
     write_json_atomic(ANSWERS / f"{task_id}.json", {"task_id": task_id, "questions": key})

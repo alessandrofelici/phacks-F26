@@ -68,6 +68,8 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"tasks": tasks, "real_agent_available": runs.real_agent_available()})
         if url.path == "/api/runs":
             return self._json({"runs": runs.list_runs()})
+        if url.path == "/api/batches":
+            return self._json({"batches": runs.list_batches(), "running": runs.batch_running()})
         m = RUN_PATH.match(url.path)
         if m:
             since = int((parse_qs(url.query).get("since") or ["0"])[0] or 0)
@@ -96,6 +98,9 @@ class Handler(BaseHTTPRequestHandler):
                 run_id = runs.start_run(str(body.get("task_id", "")), str(body.get("agent", "real")),
                                         bool(body.get("auto_approve", False)))
                 return self._json({"run_id": run_id}, 201)
+            if url.path == "/api/batches":
+                runs.start_batch(str(body.get("agent", "real")))
+                return self._json({"ok": True}, 201)
             m = STOP_PATH.match(url.path)
             if m:
                 return self._json({"stopped": runs.stop_run(m.group(1))})

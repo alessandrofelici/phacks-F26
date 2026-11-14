@@ -93,12 +93,18 @@
   .empty { color: var(--muted); padding: 30px 10px; text-align: center; }
   .error-banner { background: var(--bad-bg); color: var(--bad); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
   #logview { margin-top: 16px; }
+  table { border-collapse: collapse; width: 100%; }
+  th, td { text-align: left; padding: 6px 10px 6px 0; border-top: 1px solid var(--line); vertical-align: top; }
+  th { font-size: 12px; color: var(--muted); font-weight: 600; border-top: 0; }
+  td.num { font-family: var(--mono); }
+  a.link { color: var(--accent); cursor: pointer; text-decoration: underline; }
 </style>
 </head>
 <body>
 <header class="top">
   <h1>Repro Bot</h1>
   <span>Runs a paper's code and checks whether the published numbers hold up</span>
+  <button id="show-scoreboard" style="margin-left:auto">Scoreboard</button>
 </header>
 
 <div class="layout">
@@ -160,6 +166,7 @@ const isLive = (s) => s === "running" || s === "waiting_approval";
 const fmt = (v) => v === null || v === undefined ? "" : (typeof v === "number" ? String(Math.round(v * 1e6) / 1e6) : (Array.isArray(v) ? JSON.stringify(v) : String(v)));
 
 let tasks = [], tasksById = {}, selected = null, detail = null, events = [], pollTimer = null, deciding = false;
+let openDetails = new Set(), fileView = null, notice = null, view = "run", boardTimer = null;
 
 /* ---------- start panel ---------- */
 async function loadTasks() {
@@ -203,8 +210,8 @@ async function loadRuns() {
 
 /* ---------- run view ---------- */
 function select(runId) {
-  selected = runId; detail = null; events = [];
-  clearTimeout(pollTimer);
+  selected = runId; detail = null; events = []; openDetails = new Set(); fileView = null; notice = null; view = "run";
+  clearTimeout(pollTimer); clearTimeout(boardTimer);
   $("main").replaceChildren(el("section", { class: "panel" }, el("div", { class: "empty", text: "Loading…" })));
   poll(); loadRuns();
 }
@@ -214,7 +221,7 @@ async function poll() {
   try {
     const since = events.length ? events[events.length - 1].seq : 0;
     const d = await api(`/api/runs/${runId}?since=${since}`);
-    if (runId !== selected) return;
+    if (runId !== selected || view !== "run") return;
     events = events.concat(d.events); detail = d;
     render();
     if (isLive(d.status)) pollTimer = setTimeout(poll, 1000); else loadRuns();
@@ -245,7 +252,9 @@ function render() {
         el("section", { class: "panel" }, el("h2", { text: "Plan" }), renderTodos()),
         el("section", { class: "panel" }, el("h2", { text: "Report" }), renderReport(task))),
       el("section", { class: "panel" }, el("h2", { text: "What the agent did" }), renderTimeline())),
-    el("div", { id: "logview" }));
+    el("div", { id: "logview" },
+      notice ? el("div", { class: "error-banner", text: notice }) : null,
+      fileView ? el("section", { class: "panel" }, el("h2", { text: fileView.path }), el("pre", { text: fileView.text, style: "max-height:420px" })) : null));
   window.scrollTo(0, scrollY);
 }
 function renderApproval(a) {
@@ -267,7 +276,7 @@ async function decide(id, decision) {
   deciding = false;
 }
 async function stopRun() { try { await api(`/api/runs/${selected}/stop`, {}); } catch (e) { alertInline(e.message); } }
-function alertInline(msg) { $("logview").replaceChildren(el("div", { class: "error-banner", text: msg })); }
+function alertInline(msg) { notice = msg; if (detail) render(); }
 
 function renderTodos() {
   const last = [...events].reverse().find((e) => e.type === "todo_updated");
@@ -314,7 +323,7 @@ async function showFile(path) {
   try {
     const res = await fetch(`/api/runs/${selected}/file?path=${encodeURIComponent(path)}`);
     const text = res.ok ? await res.text() : "This file isn't in the run directory.";
-    $("logview").replaceChildren(el("section", { class: "panel" }, el("h2", { text: path }), el("pre", { text, style: "max-height:420px" })));
+    fileView = { path, text }; render();
     $("logview").scrollIntoView({ behavior: "smooth", block: "nearest" });
   } catch (e) { alertInline(e.message); }
 }
@@ -330,7 +339,7 @@ function renderTimeline() {
       case "subagent_started": what = [el("strong", { text: `Handed to ${d.name}: ` }), d.task]; cls = ""; break;
       case "subagent_finished": what = [el("strong", { text: `${d.name} finished: ` }), d.summary]; cls = ""; break;
       case "tool_call": what = [el("span", { class: "kind", text: `${d.tool} ` }), el("code", { text: d.summary }), d.ok === false ? el("span", { class: "fail", text: " failed" }) : null,
-        d.detail ? el("details", {}, el("summary", { text: "output" }), el("pre", { text: d.detail })) : null]; break;
+        d.detail ? el("details", { open: openDetails.has(e.seq), ontoggle: (ev) => { ev.target.open ? openDetails.add(e.seq) : openDetails.delete(e.seq); } }, el("summary", { text: "output" }), el("pre", { text: d.detail })) : null]; break;
       case "approval_requested": what = [el("strong", { text: "Asked for approval: " }), d.summary]; break;
       case "approval_resolved": what = [el("strong", { text: d.decision === "approve" ? "Approved" : "Rejected" }), el("span", { class: "kind", text: d.by === "human" ? " by you" : d.by === "auto" ? " automatically" : " (no answer in time)" })]; break;
       case "memory_read": what = [el("strong", { text: "Checked memory: " }), d.note]; cls += " memory"; break;
@@ -347,6 +356,55 @@ function renderTimeline() {
       el("span", { class: "what" }, what)));
   }
   return el("ol", { class: "timeline" }, rows);
+}
+
+/* ---------- scoreboard ---------- */
+$("show-scoreboard").addEventListener("click", () => {
+  view = "scoreboard"; selected = null; clearTimeout(pollTimer); loadRuns().catch(() => {}); loadBoard();
+});
+async function loadBoard() {
+  clearTimeout(boardTimer);
+  if (view !== "scoreboard") return;
+  let data;
+  try { data = await api("/api/batches"); } catch (e) { boardTimer = setTimeout(loadBoard, 3000); return; }
+  if (view !== "scoreboard") return;
+  const agent = document.querySelector("input[name=agent]:checked").value;
+  const head = el("section", { class: "panel" },
+    el("div", { class: "run-head" }, el("h3", { text: "Scoreboard" }),
+      data.running ? el("span", { class: "chip live", text: "A batch is running" }) : null,
+      el("button", { class: "primary", text: "Run all papers", disabled: data.running, onclick: startBatch })),
+    el("p", { class: "hint", text: `Runs every paper that has reference answers, one after another, with approvals granted automatically, using the ${agent === "fake" ? "demo replay" : "real"} agent selected on the left. A paper counts as reproduced only when every answer matches.` }));
+  const panels = [head];
+  if (!data.batches.length) panels.push(el("section", { class: "panel" }, el("div", { class: "empty", text: "No batch has finished yet." })));
+  else {
+    panels.push(el("section", { class: "panel" }, el("h2", { text: "Batches" }), el("table", {},
+      el("tr", {}, ["When (UTC)", "Label", "Agent", "Papers reproduced", "Answers correct"].map((h) => el("th", { text: h }))),
+      data.batches.map((b) => {
+        const rep = b.results.filter((r) => r.all_correct).length, c = b.results.reduce((n, r) => n + r.correct, 0), t = b.results.reduce((n, r) => n + r.total, 0);
+        return el("tr", {}, el("td", { text: b.when.replace("T", " ").replace("Z", "") }), el("td", { text: b.label || "-" }),
+          el("td", { text: b.agent === "fake" ? "demo replay" : "real" }), el("td", { class: "num", text: `${rep}/${b.results.length}` }), el("td", { class: "num", text: `${c}/${t}` }));
+      }))));
+    const latest = data.batches[0], groups = Object.entries(latest.failure_groups || {}).sort((a, b) => b[1].length - a[1].length);
+    panels.push(el("section", { class: "panel" }, el("h2", { text: "Latest batch, paper by paper" }), el("table", {},
+      el("tr", {}, ["Paper", "Result", "Answers", ""].map((h) => el("th", { text: h }))),
+      latest.results.map((r) => el("tr", {},
+        el("td", { text: (tasksById[r.task_id] || {}).title || r.task_id }),
+        el("td", {}, r.all_correct ? el("span", { class: "chip ok", text: "Reproduced" }) : statusChip(r.status === "completed" ? "failed" : r.status), r.status === "completed" && !r.all_correct ? el("span", { class: "hint", text: " finished, answers differ" }) : null),
+        el("td", { class: "num", text: `${r.correct}/${r.total}` }),
+        el("td", {}, r.run_id ? el("a", { class: "link", text: "Open run", onclick: () => select(r.run_id) }) : null))))));
+    panels.push(el("section", { class: "panel" }, el("h2", { text: "What went wrong in the latest batch" }),
+      groups.length ? el("table", {}, el("tr", {}, ["Papers", "Problem", "Which"].map((h) => el("th", { text: h }))),
+        groups.map(([reason, ids]) => el("tr", {}, el("td", { class: "num", text: String(ids.length) }), el("td", { text: reason }), el("td", { class: "hint", text: ids.join(", ") }))))
+        : el("div", { class: "empty", text: "Nothing: every paper was reproduced." })));
+  }
+  $("main").replaceChildren(...panels);
+  if (data.running) boardTimer = setTimeout(loadBoard, 2000);
+}
+async function startBatch() {
+  try {
+    await api("/api/batches", { agent: document.querySelector("input[name=agent]:checked").value });
+  } catch (e) { $("start-error").textContent = e.message; $("start-error").hidden = false; }
+  loadBoard();
 }
 
 (async function init() {

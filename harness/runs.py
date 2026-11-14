@@ -184,3 +184,33 @@ def wait_for(run_id: str, timeout_s: float) -> str:
     stop_run(run_id)
     time.sleep(1)
     return "stopped"
+
+
+_batch: subprocess.Popen | None = None
+
+
+def batch_running() -> bool:
+    return _batch is not None and _batch.poll() is None
+
+
+def start_batch(kind: str) -> None:
+    """Run `python -m harness.batch` in the background (one at a time)."""
+    global _batch
+    if kind not in AGENT_KINDS:
+        raise ValueError(f"agent must be one of {AGENT_KINDS}")
+    if kind == "real" and not real_agent_available():
+        raise ValueError("the real agent isn't in this checkout yet (no agent/run.py); use the fake agent")
+    if batch_running():
+        raise ValueError("a batch is already running")
+    RUNS.mkdir(exist_ok=True)
+    log = open(RUNS / ".batch.log", "ab")
+    _batch = subprocess.Popen([sys.executable, "-m", "harness.batch", "--agent", kind, "--label", "started from the UI"],
+                              cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, start_new_session=True)
+
+
+def list_batches() -> list[dict]:
+    bdir = RUNS / ".batches"
+    if not bdir.is_dir():
+        return []
+    out = [b for b in (read_json(p) for p in sorted(bdir.glob("*.json"), reverse=True)) if isinstance(b, dict)]
+    return out[:30]

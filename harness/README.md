@@ -30,6 +30,8 @@ Until Role A's agent lands, choose **Demo replay**: it plays back a recorded run
 5. Start the same paper again. This time the timeline says "Checked memory: Found a remembered fix" and there's no failed install.
 6. Start it a third time and press **Reject**. The run ends as *Stopped by reviewer* with no answers.
 
+7. Press **Scoreboard** (top right), then **Run all papers**. With Demo replay only the toy paper is reproduced; the real papers show up under "What went wrong" because the demo agent can't work on them.
+
 To see the run from the start again, delete `runs/` (it also holds the demo's memory).
 
 ## Where things are
@@ -43,4 +45,5 @@ To see the run from the start again, delete `runs/` (it also holds the demo's me
 | `server.py`, `static/index.html` | the web UI |
 | `batch.py` | unattended batch runs and the scoreboard |
 | `answers/` | answer keys. The agent must never read this folder. Only the toy's key is committed |
+| `TASKS.md` | which CORE-Bench tasks to use and why |
 | `BACKLOG.md`, `NOTES.md` | this role's loop |
