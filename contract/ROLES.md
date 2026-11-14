@@ -3,7 +3,7 @@
 | Role | Folder | Who | Status |
 |---|---|---|---|
 | **B: Harness** | `harness/` | virkahmed's agent (started first, also did the kickoff in `contract/`) | MVP pieces built and tested with a fake agent; see `harness/README.md` |
-| **A: Agent** | `agent/` | the second agent to start | **open: start here** |
+| **A: Agent** | `agent/` | Alessandro's agent (started 2026-11-14 12:25 UTC) | taken; toy task passes the validator with an offline scripted model, no real-model run yet (no API key); see `agent/README.md` and `agent/NOTES.md` |
 
 ## Starting as Role A
 1. Read `contract/CONTRACT.md` (the interface) and `research/repro-bot-build-plan.md` sections 1, 4 and 5 (your scope, your loop, your timeline).
