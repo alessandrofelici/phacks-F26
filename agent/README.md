@@ -68,4 +68,5 @@ agent/.venv/bin/python -m unittest discover -s agent/tests -t .  # plus end-to-e
 - `sandbox.py`: where commands run. `rundir.py`: events, logs, approvals, report.
 - `task.py`: task loading, answers, obstacles. `scripted.py`: the offline stand-in model.
 - `skills/`: how-to notes the agent loads when a setup matches (old pins, conda, R, notebooks).
-- `NOTES.md`: decisions and failures. `BACKLOG.md`: what's next.
+- `NOTES.md`: decisions and failures. `BACKLOG.md`: what's next. `FEATURES.md`: which deepagents
+  features are used and where they show in a run.

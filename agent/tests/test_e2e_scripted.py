@@ -167,6 +167,27 @@ class ScriptedToyRun(unittest.TestCase):
         self.assertEqual(report["source_changes"], [{"path": "repo/run.py", "change": "modified", "approved": False}])
         self.assertTrue(any("without an approval" in o["summary"] and "repo/run.py" in o["summary"] for o in report["obstacles"]))
 
+    def check_background_run(self, sandbox: str) -> None:
+        report = self.finish(self.start("--auto-approve", REPRO_SCRIPT_BACKGROUND="1", REPRO_SANDBOX=sandbox))
+        self.assertEqual(report["status"], "completed")
+        self.assertEqual({a["question_id"]: a["value"] for a in report["answers"]}, {"q1": 0.4555, "q2": "ridge-weak"})
+        events = events_of(self.run_dir)
+        steps = [e["data"]["summary"] for e in events if e["type"] == "tool_call" and e["agent"] == "runner"]
+        self.assertTrue(steps[0].startswith("start in the background"))
+        self.assertTrue(any("still running" in step for step in steps), "the agent got control back while it ran")
+        self.assertTrue(any("exit code 0" in step for step in steps))
+        asked = next(e for e in events if e["type"] == "approval_requested")
+        self.assertIn("in the background", asked["data"]["summary"])
+        evidence = report["answers"][0]["evidence"]
+        self.assertIn(evidence["quote"], (self.run_dir / evidence["file"]).read_text(), "background output is saved as a log")
+
+    def test_background_run_local(self) -> None:
+        self.check_background_run("local")
+
+    @unittest.skipUnless(shutil.which("podman"), "needs podman")
+    def test_background_run_podman(self) -> None:
+        self.check_background_run("podman")
+
     @unittest.skipUnless(shutil.which("podman"), "needs podman")
     def test_podman_sandbox_reproduces_the_toy_out_of_reach_of_the_host(self) -> None:
         secret = self.tmp / "host-only.txt"

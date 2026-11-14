@@ -17,7 +17,9 @@ from __future__ import annotations
 import hashlib
 import math
 import os
+import shlex
 import shutil
+import signal
 import subprocess
 import tempfile
 import time
@@ -125,6 +127,7 @@ class LoggingShellBackend(LocalShellBackend):
         self._deadline = deadline  # time.monotonic() value for the whole run
         self.commands: list[CommandRecord] = []
         self.out_of_time = False  # set when a command was refused because the run's time is used up
+        self.background: dict[str, dict] = {}  # runs started with start_background, by id
 
     def execute(self, command: str, *, timeout: int | None = None) -> ExecuteResponse:
         effective = timeout if timeout is not None else SHORT_TIMEOUT_S
@@ -148,6 +151,57 @@ class LoggingShellBackend(LocalShellBackend):
     def _run(self, command: str, timeout: int) -> ExecuteResponse:
         return LocalShellBackend.execute(self, command, timeout=timeout)
 
+    # -- background runs: a long experiment that doesn't block the agent ---------------
+
+    def start_background(self, command: str, limit_s: int) -> str:
+        """Start ``command`` detached in the sandbox and return its id. Output goes to .bg/<id>.out."""
+        remaining = None if self._deadline is None else self._deadline - time.monotonic()
+        if remaining is not None and remaining <= 0:
+            self.out_of_time = True
+            return ""
+        limit = limit_s if remaining is None else max(1, min(limit_s, math.ceil(remaining)))
+        run_id = f"bg{len(self.background) + 1}"
+        (Path(self.cwd) / ".bg").mkdir(exist_ok=True)
+        inner = f"timeout -k 5 {limit} sh -c {shlex.quote(command)}"
+        launcher = (
+            f"(({inner}) > .bg/{run_id}.out 2>&1; echo $? > .bg/{run_id}.exit) > /dev/null 2>&1 & "
+            f"echo $! > .bg/{run_id}.pid"
+        )
+        self._run(launcher, 30)
+        self.background[run_id] = {"command": command, "started": time.monotonic(), "log": None, "limit": limit}
+        return run_id
+
+    def check_background(self, run_id: str, tail_lines: int = 30) -> dict | None:
+        """State of a background run. When it has finished, its output is saved to logs/ once."""
+        run = self.background.get(run_id)
+        if run is None:
+            return None
+        base = Path(self.cwd) / ".bg"
+        out_file, exit_file = base / f"{run_id}.out", base / f"{run_id}.exit"
+        output = out_file.read_text(encoding="utf-8", errors="replace") if out_file.exists() else ""
+        exit_code: int | None = None
+        if exit_file.exists():
+            try:
+                exit_code = int(exit_file.read_text().strip() or "1")
+            except ValueError:
+                exit_code = 1
+        if exit_code is not None and run["log"] is None:
+            ending = "" if exit_code == 0 else f"\n\nExit code: {exit_code}"
+            text = f"$ {run['command']}\n{output.rstrip()}{ending}\n"
+            run["log"] = self._writer.save_log(run["command"], text)
+            run["seconds"] = time.monotonic() - run["started"]
+            mirror = Path(self.cwd) / run["log"]
+            mirror.parent.mkdir(exist_ok=True)
+            mirror.write_text(text, encoding="utf-8")
+        return {
+            "done": exit_code is not None,
+            "exit_code": exit_code,
+            "timed_out": exit_code in (124, 137),
+            "seconds": run.get("seconds", time.monotonic() - run["started"]),
+            "tail": "\n".join(output.splitlines()[-tail_lines:]),
+            "log": run["log"],
+        }
+
     def take_record(self, command: str) -> CommandRecord | None:
         """The oldest unclaimed record of ``command``, removed from the list."""
         for i, record in enumerate(self.commands):
@@ -156,7 +210,15 @@ class LoggingShellBackend(LocalShellBackend):
         return None
 
     def close(self) -> None:
-        """Stop anything still running. Nothing to do for the local shell."""
+        """Stop background runs that are still going."""
+        for run_id in self.background:
+            pid_file = Path(self.cwd) / ".bg" / f"{run_id}.pid"
+            if (Path(self.cwd) / ".bg" / f"{run_id}.exit").exists() or not pid_file.exists():
+                continue
+            try:
+                os.killpg(os.getpgid(int(pid_file.read_text().strip())), signal.SIGKILL)
+            except (OSError, ValueError):
+                pass
 
 
 class PodmanShellBackend(LoggingShellBackend):

@@ -52,6 +52,10 @@ Running commands:
 a longer `timeout` is allowed for slow installs, and a human is asked to approve it first.
 - `run_experiment` is for the command that produces the paper's results. A human is asked to approve \
 it before it runs, so give an honest time estimate and say what it will do.
+- `start_background_run` is for an experiment that takes more than a couple of minutes. It is \
+approved the same way, returns at once, and `check_background_run` reports on it. Use the wait for \
+work that doesn't depend on the result, and don't check in a tight loop (`sleep 30` through \
+`execute` is a fine way to wait).
 - If an approval is rejected, don't retry the same thing. Find another way, or finish with what you have.
 
 How to split the work (each helper starts with only the message you give it, so include the \
@@ -101,6 +105,38 @@ def build_tools(backend: LoggingShellBackend, findings: Findings, agent: str = "
         return response.output
 
     @tool
+    def start_background_run(command: str, est_minutes: float, why: str) -> str:
+        """Start a long experiment in the background, after human approval, and return at once.
+
+        Use this when the run will take more than a couple of minutes, then follow it with
+        `check_background_run` while doing other work.
+
+        Args:
+            command: The shell command, with relative paths (it starts in the workspace directory).
+            est_minutes: Your honest estimate of how long it takes, in minutes.
+            why: One sentence on what this run produces and which questions it answers.
+        """
+        run_id = backend.start_background(command, max(120, int(est_minutes * 60 * 3)))
+        if not run_id:
+            return "Error: the run's time limit is used up; nothing was started."
+        return f"Started as {run_id}. It keeps running while you work; call check_background_run('{run_id}') to follow it."
+
+    @tool
+    def check_background_run(run_id: str) -> str:
+        """Report whether a background run has finished, with the last lines of its output.
+
+        Args:
+            run_id: The id `start_background_run` returned, for example "bg1".
+        """
+        state = backend.check_background(run_id)
+        if state is None:
+            return f"Error: there is no background run '{run_id}'."
+        if not state["done"]:
+            return f"Still running after {state['seconds']:.0f} s. Last lines so far:\n{state['tail'] or '<no output yet>'}"
+        how = "was stopped at its time limit" if state["timed_out"] else f"finished with exit code {state['exit_code']}"
+        return f"The run {how} after {state['seconds']:.0f} s. Full output saved as /{state['log']}. Last lines:\n{state['tail'] or '<no output>'}"
+
+    @tool
     def record_answer(question_id: str, value: Any, quote: str, confidence: str) -> str:
         """Record the answer to one question, with the output line that proves it.
 
@@ -124,7 +160,13 @@ def build_tools(backend: LoggingShellBackend, findings: Findings, agent: str = "
         """
         return findings.record_obstacle(stage, summary, fix, resolved)
 
-    return {"run_experiment": run_experiment, "record_answer": record_answer, "record_obstacle": record_obstacle}
+    return {
+        "run_experiment": run_experiment,
+        "start_background_run": start_background_run,
+        "check_background_run": check_background_run,
+        "record_answer": record_answer,
+        "record_obstacle": record_obstacle,
+    }
 
 
 def _needs_long_run_approval(request: Any) -> bool:
@@ -181,12 +223,16 @@ every change you made.""",
     {
         "name": "runner",
         "description": "Runs the experiment command (after human approval) and reports where its output is.",
-        "tools": ["run_experiment", "record_obstacle"],
+        "tools": ["run_experiment", "start_background_run", "check_background_run", "record_obstacle"],
         "skills": ["/skills/"],
         "system_prompt": f"""You run a paper's experiment. {_WORKSPACE_NOTE}
 
 Use `run_experiment` for the command that produces the results. A human approves it before it runs, \
 so give an honest time estimate. If the approval is rejected, do not retry: report that it was rejected.
+
+When the run will take more than a couple of minutes, use `start_background_run` instead. It returns \
+at once; follow it with `check_background_run`, waiting between checks (`sleep 30` through `execute`), \
+and report when it has finished.
 
 If the command fails, report the error text. Don't change the paper's code to get past it; a missing \
 package or path is the environment's problem, and the caller decides what to do. Record what went \
@@ -244,6 +290,7 @@ def build_agent(model: Any, shell: LoggingShellBackend, findings: Findings, memo
         # Subagents inherit these, so an approval inside `runner` pauses the whole run.
         interrupt_on={
             "run_experiment": {"allowed_decisions": decisions},
+            "start_background_run": {"allowed_decisions": decisions},
             "execute": {"allowed_decisions": decisions, "when": _needs_long_run_approval},
             # Changing a file inside the paper's repository pauses for an `edit_source` approval.
             # (`permissions=` would be the deepagents way, but 0.7.38 refuses permissions on a
@@ -265,11 +312,12 @@ def approval_request(action: dict[str, Any], work: Path) -> dict[str, Any]:
         summary = f"Change {path} (a file inside the paper's repository)"
         return {"kind": "edit_source", "summary": summary, "command": None, "diff": _diff(name, args, work)}
     command = str(args.get("command") or "")
-    if name == "run_experiment":
+    if name in ("run_experiment", "start_background_run"):
         minutes = args.get("est_minutes")
         estimate = f" (est. {minutes:g} min)" if isinstance(minutes, (int, float)) else ""
         why = f": {args['why']}" if args.get("why") else ""
-        summary = f"Run {command}{estimate}{why}"
+        where = " in the background" if name == "start_background_run" else ""
+        summary = f"Run {command}{where}{estimate}{why}"
     else:
         summary = f"Run {command} (allowed up to {args.get('timeout')} s)"
     return {"kind": "long_run", "summary": summary, "command": command or None, "diff": None}
@@ -396,7 +444,15 @@ class EventMapper:
                 self.writer.event("memory_written", {"path": path, "note": note}, call["agent"])
             return
         data: dict[str, Any] = {"tool": name}
-        if name in ("execute", "run_experiment"):
+        if name in ("start_background_run", "check_background_run"):
+            if name == "start_background_run":
+                data["summary"] = _one_line(f"start in the background: {args.get('command', '')}")
+            else:
+                state = "still running" if text.startswith("Still running") else _one_line(text.split(". ", 1)[0].lower(), 80)
+                data["summary"] = f"check {args.get('run_id', '')}: {state}"
+                ok = ok and ("exit code" not in state or "exit code 0" in state) and "time limit" not in state
+            data["detail"] = text[-1800:]
+        elif name in ("execute", "run_experiment"):
             command = str(args.get("command", ""))
             record = self.backend.take_record(command)
             data["summary"] = _one_line(command)

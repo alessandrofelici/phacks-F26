@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import os
 import re
+import sys
 import uuid
 from collections.abc import Generator, Sequence
 from typing import Any
@@ -125,6 +126,11 @@ def _toy_flow() -> Flow:
     if os.environ.get("REPRO_SCRIPT_PROBE"):
         # Test switch: try to read a file outside the workspace. A real sandbox makes this fail.
         yield call("execute", command=f"cat {os.environ['REPRO_SCRIPT_PROBE']}")
+    if os.environ.get("REPRO_SCRIPT_BIG_OUTPUT"):
+        # Probe: a command with a very large output, to see what the model is handed back.
+        messages = yield call("execute", command="python3 -c \"print('a line of build log output\\n' * 60000)\"")
+        text = last_result(messages, "execute")
+        print(f"[scripted] big output: model received {len(text)} characters; start: {text[:300]!r}", file=sys.stderr)
     if os.environ.get("REPRO_SCRIPT_TAMPER"):
         # Test switch: change one of the paper's files with a shell command, behind the file tools' back.
         yield call("execute", command="echo '# touched' >> repo/run.py")
@@ -168,13 +174,31 @@ def _toy_flow() -> Flow:
         subagent_type="runner",
         description="Run `cd repo && ../.venv/bin/python run.py --seed 0` with run_experiment and report where the output is.",
     )
-    messages = yield call(
-        "run_experiment",
-        command="cd repo && ../.venv/bin/python run.py --seed 0",
-        est_minutes=1,
-        why="prints the selected model and its test R^2 (q1, q2)",
-    )
-    ran = bool(re.search(r"^test r2:", last_result(messages, "run_experiment"), flags=re.M))
+    if os.environ.get("REPRO_SCRIPT_BACKGROUND"):
+        # Test switch: run the experiment in the background (made slow on purpose) and poll it.
+        messages = yield call(
+            "start_background_run",
+            command="cd repo && sleep 3 && ../.venv/bin/python run.py --seed 0",
+            est_minutes=1,
+            why="prints the selected model and its test R^2 (q1, q2)",
+        )
+        ran = False
+        if last_result(messages, "start_background_run").startswith("Started as"):
+            for _ in range(30):
+                messages = yield call("check_background_run", run_id="bg1")
+                state = last_result(messages, "check_background_run")
+                if not state.startswith("Still running"):
+                    ran = "exit code 0" in state
+                    break
+                yield call("execute", command="sleep 1")
+    else:
+        messages = yield call(
+            "run_experiment",
+            command="cd repo && ../.venv/bin/python run.py --seed 0",
+            est_minutes=1,
+            why="prints the selected model and its test R^2 (q1, q2)",
+        )
+        ran = bool(re.search(r"^test r2:", last_result(messages, "run_experiment"), flags=re.M))
     if not ran:
         yield say("The experiment was not run: the approval was rejected, so there is no output.")
         yield say("The run stopped because the experiment was not approved. No question could be answered.")

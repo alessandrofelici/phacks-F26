@@ -12,6 +12,9 @@ Role B doesn't read this; the humans do at checkpoints.
   repo clone in CT 120 (`/mnt/vf/hack/hackathon/projects/shared-project`) with
   `/home/claude/repro-agent/tools/sync.sh`. Tests and git run in the CT as user `hack`.
 - **Verified:** see "What is verified" at the bottom. Updated after every slice.
+- **Done as of 2026-11-14 13:05 UTC:** everything in `BACKLOG.md` that can be done without a
+  model key. Four slices are pushed to `main`. What is left needs a key, a task directory
+  from Role B, or an account (see the second half of `BACKLOG.md`).
 - **Not possible yet:** any run with a real model. There is no model API key in CT 120, and no
   account for a hosted sandbox. Everything below was checked with the scripted stand-in model.
 
@@ -143,6 +146,24 @@ they're wrong.
     `run_started.data.sandbox`, `report.sandbox`, `report.source_changes`, and the event type
     `source_changed`.
 
+### Background runs and the feature map (slice 4)
+
+35. **Long experiments run detached in the sandbox** through two tools the agent owns:
+    `start_background_run` (approved like `run_experiment`, kind `long_run`) and
+    `check_background_run`. The command's output goes to a file in the workspace; when it has
+    finished, the output is saved to `logs/` like any other command, so answers can cite it.
+    This replaces deepagents' async subagents (decision 26). The run is still bounded by the
+    time left in `limits.max_minutes`, and anything still running is killed when the run ends.
+36. **Large outputs are left to deepagents.** A probe with a 1.5 MB output showed the model
+    gets a short pointer to `/large_tool_results/...`. The backend keeps up to 1 MB per command
+    in `logs/`. No extra code was needed.
+37. **`FEATURES.md` is the answer to "did you use all of deep agents?"**: one row per feature,
+    where it shows in a run, and how far it was checked. Two features could not be used as the
+    plan assumed (permissions, async subagents); it says what replaced them.
+38. **Test switches live in the scripted model**, not in the agent: `REPRO_SCRIPT_EDIT_SOURCE`,
+    `REPRO_SCRIPT_TAMPER`, `REPRO_SCRIPT_PROBE`, `REPRO_SCRIPT_BACKGROUND`,
+    `REPRO_SCRIPT_BIG_OUTPUT`. They only change what the stand-in model does.
+
 ## Failures and what changed
 
 For `FAILURES.md` (the "what did you try and fail on" question).
@@ -183,7 +204,10 @@ For `FAILURES.md` (the "what did you try and fail on" question).
 - An approved edit is listed as approved; a file changed by a shell command is reported.
 - In the Podman sandbox the toy reproduces, a file outside the workspace can't be read, and the
   container is gone afterwards.
+- A background run returns control to the agent, is polled, and its output is cited as
+  evidence, in the local shell and in Podman.
+- A 1.5 MB command output is offloaded by deepagents and saved in `logs/`.
 - Run over `limits.max_minutes` ends with status `timeout`.
-- 16 tests: 6 on the writer and findings (standard library), 10 end-to-end.
+- 18 tests: 6 on the writer and findings (standard library), 12 end-to-end.
 
 None of this says how a real model behaves with these prompts. That needs a key.
