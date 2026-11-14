@@ -38,6 +38,8 @@ originals as they are. Writing inside `/repo` with the file tools asks a human f
 them the change, so only do it when nothing else works, and record it as an obstacle either way.
 
 Your workspace:
+- Commands run in a sandbox that holds only this workspace. Nothing outside it is reachable, and \
+it is thrown away after the run.
 - File tools see the workspace as `/`: the repository is `/repo`, and `/paper.md` exists when the \
 task comes with paper text.
 - Shell commands start in that same directory, but file-tool paths are not real shell paths. In the \

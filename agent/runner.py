@@ -14,7 +14,7 @@ from langgraph.types import Command
 
 from agent.deep import MEMORY_FILE, MEMORY_HEADER, SKILLS_DIR, EventMapper, approval_request, build_agent
 from agent.rundir import APPROVAL_TIMEOUT_S, RunWriter
-from agent.sandbox import LoggingShellBackend, make_workdir
+from agent.sandbox import SandboxError, changed_files, make_backend, make_workdir, remove_workdir, snapshot
 from agent.task import Findings, Task
 
 DEFAULT_MODEL = "anthropic:claude-opus-5-5"
@@ -79,9 +79,18 @@ def run_task(task_dir: Path | str, run_dir: Path | str, *, auto_approve: bool = 
     started = time.monotonic()
     deadline = started + task.max_minutes * 60
     work = make_workdir(task, run_id)
-    backend = LoggingShellBackend(work, writer, deadline=deadline)
+    originals = snapshot(work / "repo")
+    try:
+        backend, sandbox_warning = make_backend(task, work, writer, deadline)
+    except SandboxError as exc:
+        writer.close()
+        remove_workdir(work)
+        raise ConfigError(str(exc)) from exc
     mapper = EventMapper(writer, backend)
-    writer.event("run_started", {"task_id": task.task_id, "run_id": run_id, "model": model_label})
+    # `sandbox` is an optional field beyond contract v1; readers ignore what they don't know.
+    writer.event("run_started", {"task_id": task.task_id, "run_id": run_id, "model": model_label, "sandbox": backend.label})
+    if sandbox_warning:
+        writer.event("error", {"message": sandbox_warning, "fatal": False})
     memory_dir = _memory_dir()
     remembered = sum(1 for line in (memory_dir / "fixes.md").read_text(encoding="utf-8").splitlines() if line.startswith("- "))
     if remembered:
@@ -89,13 +98,14 @@ def run_task(task_dir: Path | str, run_dir: Path | str, *, auto_approve: bool = 
         writer.event("memory_read", {"path": MEMORY_FILE, "note": note})
 
     rejected: list[str] = []
+    approved_edits: set[str] = set()
     why_missing = "the agent finished without answering it"
     try:
         # The agent gets a throwaway copy of the skills, so it can't change the ones in this repository.
         skills_dir = work.with_name(work.name + "-skills")
         shutil.copytree(SKILLS_DIR, skills_dir)
         agent = build_agent(model, backend, findings, memory_dir, skills_dir)
-        _drive(agent, task, run_id, writer, mapper, deadline, rejected, work)
+        _drive(agent, task, run_id, writer, mapper, deadline, rejected, approved_edits, work)
         if backend.out_of_time or time.monotonic() > deadline:
             raise RunTimeout
         if findings.missing() and rejected:
@@ -116,21 +126,41 @@ def run_task(task_dir: Path | str, run_dir: Path | str, *, auto_approve: bool = 
         why_missing = f"the run stopped on an error: {type(exc).__name__}: {exc}"
         writer.event("error", {"message": why_missing[:2000], "fatal": True})
 
-    writer.event("run_finished", {"status": status})
-    writer.write_report(
-        findings.report(
-            run_id=run_id,
-            status=status,
-            wall_seconds=time.monotonic() - started,
-            tokens=mapper.tokens or None,
-            why_missing=why_missing,
+    backend.close()
+    # Did anything change the files that came with the repository? File-tool edits were
+    # approved one by one; a shell command (`sed -i`, a script that rewrites its inputs) is
+    # only caught here.
+    changes = changed_files(work / "repo", originals)
+    for change in changes:
+        change["approved"] = change["path"] in approved_edits
+    unapproved = [c["path"] for c in changes if not c["approved"]]
+    if unapproved:
+        shown = ", ".join(unapproved[:5]) + (f" and {len(unapproved) - 5} more" if len(unapproved) > 5 else "")
+        findings.record_obstacle(
+            "other",
+            f"Files that came with the repository were changed during the run without an approval: {shown}. "
+            "Results may not come from the code as published.",
+            None,
+            False,
         )
+        writer.event("source_changed", {"files": changes})  # event type beyond contract v1
+
+    writer.event("run_finished", {"status": status})
+    report = findings.report(
+        run_id=run_id,
+        status=status,
+        wall_seconds=time.monotonic() - started,
+        tokens=mapper.tokens or None,
+        why_missing=why_missing,
     )
+    report["sandbox"] = backend.label  # optional fields beyond contract v1
+    report["source_changes"] = changes
+    writer.write_report(report)
     writer.close()
     if os.environ.get("REPRO_KEEP_WORK"):
         print(f"workspace kept at {work}", file=sys.stderr)
     else:
-        shutil.rmtree(work, ignore_errors=True)
+        remove_workdir(work)
     shutil.rmtree(work.with_name(work.name + "-skills"), ignore_errors=True)
     print(f"{status}: report written to {run_dir}/report.json")
     return 0
@@ -144,6 +174,7 @@ def _drive(
     mapper: EventMapper,
     deadline: float,
     rejected: list[str],
+    approved_edits: set[str],
     work: Path,
 ) -> None:
     """Stream the agent, pausing at each approval until the run ends."""
@@ -175,6 +206,8 @@ def _drive(
                 )
                 if decision["decision"] == "approve":
                     decisions.append({"type": "approve"})
+                    if request["kind"] == "edit_source":
+                        approved_edits.add(str((action.get("args") or {}).get("file_path") or "").lstrip("/"))
                 else:
                     rejected.append(decision["id"])
                     who = "Nobody answered the approval request in time" if decision["by"] == "timeout" else "A human rejected this"

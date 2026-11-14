@@ -39,3 +39,11 @@ Status: proposed (information only)
 - When no decision arrives in 10 minutes, A writes `approvals/<id>.decision.json` itself with `"by": "timeout"`. It creates the file exclusively, so a decision B writes at the same moment wins.
 - Every run asks for one `long_run` approval before the experiment command, even when it is short, so the approve button is exercised on the toy task. Setup commands under 90 seconds don't ask.
 - `evidence.file` always points into `logs/`; A fills it in after finding the quote in saved command output.
+
+## 2026-11-14 A — optional fields A now writes
+Status: proposed (information only; all optional, nothing to adopt)
+- `run_started.data.sandbox` and `report.sandbox`: where commands ran, e.g. `podman (python:3.12-slim, network on)` or `local`. A run with `local` had no isolation, so the paper's code could read anything on the disk, answer keys included. B may want to show or exclude those runs on the scoreboard.
+- `report.source_changes`: files that came with the task's repo and were modified or deleted during the run, as `[{"path": "repo/run.py", "change": "modified", "approved": false}]`. `approved` is true when a human approved that edit through an `edit_source` request. Empty list when nothing changed.
+- Event type `source_changed` with `data.files` (same list), emitted just before `run_finished` when the list has unapproved entries. The same information is also in `obstacles`.
+- Approvals can now come from a subagent: the `agent` field of `approval_requested` / `approval_resolved` is the subagent's name (`runner`, `env-builder`), not always `main`.
+- A run can raise more than one approval (`a1`, `a2`, ...): `edit_source` when the agent wants to change a file inside the paper's repo (the request's `diff` is a unified diff), then `long_run` before the experiment.

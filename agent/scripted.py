@@ -122,6 +122,12 @@ def _toy_flow() -> Flow:
         description="Create .venv in the workspace and install repo/requirements.txt (numpy==1.19.5, likely too old). "
         "Report how to start Python.",
     )
+    if os.environ.get("REPRO_SCRIPT_PROBE"):
+        # Test switch: try to read a file outside the workspace. A real sandbox makes this fail.
+        yield call("execute", command=f"cat {os.environ['REPRO_SCRIPT_PROBE']}")
+    if os.environ.get("REPRO_SCRIPT_TAMPER"):
+        # Test switch: change one of the paper's files with a shell command, behind the file tools' back.
+        yield call("execute", command="echo '# touched' >> repo/run.py")
     messages = yield call("read_file", file_path=FIXES)
     remembered = "numpy==1.19.5" in last_result(messages, "read_file")
     if remembered:

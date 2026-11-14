@@ -117,6 +117,32 @@ they're wrong.
     Their turns happen in a fixed order, so one script with normal `if` branches covers the
     remembered-fix path, the rejected-approval path and the edit-source test switch.
 
+### Sandbox and source check (slice 3)
+
+28. **The default sandbox is a rootless Podman container** (`REPRO_SANDBOX=auto` uses it when
+    `podman` is installed). Only the workspace is mounted, at `/work`. The paper's code can't
+    read this repository, so not `harness/answers/` either, nor other files or API keys. With
+    the local shell any command could `cat` the answer key, which would make every score
+    worthless. Docker-compatible, so it should behave the same on a laptop; untested there.
+29. **`limits.network: false` is enforced** by starting the container with `--network none`.
+    `limits.gpu` needs nothing: no GPU device is passed in.
+30. **Image: `python:3.12-slim`**, set with `REPRO_SANDBOX_IMAGE`. Small enough to pull over a
+    bad connection. It has no compiler, R or conda, so real CORE-Bench capsules will need a
+    fuller image; that choice is left until there is a real task to try.
+31. **If Podman can't start in `auto` mode the run falls back to the local shell** and says so
+    in a non-fatal `error` event. With `REPRO_SANDBOX=podman` the same failure stops the run
+    before it starts (exit 2), for batch runs where an unisolated run must not be scored.
+32. **Command timeouts are enforced inside the container** (`timeout -k 5 N sh -c ...`), with
+    a slightly longer guard on the `podman exec` call itself.
+33. **Files that came with the repository are fingerprinted before the run and compared after
+    it.** File-tool edits need an approval (decision 25), but a shell command can still change
+    a file. Changed originals go into the report as `source_changes` (path, modified or
+    deleted, approved or not), and unapproved ones add an obstacle. The wording is neutral:
+    some code rewrites an output file that shipped with the repository, which is not cheating.
+34. **Fields beyond contract v1**, all optional and listed in `contract/CHANGES.md`:
+    `run_started.data.sandbox`, `report.sandbox`, `report.source_changes`, and the event type
+    `source_changed`.
+
 ## Failures and what changed
 
 For `FAILURES.md` (the "what did you try and fail on" question).
@@ -154,7 +180,10 @@ For `FAILURES.md` (the "what did you try and fail on" question).
   answers), no decision (rejected by timeout), and an approval raised inside a subagent.
 - A write into `/repo` raises an `edit_source` approval with the diff; rejecting it is not fatal.
 - A second run reads the remembered numpy fix and skips the install that fails (16 s down to 10 s).
+- An approved edit is listed as approved; a file changed by a shell command is reported.
+- In the Podman sandbox the toy reproduces, a file outside the workspace can't be read, and the
+  container is gone afterwards.
 - Run over `limits.max_minutes` ends with status `timeout`.
-- 13 tests: 6 on the writer and findings (standard library), 7 end-to-end.
+- 16 tests: 6 on the writer and findings (standard library), 10 end-to-end.
 
 None of this says how a real model behaves with these prompts. That needs a key.

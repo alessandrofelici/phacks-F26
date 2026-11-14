@@ -48,6 +48,7 @@ class ScriptedToyRun(unittest.TestCase):
             "REPRO_MODEL": "scripted",
             "REPRO_WORK_ROOT": str(self.tmp / "work"),
             "REPRO_MEMORY_DIR": str(self.tmp / "memory"),  # each test starts with nothing remembered
+            "REPRO_SANDBOX": "local",  # fast; the Podman sandbox has its own tests below
             **env,
         }
         return subprocess.Popen(
@@ -147,6 +148,40 @@ class ScriptedToyRun(unittest.TestCase):
         asked = [e for e in events if e["type"] == "approval_requested"]
         self.assertEqual([e["data"]["kind"] for e in asked], ["edit_source", "long_run"])
         self.assertEqual({e["agent"] for e in asked}, {"env-builder", "runner"})
+        self.assertEqual(report["source_changes"], [], "the rejected edit left the file alone")
+
+    def test_an_approved_edit_is_listed_as_approved(self) -> None:
+        process = self.start(REPRO_SCRIPT_EDIT_SOURCE="1")
+
+        def harness() -> None:
+            self.decide("approve", "", "a1")
+            self.decide("approve", "", "a2")
+
+        threading.Thread(target=harness, daemon=True).start()
+        report = self.finish(process)
+        self.assertEqual(report["source_changes"], [{"path": "repo/requirements.txt", "change": "modified", "approved": True}])
+        self.assertFalse(any("without an approval" in o["summary"] for o in report["obstacles"]))
+
+    def test_a_shell_command_that_changes_a_repo_file_is_reported(self) -> None:
+        report = self.finish(self.start("--auto-approve", REPRO_SCRIPT_TAMPER="1"))
+        self.assertEqual(report["source_changes"], [{"path": "repo/run.py", "change": "modified", "approved": False}])
+        self.assertTrue(any("without an approval" in o["summary"] and "repo/run.py" in o["summary"] for o in report["obstacles"]))
+
+    @unittest.skipUnless(shutil.which("podman"), "needs podman")
+    def test_podman_sandbox_reproduces_the_toy_out_of_reach_of_the_host(self) -> None:
+        secret = self.tmp / "host-only.txt"
+        secret.write_text("answer key stand-in")
+        report = self.finish(self.start("--auto-approve", REPRO_SANDBOX="podman", REPRO_SCRIPT_PROBE=str(secret)))
+        self.assertEqual(report["status"], "completed")
+        self.assertEqual({a["question_id"]: a["value"] for a in report["answers"]}, {"q1": 0.4555, "q2": "ridge-weak"})
+        self.assertTrue(report["sandbox"].startswith("podman"))
+        events = events_of(self.run_dir)
+        self.assertTrue(events[0]["data"]["sandbox"].startswith("podman"))
+        probe = next(e for e in events if e["data"].get("tool") == "execute" and "host-only" in e["data"]["summary"])
+        self.assertFalse(probe["data"]["ok"], "a file outside the workspace can't be read from the sandbox")
+        self.assertNotIn("answer key stand-in", probe["data"].get("detail", ""))
+        leftovers = subprocess.run(["podman", "ps", "-q", "--filter", "name=repro-"], capture_output=True, text=True)
+        self.assertEqual(leftovers.stdout.strip(), "", "the container is removed after the run")
 
     def test_human_approval_resumes_the_run(self) -> None:
         process = self.start()

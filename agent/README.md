@@ -35,6 +35,8 @@ output, but no LLM is involved, so it only proves the plumbing.
 | Variable | Default | Meaning |
 |---|---|---|
 | `REPRO_MODEL` | `anthropic:claude-opus-5-5` | Any LangChain `provider:model` string, or `scripted` |
+| `REPRO_SANDBOX` | `auto` | `podman`, `local`, or `auto` (Podman when it's installed, else the local shell) |
+| `REPRO_SANDBOX_IMAGE` | `docker.io/library/python:3.12-slim` | Container image for the Podman sandbox |
 | `REPRO_WORK_ROOT` | system temp dir | Where the private copy of the task's repo is made |
 | `REPRO_KEEP_WORK` | unset | Set to keep that copy after the run, for debugging |
 | `REPRO_MEMORY_DIR` | `agent/.memory` | Where fixes remembered across runs are kept (gitignored) |
@@ -42,10 +44,13 @@ output, but no LLM is involved, so it only proves the plumbing.
 | `REPRO_APPROVAL_TIMEOUT` | `600` | Seconds to wait for a decision (contract: 10 minutes) |
 | `REPRO_DEBUG` | unset | Print the agent's raw stream updates to stderr |
 
+The local shell has no isolation: the paper's code can read anything this user can, including
+the harness's answer keys. Use it for plumbing only; scored runs should use Podman.
+
 ## Exit codes
 
 - `0`: `report.json` was written (status `completed`, `failed`, `timeout` or `rejected`).
-- `2`: the run could not start (no model key, unreadable task, run directory already used).
+- `2`: the run could not start (no model key, unreadable task, run directory already used, `REPRO_SANDBOX=podman` but Podman didn't start).
   Nothing is written in that case.
 - anything else: a crash.
 
