@@ -18,13 +18,14 @@ Everything above is done and pushed. Nothing else can be built or checked withou
 
 ## Needs something this agent doesn't have
 
-- [ ] **Any run with a real model.** Needs a model API key in `.env` (e.g. `ANTHROPIC_API_KEY`).
+- [ ] **Any run with a real model.** Needs `OPENROUTER_API_KEY` in `.env` (see `agent/.env.example`;
+      check it with `python -m agent.check --call`).
       First thing to do with a key: `python -m agent.run --task contract/fixtures/tasks/toy-linreg
       --run runs/real-1 --auto-approve`, then read the timeline. Expect to tune the prompts in
       `agent/deep.py`: they have only ever been read by the scripted stand-in.
 - [ ] **First CORE-Bench task end to end.** Needs the key, and a task directory made by Role B's
       loader (`tasks/` is local to the machine where the harness ran).
-- [ ] **LangSmith trace link in `trace_url`.** Needs `LANGSMITH_API_KEY`.
+- [ ] **LangSmith trace link in `trace_url`.** Wired, but never tried with a real `LANGSMITH_API_KEY`.
 - [ ] **Hosted sandbox** (Modal, E2B, Daytona, LangSmith). Needs an account; Podman covers
       isolation until then.
 - [ ] **A fuller sandbox image.** `python:3.12-slim` has no compiler, R or conda. Pick one when a

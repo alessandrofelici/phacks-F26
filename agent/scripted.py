@@ -23,6 +23,7 @@ from typing import Any
 from langchain_core.language_models.chat_models import BaseChatModel
 from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
 from langchain_core.outputs import ChatGeneration, ChatResult
+from pydantic import PrivateAttr
 
 from agent.task import Task
 
@@ -60,7 +61,9 @@ def last_result(messages: Sequence[BaseMessage], name: str) -> str:
 class ScriptedChatModel(BaseChatModel):
     """Asks the flow generator for the next assistant turn."""
 
-    flow: Any  # a primed Flow generator
+    # Private, not a model field: with LangSmith tracing on, the tracer serializes the model's
+    # fields, and walking a generator field consumed the whole script before the first turn.
+    _flow: Any = PrivateAttr(default=None)
 
     @property
     def _llm_type(self) -> str:
@@ -77,7 +80,7 @@ class ScriptedChatModel(BaseChatModel):
         **kwargs: Any,
     ) -> ChatResult:
         try:
-            message = self.flow.send(messages)
+            message = self._flow.send(messages)
         except StopIteration:
             message = say("The script has no more steps.")
         return ChatResult(generations=[ChatGeneration(message=message)])
@@ -235,4 +238,6 @@ def scripted_model_for(task: Task) -> ScriptedChatModel:
         )
     flow = _toy_flow()
     next(flow)  # run to the first bare yield, so send() works from the first model call
-    return ScriptedChatModel(flow=flow)
+    model = ScriptedChatModel()
+    model._flow = flow
+    return model

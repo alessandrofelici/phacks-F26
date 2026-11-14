@@ -28,7 +28,7 @@ has been tried with a real model yet.
 
 | Feature | Why |
 |---|---|
-| LangSmith tracing (`trace_url`) | Needs `LANGSMITH_API_KEY`; `trace_url` is `null` |
+| LangSmith tracing (`trace_url`) | Wired: one parent trace per run, linked from `trace_url`. Needs `LANGSMITH_API_KEY` and `LANGSMITH_TRACING=true`; never tried with a real key |
 | A hosted sandbox (Modal, E2B, Daytona, LangSmith) | Needs an account. Only `agent/sandbox.py` would change |
 
 ## One thing that isn't a deepagents feature but belongs in the pitch

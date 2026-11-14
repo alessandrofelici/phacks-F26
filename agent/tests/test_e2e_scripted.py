@@ -49,6 +49,7 @@ class ScriptedToyRun(unittest.TestCase):
             "REPRO_WORK_ROOT": str(self.tmp / "work"),
             "REPRO_MEMORY_DIR": str(self.tmp / "memory"),  # each test starts with nothing remembered
             "REPRO_SANDBOX": "local",  # fast; the Podman sandbox has its own tests below
+            "LANGSMITH_TRACING": "false",  # a developer's .env must not turn tracing on in tests
             **env,
         }
         return subprocess.Popen(
@@ -203,6 +204,14 @@ class ScriptedToyRun(unittest.TestCase):
         self.assertNotIn("answer key stand-in", probe["data"].get("detail", ""))
         leftovers = subprocess.run(["podman", "ps", "-q", "--filter", "name=repro-"], capture_output=True, text=True)
         self.assertEqual(leftovers.stdout.strip(), "", "the container is removed after the run")
+
+    def test_tracing_with_a_bad_key_does_not_break_the_run(self) -> None:
+        report = self.finish(
+            self.start("--auto-approve", LANGSMITH_TRACING="true", LANGSMITH_API_KEY="lsv2_not_a_real_key")
+        )
+        self.assertEqual(report["status"], "completed")
+        self.assertEqual({a["question_id"]: a["value"] for a in report["answers"]}, {"q1": 0.4555, "q2": "ridge-weak"})
+        self.assertTrue(report["trace_url"] is None or report["trace_url"].startswith("https://"))
 
     def test_human_approval_resumes_the_run(self) -> None:
         process = self.start()

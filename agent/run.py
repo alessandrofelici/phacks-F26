@@ -35,16 +35,16 @@ def load_dotenv(path: Path) -> None:
         os.environ.setdefault(key, value)
 
 
-def ensure_dependencies(argv: list[str]) -> None:
+def ensure_dependencies(argv: list[str], module: str = "agent.run") -> None:
     """Switch to agent/.venv when this interpreter can't import deepagents."""
     if importlib.util.find_spec("deepagents") is not None:
         return
     venv_python = AGENT_DIR / ".venv" / "bin" / "python"
     if venv_python.exists() and not os.environ.get("REPRO_REEXEC"):
         os.environ["REPRO_REEXEC"] = "1"
-        os.execv(str(venv_python), [str(venv_python), "-m", "agent.run", *argv])
+        os.execv(str(venv_python), [str(venv_python), "-m", module, *argv])
     sys.exit(
-        "agent.run: the agent's dependencies are not installed.\n"
+        f"{module}: the agent's dependencies are not installed.\n"
         "From the repo root run:\n"
         "  python3 -m venv agent/.venv && agent/.venv/bin/pip install -r agent/requirements.txt\n"
         "(or: uv venv agent/.venv && uv pip install -p agent/.venv -r agent/requirements.txt)"

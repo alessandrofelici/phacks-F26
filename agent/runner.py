@@ -12,20 +12,12 @@ from typing import Any
 
 from langgraph.types import Command
 
+from agent import models
 from agent.deep import MEMORY_FILE, MEMORY_HEADER, SKILLS_DIR, EventMapper, approval_request, build_agent
 from agent.rundir import APPROVAL_TIMEOUT_S, RunWriter
 from agent.sandbox import SandboxError, changed_files, make_backend, make_workdir, remove_workdir, snapshot
 from agent.task import Findings, Task
-
-DEFAULT_MODEL = "anthropic:claude-opus-5-5"
-
-# Any one of the listed variables is enough for that provider.
-_KEYS = {
-    "anthropic": ("ANTHROPIC_API_KEY",),
-    "openai": ("OPENAI_API_KEY",),
-    "google_genai": ("GOOGLE_API_KEY", "GEMINI_API_KEY"),
-}
-
+from agent.tracing import run_trace
 
 class ConfigError(RuntimeError):
     """The run can't start (no model key, bad task). Exits non-zero before any event is written."""
@@ -35,23 +27,20 @@ class RunTimeout(Exception):
     """The task's limits.max_minutes is used up."""
 
 
-def resolve_model(task: Task) -> tuple[Any, str]:
-    """Return (model for create_deep_agent, label for the run_started event)."""
-    name = os.environ.get("REPRO_MODEL", DEFAULT_MODEL)
+def resolve_models(task: Task) -> tuple[Any, Any, str]:
+    """Return (main model, subagent model or None, label for the run_started event)."""
+    name = models.chosen_model()
     if name == "scripted":
         from agent.scripted import scripted_model_for
 
-        return scripted_model_for(task), "scripted (offline replay, no LLM)"
-    provider = name.split(":", 1)[0]
-    wanted = _KEYS.get(provider, ())
-    if wanted and not any(os.environ.get(var) for var in wanted):
-        raise ConfigError(
-            f"{name} needs {' or '.join(wanted)} in the environment or in .env at the repo root. "
-            "Set it, pick another model with REPRO_MODEL, or use REPRO_MODEL=scripted for the offline toy run."
-        )
-    from langchain.chat_models import init_chat_model
-
-    return init_chat_model(name, max_tokens=16000), name
+        return scripted_model_for(task), None, "scripted (offline replay, no LLM)"
+    sub_name = models.chosen_subagent_model()
+    try:
+        main = models.make_model(name)
+        sub = models.make_model(sub_name) if sub_name and sub_name != name else None
+    except models.ModelConfigError as exc:
+        raise ConfigError(str(exc)) from exc
+    return main, sub, name + (f" (subagents: {sub_name})" if sub is not None else "")
 
 
 def _memory_dir() -> Path:
@@ -67,7 +56,7 @@ def _memory_dir() -> Path:
 def run_task(task_dir: Path | str, run_dir: Path | str, *, auto_approve: bool = False) -> int:
     """Run the task and write the run directory. Returns the process exit code."""
     task = Task.load(task_dir)
-    model, model_label = resolve_model(task)  # may raise ConfigError before anything is written
+    model, subagent_model, model_label = resolve_models(task)  # may raise ConfigError before anything is written
     run_dir = Path(run_dir)
     run_id = run_dir.resolve().name
     writer = RunWriter(
@@ -100,12 +89,14 @@ def run_task(task_dir: Path | str, run_dir: Path | str, *, auto_approve: bool = 
     rejected: list[str] = []
     approved_edits: set[str] = set()
     why_missing = "the agent finished without answering it"
+    trace: dict[str, Any] = {"url": None}
     try:
         # The agent gets a throwaway copy of the skills, so it can't change the ones in this repository.
         skills_dir = work.with_name(work.name + "-skills")
         shutil.copytree(SKILLS_DIR, skills_dir)
-        agent = build_agent(model, backend, findings, memory_dir, skills_dir)
-        _drive(agent, task, run_id, writer, mapper, deadline, rejected, approved_edits, work)
+        agent = build_agent(model, backend, findings, memory_dir, skills_dir, subagent_model)
+        with run_trace(task.task_id, run_id, model_label) as trace:
+            _drive(agent, task, run_id, writer, mapper, deadline, rejected, approved_edits, work)
         if backend.out_of_time or time.monotonic() > deadline:
             raise RunTimeout
         if findings.missing() and rejected:
@@ -152,6 +143,7 @@ def run_task(task_dir: Path | str, run_dir: Path | str, *, auto_approve: bool = 
         wall_seconds=time.monotonic() - started,
         tokens=mapper.tokens or None,
         why_missing=why_missing,
+        trace_url=trace.get("url"),
     )
     report["sandbox"] = backend.label  # optional fields beyond contract v1
     report["source_changes"] = changes

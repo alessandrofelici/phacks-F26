@@ -13,7 +13,24 @@ python3 -m venv agent/.venv && agent/.venv/bin/pip install -r agent/requirements
 
 or `uv venv agent/.venv && uv pip install -p agent/.venv -r agent/requirements.txt`.
 
-Put the model key in `.env` at the repo root (gitignored), for example `ANTHROPIC_API_KEY=...`.
+## Keys
+
+Copy the example and fill in one key:
+
+```
+cp agent/.env.example .env        # .env lives in the repo root and is gitignored
+python -m agent.check             # shows the model, key, sandbox and tracing that would be used
+python -m agent.check --call      # also sends one tiny request to the model
+```
+
+| Key | Needed? | What for |
+|---|---|---|
+| `OPENROUTER_API_KEY` | Yes (or `ANTHROPIC_API_KEY`) | The model. Default `openrouter:anthropic/claude-opus-5.5` |
+| `ANTHROPIC_API_KEY` | Only when `REPRO_MODEL` starts with `anthropic:` | Anthropic's API directly |
+| `LANGSMITH_API_KEY` + `LANGSMITH_TRACING=true` | Optional | One LangSmith trace per run, linked from `trace_url` |
+
+Nothing else needs a key: the sandbox is local Podman, and the docs MCP servers are public.
+Keys stay in the agent's own process. Commands in the sandbox never see them.
 
 ## Run
 
@@ -34,7 +51,8 @@ output, but no LLM is involved, so it only proves the plumbing.
 
 | Variable | Default | Meaning |
 |---|---|---|
-| `REPRO_MODEL` | `anthropic:claude-opus-5-5` | Any LangChain `provider:model` string, or `scripted` |
+| `REPRO_MODEL` | `openrouter:anthropic/claude-opus-5.5` (or `anthropic:claude-opus-5-5` when only that key is set) | Any LangChain `provider:model` string, or `scripted` |
+| `REPRO_SUBAGENT_MODEL` | same as `REPRO_MODEL` | A cheaper model for the four subagents |
 | `REPRO_SANDBOX` | `auto` | `podman`, `local`, or `auto` (Podman when it's installed, else the local shell) |
 | `REPRO_SANDBOX_IMAGE` | `docker.io/library/python:3.12-slim` | Container image for the Podman sandbox |
 | `REPRO_WORK_ROOT` | system temp dir | Where the private copy of the task's repo is made |
@@ -63,7 +81,9 @@ agent/.venv/bin/python -m unittest discover -s agent/tests -t .  # plus end-to-e
 
 ## Files
 
-- `run.py`: the command. `runner.py`: one run from start to report.
+- `run.py`: the command. `runner.py`: one run from start to report. `check.py`: configuration check.
+- `models.py`: which model and key. `tracing.py`: the optional LangSmith trace link.
+- `.env.example`: every setting, with comments.
 - `deep.py`: prompts, tools, subagents, approvals, stream-to-events mapping.
 - `sandbox.py`: where commands run. `rundir.py`: events, logs, approvals, report.
 - `task.py`: task loading, answers, obstacles. `scripted.py`: the offline stand-in model.

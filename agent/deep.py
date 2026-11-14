@@ -263,8 +263,19 @@ def _writes_into_repo(request: Any) -> bool:
     return ("/" + path.lstrip("/")).startswith("/repo/")
 
 
-def build_agent(model: Any, shell: LoggingShellBackend, findings: Findings, memory_dir: Path, skills_dir: Path) -> Any:
-    """The deep agent. ``shell`` is the workspace; memory and skills are mounted next to it."""
+def build_agent(
+    model: Any,
+    shell: LoggingShellBackend,
+    findings: Findings,
+    memory_dir: Path,
+    skills_dir: Path,
+    subagent_model: Any = None,
+) -> Any:
+    """The deep agent. ``shell`` is the workspace; memory and skills are mounted next to it.
+
+    ``subagent_model`` is an optional cheaper model for the four subagents; by default they
+    use the main model.
+    """
     decisions = ["approve", "reject"]
     backend = CompositeBackend(
         default=shell,
@@ -276,7 +287,10 @@ def build_agent(model: Any, shell: LoggingShellBackend, findings: Findings, memo
     subagents = []
     for spec in SUBAGENTS:
         tools = build_tools(shell, findings, agent=spec["name"])
-        subagents.append({**spec, "tools": [tools[name] for name in spec["tools"]]})
+        subagent = {**spec, "tools": [tools[name] for name in spec["tools"]]}
+        if subagent_model is not None:
+            subagent["model"] = subagent_model
+        subagents.append(subagent)
     return create_deep_agent(
         model=model,
         tools=list(build_tools(shell, findings).values()),

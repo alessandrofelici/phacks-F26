@@ -164,6 +164,27 @@ they're wrong.
     `REPRO_SCRIPT_TAMPER`, `REPRO_SCRIPT_PROBE`, `REPRO_SCRIPT_BACKGROUND`,
     `REPRO_SCRIPT_BIG_OUTPUT`. They only change what the stand-in model does.
 
+### Keys and model choice (slice 5, after Alessandro said he will add an OpenRouter key)
+
+39. **OpenRouter through `langchain-openrouter` 0.2.9**, the provider `init_chat_model` and
+    deepagents already know (`openrouter:<vendor>/<model>`). Not an OpenAI-compatible base URL:
+    deepagents ships an OpenRouter profile (app attribution, no routing through Azure) that
+    only applies to the real provider.
+40. **Default model `openrouter:anthropic/claude-opus-5.5`** ($4 / $20 per million tokens on
+    OpenRouter today; the id was read from OpenRouter's model list, not guessed). With
+    `REPRO_MODEL` unset the model follows the key that is set: OpenRouter first, then Anthropic.
+41. **`REPRO_SUBAGENT_MODEL` is optional and empty by default.** Subagents use the main model
+    unless someone decides to trade quality for cost; that is a human's call after a real run.
+42. **`agent/.env.example` lives in `agent/`** because Role A only writes there, but it is
+    copied to `.env` in the repo root, where the contract says secrets go.
+43. **`python -m agent.check`** prints what a run would use (model, key present or not, sandbox,
+    tracing) and with `--call` sends one tiny request. A wrong key, no credit or a mistyped
+    model id is the likeliest first failure, and this finds it without starting a run.
+44. **LangSmith tracing wraps the whole run in one parent trace** (`langsmith.trace`), because
+    approvals split a run into several agent invocations. `trace_url` is that trace's link.
+    Any tracing failure ends in `trace_url: null`, never in a failed run. Checked with tracing
+    off and with a fake key; **not checked with a real LangSmith key**.
+
 ## Failures and what changed
 
 For `FAILURES.md` (the "what did you try and fail on" question).
@@ -192,6 +213,12 @@ For `FAILURES.md` (the "what did you try and fail on" question).
   the report was valid, the status was `failed`. Two lessons: search for one literal at a time,
   and a valid run directory says nothing about whether the questions got answered.
 
+- **Turning tracing on emptied the scripted model.** With `LANGSMITH_TRACING=true` the run
+  ended at once with no answers. The tracer serializes the model's fields, and one field was the
+  script's generator, which got consumed before the first turn. Only the stand-in was affected
+  (a real model has no such field), but it was found only because a test ran with a fake
+  LangSmith key. The generator is now a private attribute.
+
 ## What is verified (scripted model, CT 120, 2026-11-14)
 
 - `python -m agent.run` on the toy task writes a run directory that `contract/validate.py`
@@ -208,6 +235,8 @@ For `FAILURES.md` (the "what did you try and fail on" question).
   evidence, in the local shell and in Podman.
 - A 1.5 MB command output is offloaded by deepagents and saved in `logs/`.
 - Run over `limits.max_minutes` ends with status `timeout`.
-- 18 tests: 6 on the writer and findings (standard library), 12 end-to-end.
+- The model follows the key that is set; a missing key is named; `python -m agent.check` reports it.
+- A fake LangSmith key does not break a run.
+- 24 tests: 6 on the writer and findings, 5 on model selection, 13 end-to-end.
 
 None of this says how a real model behaves with these prompts. That needs a key.
