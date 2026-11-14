@@ -27,7 +27,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from html.parser import HTMLParser
 from pathlib import Path
-from typing import Any
+from typing import Any, ClassVar
 
 from agent.run import REPO_ROOT, ensure_dependencies, env_file, load_dotenv
 
@@ -87,7 +87,7 @@ def metadata(aid: str) -> dict[str, Any]:
     entry = ET.fromstring(xml).find("a:entry", ns)
     if entry is None or entry.findtext("a:title", default="", namespaces=ns).strip() in ("", "Error"):
         raise ValueError(f"arXiv has no paper {aid}")
-    clean = lambda s: " ".join((s or "").split())  # noqa: E731
+    clean = lambda s: " ".join((s or "").split())
     return {
         "id": aid,
         "title": clean(entry.findtext("a:title", namespaces=ns)),
@@ -99,7 +99,7 @@ def metadata(aid: str) -> dict[str, Any]:
 class _TextOfHtml(HTMLParser):
     """Visible text of arXiv's HTML paper, with table cells kept apart."""
 
-    SKIP = {"script", "style", "nav", "header", "footer", "math"}
+    SKIP: ClassVar[frozenset[str]] = frozenset({"script", "style", "nav", "header", "footer", "math"})
 
     def __init__(self) -> None:
         super().__init__()
@@ -187,7 +187,7 @@ def find_repo(meta: dict[str, Any], text: str, links: list[str]) -> tuple[str | 
             )
             with urllib.request.urlopen(req, timeout=30) as resp:
                 readme = " ".join(resp.read().decode("utf-8", "replace").split()).lower()
-        except Exception:  # noqa: BLE001
+        except Exception:  # noqa: BLE001, S112 - an unreadable README just isn't evidence
             continue
         if any(w in readme for w in wanted):
             return item["html_url"], "a GitHub repository whose README names the paper (check it is the authors' code)"

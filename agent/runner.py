@@ -92,7 +92,11 @@ def run_task(task_dir: Path | str, run_dir: Path | str, *, auto_approve: bool = 
         raise ConfigError(str(exc)) from exc
     mapper = EventMapper(writer, backend)
     # `sandbox` is an optional field beyond contract v1; readers ignore what they don't know.
-    writer.event("run_started", {"task_id": task.task_id, "run_id": run_id, "model": model_label, "sandbox": backend.label})
+    started_data = {"task_id": task.task_id, "run_id": run_id, "model": model_label, "sandbox": backend.label}
+    container = getattr(backend, "container", None)
+    if container:
+        started_data["container"] = container  # optional field beyond contract v1, for cleanup checks
+    writer.event("run_started", started_data)
     if sandbox_warning:
         writer.event("error", {"message": sandbox_warning, "fatal": False})
     memory_dir = _memory_dir()

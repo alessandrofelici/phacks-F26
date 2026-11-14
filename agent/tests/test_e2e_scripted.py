@@ -203,7 +203,10 @@ class ScriptedToyRun(unittest.TestCase):
         probe = next(e for e in events if e["data"].get("tool") == "execute" and "host-only" in e["data"]["summary"])
         self.assertFalse(probe["data"]["ok"], "a file outside the workspace can't be read from the sandbox")
         self.assertNotIn("answer key stand-in", probe["data"].get("detail", ""))
-        leftovers = subprocess.run(["podman", "ps", "-q", "--filter", "name=repro-"], capture_output=True, text=True, check=False)
+        container = events[0]["data"]["container"]  # other runs may have their own containers right now
+        leftovers = subprocess.run(
+            ["podman", "ps", "-a", "-q", "--filter", f"name=^{container}$"], capture_output=True, text=True, check=False
+        )
         self.assertEqual(leftovers.stdout.strip(), "", "the container is removed after the run")
 
     def test_tracing_with_a_bad_key_does_not_break_the_run(self) -> None:

@@ -20,6 +20,29 @@ def _mask(value: str) -> str:
     return f"set ({len(value)} characters, ends in ...{value[-4:]})" if len(value) > 8 else "set"
 
 
+def _openrouter_credit() -> float | None:
+    """Dollars left on the OpenRouter account (and under the key's own limit), or None."""
+    import json
+    import urllib.request
+
+    headers = {"Authorization": "Bearer " + os.environ.get("OPENROUTER_API_KEY", "")}
+
+    def get(path: str) -> dict:
+        req = urllib.request.Request(f"https://openrouter.ai/api/v1/{path}", headers=headers)
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            return json.load(resp).get("data") or {}
+
+    try:
+        account = get("credits")
+        left = float(account["total_credits"]) - float(account["total_usage"])
+        key = get("key")
+        if key.get("limit_remaining") is not None:
+            left = min(left, float(key["limit_remaining"]))
+        return left
+    except Exception:  # noqa: BLE001 - only a hint
+        return None
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     parser = argparse.ArgumentParser(prog="python -m agent.check", description="Check Repro Bot's configuration.")
@@ -56,6 +79,14 @@ def main(argv: list[str] | None = None) -> int:
             provider = model_name.split(":", 1)[0]
             present = next((v for v in models.KEYS.get(provider, ()) if os.environ.get(v)), None)
             print(f"key:            {present or '(provider needs no known key)'} {_mask(os.environ[present]) if present else ''}".rstrip())
+    if any((m or "").startswith("openrouter:") for m in (name, sub)) and os.environ.get("OPENROUTER_API_KEY"):
+        left = _openrouter_credit()
+        if left is None:
+            print("credit:         could not read the OpenRouter balance")
+        else:
+            warn = "  LOW: a batch of papers can use a few dollars" if left < 1 else ""
+            print(f"credit:         ${left:.2f} left on the OpenRouter account{warn}")
+            ok = ok and left > 0.05
     choice = os.environ.get("REPRO_SANDBOX", "auto").lower()
     have_podman = bool(shutil.which("podman"))
     if choice == "local" or (choice == "auto" and not have_podman):

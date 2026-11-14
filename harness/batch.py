@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+import threading
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 
@@ -48,8 +49,14 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     batch_id = "b-" + now_iso().replace(":", "").replace("-", "").replace("T", "-").rstrip("Z")
+    out_of_credit = threading.Event()  # set when a run ends because the model provider refused to bill
+
     def run_one(numbered: tuple[int, str]) -> dict:
         i, tid = numbered
+        if out_of_credit.is_set():
+            print(f"    {tid} not started: the model provider is out of credit", flush=True)
+            return {"task_id": tid, "run_id": None, "status": "not_started", "correct": 0, "total": 0,
+                    "obstacles": [{"stage": "other", "summary": "Not started: the model provider is out of credit", "resolved": False}]}
         limit_min = float((all_tasks[tid].get("limits") or {}).get("max_minutes", 30))
         print(f"[{i}/{len(task_ids)}] {tid} ...", flush=True)
         try:
@@ -59,6 +66,8 @@ def main(argv: list[str] | None = None) -> int:
             return {"task_id": tid, "run_id": None, "status": "not_started", "correct": 0, "total": 0, "obstacles": []}
         status = runs.wait_for(run_id, timeout_s=limit_min * 60 + 120)
         rdir = RUNS / run_id
+        if _billing_refused(rdir):
+            out_of_credit.set()
         score = score_run(rdir)
         report = read_json(rdir / "report.json", {}) or {}
         result = {"task_id": tid, "run_id": run_id, "status": status,
@@ -103,6 +112,18 @@ def main(argv: list[str] | None = None) -> int:
         for reason, tids in sorted(groups.items(), key=lambda kv: -len(kv[1])):
             print(f"  {len(tids)}x {reason}  [{', '.join(tids)}]")
     return 0
+
+
+BILLING_ERRORS = ("PaymentRequired", "exceed your available credits", "insufficient credits", "Error code: 402")
+
+
+def _billing_refused(rdir) -> bool:
+    """Did the run end because the model provider refused to bill (out of credit)?"""
+    try:
+        text = (rdir / "events.jsonl").read_text(encoding="utf-8")
+    except OSError:
+        return False
+    return any(marker in text for marker in BILLING_ERRORS)
 
 
 if __name__ == "__main__":

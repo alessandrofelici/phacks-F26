@@ -13,7 +13,10 @@ from typing import Any
 from deepagents import SubAgent, create_deep_agent
 from deepagents.backends import CompositeBackend, FilesystemBackend
 from langchain.agents.middleware import (
+    AgentMiddleware,
     InterruptOnConfig,
+    ModelRequest,
+    ModelResponse,
     TodoListMiddleware,
     ToolCallRequest,
 )
@@ -365,6 +368,32 @@ def _writes_into_repo(request: ToolCallRequest) -> bool:
     return ("/" + path.lstrip("/")).startswith("/repo/")
 
 
+_COMMAND_TOOLS = frozenset({"execute", "run_experiment", "start_background_run", "check_background_run"})
+_STRICT_NOTE = """
+
+In this run you don't run commands yourself: `env-builder` sets up the environment, `runner` runs the \
+experiment and `result-judge` records the answers. Give each one the paths, commands and question texts \
+it needs, and check what they report."""
+
+
+class DelegateCommands(AgentMiddleware):
+    """Hide the command tools from the main agent, so setup and runs go to subagents.
+
+    Their install logs and long outputs then stay in the subagents' own context. Subagents are
+    built with their own middleware, so their tools are untouched.
+    """
+
+    def wrap_model_call(self, request: ModelRequest, handler: Any) -> ModelResponse:
+        tools = [t for t in request.tools if getattr(t, "name", None) not in _COMMAND_TOOLS]
+        return handler(request.override(tools=tools))
+
+
+def delegation_mode() -> str:
+    """``REPRO_DELEGATION``: ``auto`` (the main agent may run commands) or ``strict``."""
+    mode = (os.environ.get("REPRO_DELEGATION") or "auto").strip().lower()
+    return mode if mode in ("auto", "strict") else "auto"
+
+
 def build_agent(
     model: Any,
     shell: LoggingShellBackend,
@@ -378,6 +407,11 @@ def build_agent(
     ``subagent_model`` is an optional cheaper model for the four subagents; by default they
     use the main model.
     """
+    strict = delegation_mode() == "strict"
+    # Planning is opt-in in deepagents 0.7.38: without TodoListMiddleware there is no `write_todos` tool.
+    middleware: list[Any] = [TodoListMiddleware()]
+    if strict:
+        middleware.append(DelegateCommands())
     decisions: list[DecisionType] = ["approve", "reject"]
     backend = CompositeBackend(
         default=shell,
@@ -413,9 +447,8 @@ def build_agent(
     return create_deep_agent(
         model=model,
         tools=list(build_tools(shell, findings, vision_model=model).values()),
-        system_prompt=SYSTEM_PROMPT,
-        # Planning is opt-in in deepagents 0.7.38: without this there is no `write_todos` tool.
-        middleware=[TodoListMiddleware()],
+        system_prompt=SYSTEM_PROMPT + (_STRICT_NOTE if strict else ""),
+        middleware=middleware,
         subagents=subagents,
         skills=["/skills/"],
         memory=[MEMORY_FILE],
