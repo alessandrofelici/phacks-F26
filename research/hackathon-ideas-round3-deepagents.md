@@ -3,7 +3,7 @@ Goal: pick an idea that shows off **LangChain Deep Agents** (`deepagents`, built
 
 Note: the Fall '26 Devpost (`prizes/hackprinceton-fall-26-prizes.txt`) lists only MLH prizes so far. LangChain is a listed sponsor, but its prize wording isn't posted yet. Confirm it at the opening ceremony.
 
-Update 2026-11-13: the wording is posted. "Best use of deepagents — by LangChain: Teams build a deepagent for any use case they want." Prize: Switch 2 for winners. No further criteria are given. See `prizes/hackprinceton-fall-26-special-tracks.md`.
+Update 2026-11-13: the wording is posted. "Best use of deepagents — by LangChain: Teams build a deepagent for any use case they want." Prize: Switch 2 for winners. No criteria are posted, but that section of `prizes/hackprinceton-fall-26-special-tracks.md` lists three questions to be ready for: does it need to be automated, did you use all of deep agents, and what did you try and fail on.
 
 ## Best fit among the round-2 ideas
 1. **Repro Bot (§12)** is the clearest fit. Reproducing a paper is long-horizon agent work: plan, clone into a sandbox, read the README and configs as files, run, compare. Subagents for environment setup, running, and comparing against the paper's table. Weakness: lowest buildability (only if someone has done agent + Docker work).

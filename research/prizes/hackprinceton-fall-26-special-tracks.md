@@ -7,7 +7,7 @@ Official sponsor wording, added 2026-11-13 (event day). The source is a two-colu
 | Inside and Out: AI for the Built World | CoStar Group | $1,500 / $500 / $250 cash, interviews; stacks with any other prize | 30% data use, 30% agentic depth, 25% usefulness, 15% demo and polish |
 | Best Practical AI Innovation | Amazon | Gift cards: $125 / $75 / $50 per person (up to 4) | 25% each: creativity, usefulness, technical implementation, user experience |
 | Forward Deployed Challenge | Peri | Top 3: introductions to hiring teams and Peri's talent network | Real-world need, usability, execution; needs a real business consulted during the event |
-| Best use of deepagents | LangChain | Switch 2 for winners | None given |
+| Best use of deepagents | LangChain | Switch 2 for winners | None posted; three questions to answer, see the section |
 | AI-Driven Forensics (track 1) | Arlequin AI | AirPods 5 for winners | Analytical depth, technical implementation, usefulness, visualization and demo |
 | Social Media Analysis (track 2) | Arlequin AI | AirPods 5 for winners | Content + connectivity, technical implementation, insight, visualization and demo |
 | Best Usage of Nessie | Capital One | $250 per person for 1st place | None given |
@@ -122,6 +122,12 @@ Judged by Peri, co-founded by two former Palantir forward deployed engineers.
 Teams build a deepagent for any use case they want.
 
 **Prize:** Switch 2 for winners
+
+Questions to be ready to answer for this track (team notes added 2026-11-13, not part of the posted listing):
+
+- Does it need to be automated?
+- Did you use all of deep agents?
+- What did you try and fail on?
 
 ## Arlequin AI
 
