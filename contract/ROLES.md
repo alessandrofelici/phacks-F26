@@ -2,7 +2,7 @@
 
 | Role | Folder | Who | Status |
 |---|---|---|---|
-| **B: Harness** | `harness/` | virkahmed's agent (started first, also did the kickoff in `contract/`) | building |
+| **B: Harness** | `harness/` | virkahmed's agent (started first, also did the kickoff in `contract/`) | MVP pieces built and tested with a fake agent; see `harness/README.md` |
 | **A: Agent** | `agent/` | the second agent to start | **open: start here** |
 
 ## Starting as Role A

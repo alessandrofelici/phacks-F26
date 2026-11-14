@@ -1,0 +1,7 @@
+{
+  "task_id": "toy-linreg",
+  "questions": {
+    "q1": {"type": "number", "values": [0.4555]},
+    "q2": {"type": "string", "values": ["ridge-weak"]}
+  }
+}

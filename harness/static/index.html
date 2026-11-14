@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Repro Bot</title>
+<style>
+  :root {
+    --bg: #f6f5f1; --panel: #ffffff; --ink: #1c1b18; --muted: #6b6860; --line: #e2dfd6;
+    --accent: #1f5fbf; --accent-ink: #ffffff; --ok: #1a7f4b; --ok-bg: #e3f4ea; --bad: #b3261e; --bad-bg: #fbe6e4;
+    --warn: #8a5a00; --warn-bg: #fdf0cf; --chip: #ecebe5; --code: #f1efe8;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Menlo, Consolas, monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #151614; --panel: #1e201d; --ink: #ecebe6; --muted: #9c9a92; --line: #33352f;
+      --accent: #7aa9f5; --accent-ink: #0d1626; --ok: #6fd39b; --ok-bg: #173324; --bad: #f29a93; --bad-bg: #3b1c1a;
+      --warn: #f0c462; --warn-bg: #3a2e10; --chip: #2a2c27; --code: #262823;
+      color-scheme: dark;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header.top { display: flex; align-items: baseline; gap: 12px; padding: 14px 20px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  header.top h1 { font-size: 17px; margin: 0; letter-spacing: -0.01em; }
+  header.top span { color: var(--muted); font-size: 13px; }
+  .layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 16px; padding: 16px 20px; max-width: 1500px; margin: 0 auto; }
+  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .panel + .panel { margin-top: 16px; }
+  h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
+  label { display: block; font-size: 12px; color: var(--muted); margin: 10px 0 4px; }
+  select, button { font: inherit; }
+  select { width: 100%; padding: 7px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); color: var(--ink); }
+  button { cursor: pointer; border-radius: 7px; border: 1px solid var(--line); background: var(--panel); color: var(--ink); padding: 7px 14px; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  button.danger { color: var(--bad); }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button:focus-visible, select:focus-visible, .run-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .radio-row { display: flex; gap: 14px; margin-top: 4px; }
+  .radio-row label { display: flex; align-items: center; gap: 6px; margin: 0; font-size: 14px; color: var(--ink); }
+  .hint { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
+  ul.questions { margin: 8px 0 0; padding-left: 18px; color: var(--muted); font-size: 13px; }
+  .run-item { display: block; width: 100%; text-align: left; border: 1px solid transparent; border-radius: 8px; padding: 8px 10px; margin: 2px 0; background: none; }
+  .run-item:hover { background: var(--chip); }
+  .run-item.selected { border-color: var(--accent); background: var(--chip); }
+  .run-item .row { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+  .run-item .sub { color: var(--muted); font-size: 12px; }
+  .chip { display: inline-block; font-size: 12px; padding: 1px 8px; border-radius: 999px; background: var(--chip); white-space: nowrap; }
+  .chip.ok { background: var(--ok-bg); color: var(--ok); }
+  .chip.bad { background: var(--bad-bg); color: var(--bad); }
+  .chip.warn { background: var(--warn-bg); color: var(--warn); }
+  .chip.live::before { content: ""; display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: currentColor; margin-right: 6px; animation: pulse 1.2s infinite; }
+  @keyframes pulse { 50% { opacity: 0.25; } }
+  @media (prefers-reduced-motion: reduce) { .chip.live::before { animation: none; } }
+  .run-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+  .run-head h3 { margin: 0; font-size: 18px; flex: 1 1 auto; min-width: 0; }
+  .run-head .meta { color: var(--muted); font-size: 13px; }
+  .approval { border: 1px solid var(--warn); background: var(--warn-bg); border-radius: 10px; padding: 14px 16px; margin-top: 16px; }
+  .approval h4 { margin: 0 0 4px; font-size: 15px; color: var(--warn); }
+  .approval p { margin: 4px 0; }
+  .approval .buttons { display: flex; gap: 10px; margin-top: 10px; }
+  pre, code { font-family: var(--mono); font-size: 12.5px; }
+  pre { background: var(--code); border-radius: 7px; padding: 8px 10px; margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; max-height: 220px; overflow: auto; }
+  .cols { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 16px; margin-top: 16px; align-items: start; }
+  @media (max-width: 1100px) { .cols { grid-template-columns: 1fr; } }
+  ol.todos { list-style: none; margin: 0; padding: 0; }
+  ol.todos li { display: flex; gap: 8px; padding: 3px 0; }
+  ol.todos .mark { width: 18px; flex: none; text-align: center; }
+  ol.todos li.completed { color: var(--muted); }
+  ol.todos li.in_progress { font-weight: 600; }
+  .answer { border-top: 1px solid var(--line); padding: 10px 0; }
+  .answer:first-of-type { border-top: 0; padding-top: 0; }
+  .answer .q { color: var(--muted); font-size: 13px; }
+  .answer .v { font-size: 16px; font-weight: 600; font-family: var(--mono); margin: 2px 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .answer .v .none { color: var(--muted); font-weight: 400; font-family: inherit; font-size: 14px; }
+  .answer .expected { font-size: 13px; color: var(--muted); }
+  blockquote { margin: 6px 0 0; padding: 4px 10px; border-left: 3px solid var(--line); font-family: var(--mono); font-size: 12.5px; }
+  blockquote a { color: var(--accent); font-family: system-ui, sans-serif; font-size: 12px; margin-left: 8px; }
+  .obstacle { padding: 8px 0; border-top: 1px solid var(--line); }
+  .obstacle:first-of-type { border-top: 0; }
+  .scoreline { font-size: 15px; font-weight: 600; margin-bottom: 10px; }
+  ol.timeline { list-style: none; margin: 0; padding: 0; }
+  ol.timeline li { display: grid; grid-template-columns: 64px 104px minmax(0, 1fr); gap: 8px; padding: 5px 0; border-top: 1px solid var(--line); align-items: start; }
+  ol.timeline li:first-child { border-top: 0; }
+  ol.timeline .t { color: var(--muted); font-family: var(--mono); font-size: 12px; padding-top: 2px; }
+  ol.timeline .who { font-size: 12px; }
+  ol.timeline .what .fail { color: var(--bad); font-weight: 600; }
+  ol.timeline .what .kind { color: var(--muted); }
+  ol.timeline li.sub .what { padding-left: 14px; }
+  ol.timeline li.memory .what { color: var(--accent); }
+  ol.timeline details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+  .empty { color: var(--muted); padding: 30px 10px; text-align: center; }
+  .error-banner { background: var(--bad-bg); color: var(--bad); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
+  #logview { margin-top: 16px; }
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>Repro Bot</h1>
+  <span>Runs a paper's code and checks whether the published numbers hold up</span>
+</header>
+
+<div class="layout">
+  <aside>
+    <section class="panel">
+      <h2>Start a run</h2>
+      <div id="start-error" class="error-banner" hidden></div>
+      <label for="task">Paper</label>
+      <select id="task"></select>
+      <ul class="questions" id="task-questions"></ul>
+      <label>Agent</label>
+      <div class="radio-row">
+        <label><input type="radio" name="agent" value="real" id="agent-real"> Real</label>
+        <label><input type="radio" name="agent" value="fake" id="agent-fake"> Demo replay</label>
+      </div>
+      <p class="hint" id="agent-hint"></p>
+      <p style="margin: 12px 0 0"><button class="primary" id="start">Start run</button></p>
+    </section>
+    <section class="panel">
+      <h2>Runs</h2>
+      <div id="runs"><div class="empty">No runs yet.</div></div>
+    </section>
+  </aside>
+
+  <main id="main">
+    <section class="panel"><div class="empty">Pick a paper and start a run, or select an earlier run.</div></section>
+  </main>
+</div>
+
+<script>
+"use strict";
+const $ = (id) => document.getElementById(id);
+function el(tag, attrs, ...children) {
+  const node = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "class") node.className = v;
+    else if (k === "text") node.textContent = v;
+    else if (k.startsWith("on")) node.addEventListener(k.slice(2), v);
+    else node.setAttribute(k, v === true ? "" : v);
+  }
+  for (const c of children.flat()) if (c !== null && c !== undefined && c !== false) node.append(c);
+  return node;
+}
+async function api(path, body) {
+  const res = await fetch(path, body ? { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) } : undefined);
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+  return data;
+}
+
+const STATUS = {
+  running: ["Running", "live"], waiting_approval: ["Needs your approval", "warn live"],
+  completed: ["Finished", "ok"], failed: ["Gave up", "bad"], timeout: ["Out of time", "bad"],
+  rejected: ["Stopped by reviewer", "warn"], crashed: ["Crashed", "bad"], stopped: ["Stopped", "warn"],
+};
+const statusChip = (s) => el("span", { class: "chip " + (STATUS[s] || ["", ""])[1], text: (STATUS[s] || [s])[0] });
+const isLive = (s) => s === "running" || s === "waiting_approval";
+const fmt = (v) => v === null || v === undefined ? "" : (typeof v === "number" ? String(Math.round(v * 1e6) / 1e6) : (Array.isArray(v) ? JSON.stringify(v) : String(v)));
+
+let tasks = [], tasksById = {}, selected = null, detail = null, events = [], pollTimer = null, deciding = false;
+
+/* ---------- start panel ---------- */
+async function loadTasks() {
+  const data = await api("/api/tasks");
+  tasks = data.tasks; tasksById = Object.fromEntries(tasks.map((t) => [t.task_id, t]));
+  const sel = $("task"); sel.replaceChildren(...tasks.map((t) => el("option", { value: t.task_id, text: t.title })));
+  $("agent-real").disabled = !data.real_agent_available;
+  (data.real_agent_available ? $("agent-real") : $("agent-fake")).checked = true;
+  $("agent-hint").textContent = data.real_agent_available
+    ? "Demo replay plays back a recorded run of the toy paper without calling a model."
+    : "The real agent isn't in this checkout yet. Demo replay plays back a recorded run of the toy paper without calling a model.";
+  showQuestions();
+}
+function showQuestions() {
+  const t = tasksById[$("task").value];
+  $("task-questions").replaceChildren(...(t ? t.questions.map((q) => el("li", { text: q.text })) : []));
+}
+$("task").addEventListener("change", showQuestions);
+$("start").addEventListener("click", async () => {
+  $("start-error").hidden = true; $("start").disabled = true;
+  try {
+    const agent = document.querySelector("input[name=agent]:checked").value;
+    const { run_id } = await api("/api/runs", { task_id: $("task").value, agent });
+    await loadRuns(); select(run_id);
+  } catch (e) { $("start-error").textContent = e.message; $("start-error").hidden = false; }
+  $("start").disabled = false;
+});
+
+/* ---------- runs list ---------- */
+async function loadRuns() {
+  const { runs } = await api("/api/runs");
+  if (!runs.length) return;
+  $("runs").replaceChildren(...runs.map((r) => {
+    const title = (tasksById[r.task_id] || {}).title || r.task_id || "Unknown paper";
+    const score = r.score ? el("span", { class: "chip " + (r.score.correct === r.score.total ? "ok" : "bad"), text: `${r.score.correct}/${r.score.total}` }) : null;
+    return el("button", { class: "run-item" + (r.run_id === selected ? " selected" : ""), onclick: () => select(r.run_id) },
+      el("div", { class: "row" }, el("strong", { text: title }), score),
+      el("div", { class: "row sub" }, el("span", { text: (r.started || "").replace("T", " ").replace("Z", "") + (r.agent === "fake" ? " · demo" : "") }), statusChip(r.status)));
+  }));
+}
+
+/* ---------- run view ---------- */
+function select(runId) {
+  selected = runId; detail = null; events = [];
+  clearTimeout(pollTimer);
+  $("main").replaceChildren(el("section", { class: "panel" }, el("div", { class: "empty", text: "Loading…" })));
+  poll(); loadRuns();
+}
+async function poll() {
+  const runId = selected;
+  if (!runId) return;
+  try {
+    const since = events.length ? events[events.length - 1].seq : 0;
+    const d = await api(`/api/runs/${runId}?since=${since}`);
+    if (runId !== selected) return;
+    events = events.concat(d.events); detail = d;
+    render();
+    if (isLive(d.status)) pollTimer = setTimeout(poll, 1000); else loadRuns();
+  } catch (e) {
+    pollTimer = setTimeout(poll, 3000);
+  }
+}
+function elapsed() {
+  const m = detail.meta; if (!m || !m.started_epoch) return "";
+  const end = m.ended_epoch || Date.now() / 1000; const s = Math.max(0, Math.round(end - m.started_epoch));
+  return s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${s % 60} s`;
+}
+function render() {
+  const d = detail, task = tasksById[d.task_id] || { title: d.task_id || "Unknown paper", questions: [] };
+  const pending = d.approvals.filter((a) => !a.decision);
+  const main = $("main"); const scrollY = window.scrollY;
+  main.replaceChildren(
+    el("section", { class: "panel" },
+      el("div", { class: "run-head" },
+        el("h3", { text: task.title }), statusChip(d.status),
+        el("span", { class: "meta", text: [elapsed(), d.meta && d.meta.agent === "fake" ? "demo replay" : null].filter(Boolean).join(" · ") }),
+        isLive(d.status) ? el("button", { class: "danger", text: "Stop", onclick: stopRun }) : null),
+      task.paper_url ? el("p", { class: "hint" }, el("a", { href: task.paper_url, target: "_blank", rel: "noopener", text: task.paper_url })) : null,
+      d.status === "crashed" ? el("div", {}, el("p", { class: "hint", text: "The agent process ended without writing a report. Last output:" }), el("pre", { text: d.process_log_tail || "(no output)" })) : null),
+    ...pending.map(renderApproval),
+    el("div", { class: "cols" },
+      el("div", {},
+        el("section", { class: "panel" }, el("h2", { text: "Plan" }), renderTodos()),
+        el("section", { class: "panel" }, el("h2", { text: "Report" }), renderReport(task))),
+      el("section", { class: "panel" }, el("h2", { text: "What the agent did" }), renderTimeline())),
+    el("div", { id: "logview" }));
+  window.scrollTo(0, scrollY);
+}
+function renderApproval(a) {
+  const r = a.request;
+  const kinds = { long_run: "run a command", edit_source: "change the paper's code", publish: "send something outside the sandbox" };
+  return el("section", { class: "approval", role: "alert" },
+    el("h4", { text: `The agent wants to ${kinds[r.kind] || r.kind}` }),
+    el("p", { text: r.summary }),
+    r.command ? el("pre", { text: r.command }) : null,
+    r.diff ? el("pre", { text: r.diff }) : null,
+    el("div", { class: "buttons" },
+      el("button", { class: "primary", text: "Approve", disabled: deciding, onclick: () => decide(r.id, "approve") }),
+      el("button", { class: "danger", text: "Reject", disabled: deciding, onclick: () => decide(r.id, "reject") })),
+    el("p", { class: "hint", text: "With no answer in 10 minutes, this counts as a rejection." }));
+}
+async function decide(id, decision) {
+  deciding = true; render();
+  try { await api(`/api/runs/${selected}/approvals/${id}`, { decision }); } catch (e) { alertInline(e.message); }
+  deciding = false;
+}
+async function stopRun() { try { await api(`/api/runs/${selected}/stop`, {}); } catch (e) { alertInline(e.message); } }
+function alertInline(msg) { $("logview").replaceChildren(el("div", { class: "error-banner", text: msg })); }
+
+function renderTodos() {
+  const last = [...events].reverse().find((e) => e.type === "todo_updated");
+  if (!last) return el("div", { class: "empty", text: isLive(detail.status) ? "Waiting for the agent's plan…" : "The agent didn't publish a plan." });
+  const marks = { completed: "✓", in_progress: "▸", pending: "○" };
+  return el("ol", { class: "todos" }, last.data.todos.map((t) =>
+    el("li", { class: t.status }, el("span", { class: "mark", text: marks[t.status] || "○" }), el("span", { text: t.content }))));
+}
+function renderReport(task) {
+  const d = detail, rep = d.report;
+  if (!rep) {
+    const found = events.filter((e) => e.type === "answer_found");
+    if (isLive(d.status)) return el("div", { class: "empty", text: found.length ? `${found.length} answer(s) found so far. The report appears when the run ends.` : "The report appears when the run ends." });
+    return el("div", { class: "empty", text: "This run ended without a report." });
+  }
+  const byId = Object.fromEntries((rep.answers || []).map((a) => [a.question_id, a]));
+  const out = [];
+  if (d.score) out.push(el("div", { class: "scoreline" },
+    el("span", { text: `${d.score.correct} of ${d.score.total} answers match the reference ` }),
+    el("span", { class: "chip " + (d.score.all_correct ? "ok" : "bad"), text: d.score.all_correct ? "Reproduced" : "Not reproduced" })));
+  else out.push(el("p", { class: "hint", text: "No reference answers for this paper, so the answers below aren't scored." }));
+  for (const q of task.questions) {
+    const a = byId[q.id] || {}, s = d.score && d.score.per_question[q.id];
+    out.push(el("div", { class: "answer" },
+      el("div", { class: "q", text: q.text }),
+      el("div", { class: "v" },
+        a.value === null || a.value === undefined ? el("span", { class: "none", text: "No answer" }) : el("span", { text: fmt(a.value) }),
+        s ? el("span", { class: "chip " + (s.correct ? "ok" : "bad"), text: s.correct ? "Matches" : "Doesn't match" }) : null,
+        a.confidence && a.value !== null && a.value !== undefined ? el("span", { class: "chip", text: `${a.confidence} confidence` }) : null),
+      s ? el("div", { class: "expected", text: `Reference: ${fmt(s.expected)}` + (s.range ? ` (accepted ${fmt(s.range[0])} to ${fmt(s.range[1])})` : "") }) : null,
+      a.evidence ? el("blockquote", {}, el("span", { text: a.evidence.quote }),
+        el("a", { href: "#", text: a.evidence.file, onclick: (e) => { e.preventDefault(); showFile(a.evidence.file); } })) : null));
+  }
+  if ((rep.obstacles || []).length) {
+    out.push(el("h2", { text: "Problems it hit", style: "margin-top:16px" }));
+    for (const o of rep.obstacles) out.push(el("div", { class: "obstacle" },
+      el("div", {}, el("span", { class: "chip " + (o.resolved ? "ok" : "bad"), text: o.resolved ? "Fixed" : "Not fixed" }), " ", el("strong", { text: o.summary })),
+      o.fix ? el("div", { class: "hint", text: o.fix }) : null));
+  }
+  if (rep.trace_url) out.push(el("p", { class: "hint" }, el("a", { href: rep.trace_url, target: "_blank", rel: "noopener", text: "Open the full trace" })));
+  return el("div", {}, out);
+}
+async function showFile(path) {
+  try {
+    const res = await fetch(`/api/runs/${selected}/file?path=${encodeURIComponent(path)}`);
+    const text = res.ok ? await res.text() : "This file isn't in the run directory.";
+    $("logview").replaceChildren(el("section", { class: "panel" }, el("h2", { text: path }), el("pre", { text, style: "max-height:420px" })));
+    $("logview").scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } catch (e) { alertInline(e.message); }
+}
+function renderTimeline() {
+  if (!events.length) return el("div", { class: "empty", text: isLive(detail.status) ? "Waiting for the first step…" : "No steps were recorded." });
+  const t0 = Date.parse(events[0].ts);
+  const rows = [];
+  for (const e of events) {
+    if (e.type === "todo_updated") continue;
+    const d = e.data || {}; let what, cls = e.agent !== "main" ? "sub" : "";
+    switch (e.type) {
+      case "run_started": what = [el("strong", { text: "Run started" }), d.model ? el("span", { class: "kind", text: ` · ${d.model}` }) : null]; break;
+      case "subagent_started": what = [el("strong", { text: `Handed to ${d.name}: ` }), d.task]; cls = ""; break;
+      case "subagent_finished": what = [el("strong", { text: `${d.name} finished: ` }), d.summary]; cls = ""; break;
+      case "tool_call": what = [el("span", { class: "kind", text: `${d.tool} ` }), el("code", { text: d.summary }), d.ok === false ? el("span", { class: "fail", text: " failed" }) : null,
+        d.detail ? el("details", {}, el("summary", { text: "output" }), el("pre", { text: d.detail })) : null]; break;
+      case "approval_requested": what = [el("strong", { text: "Asked for approval: " }), d.summary]; break;
+      case "approval_resolved": what = [el("strong", { text: d.decision === "approve" ? "Approved" : "Rejected" }), el("span", { class: "kind", text: d.by === "human" ? " by you" : d.by === "auto" ? " automatically" : " (no answer in time)" })]; break;
+      case "memory_read": what = [el("strong", { text: "Checked memory: " }), d.note]; cls += " memory"; break;
+      case "memory_written": what = [el("strong", { text: "Remembered for next time: " }), d.note]; cls += " memory"; break;
+      case "answer_found": what = [el("strong", { text: "Answer found: " }), el("code", { text: fmt(d.value) })]; break;
+      case "error": what = [el("span", { class: "fail", text: "Error: " }), d.message]; break;
+      case "run_finished": what = [el("strong", { text: "Run ended" })]; break;
+      default: what = [el("span", { class: "kind", text: e.type })];
+    }
+    const secs = Math.max(0, Math.round((Date.parse(e.ts) - t0) / 1000));
+    rows.push(el("li", { class: cls },
+      el("span", { class: "t", text: `+${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, "0")}` }),
+      el("span", { class: "who" }, el("span", { class: "chip", text: e.agent })),
+      el("span", { class: "what" }, what)));
+  }
+  return el("ol", { class: "timeline" }, rows);
+}
+
+(async function init() {
+  try { await loadTasks(); await loadRuns(); } catch (e) { $("start-error").textContent = e.message; $("start-error").hidden = false; }
+  setInterval(() => loadRuns().catch(() => {}), 4000);
+})();
+</script>
+</body>
+</html>

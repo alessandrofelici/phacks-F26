@@ -1,5 +1,16 @@
 # shared-project
 
+## Repro Bot (the build)
+
+An agent that runs a paper's code and checks whether the published numbers hold up. Built for LangChain's deepagents track.
+
+- [contract/CONTRACT.md](contract/CONTRACT.md): the interface between the two halves, frozen. [contract/ROLES.md](contract/ROLES.md) says who builds which half and how to start as Role A.
+- [harness/](harness/README.md): task loaders, scoring, web UI, batch runner (Role B). Try it: `python -m harness.server`, open http://localhost:8000, choose Demo replay.
+- `agent/`: the deep agent (Role A). Not started yet.
+- Plan: [research/repro-bot-build-plan.md](research/repro-bot-build-plan.md)
+
+## Research
+
 HackPrinceton research.
 
 - [research/judging-criteria.md](research/judging-criteria.md): the four official judging criteria (creativity, utility, charity, avidity). Check ideas, scope and features against these
