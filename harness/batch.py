@@ -1,6 +1,6 @@
 """Run a set of tasks unattended and record the score. Standard library only.
 
-    python -m harness.batch [--agent real|fake] [--tasks id1,id2] [--label "cycle 1"]
+    python -m harness.batch [--agent real|fake] [--tasks id1,id2] [--label "cycle 1"] [--parallel 4]
 
 Every run uses --auto-approve. One row per batch is appended to
 harness/SCOREBOARD.md, and the full result goes to runs/.batches/<batch>.json.
@@ -11,7 +11,7 @@ from __future__ import annotations
 import argparse
 import sys
 from collections import defaultdict
-from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 
 from . import runs
 from .common import ROOT, RUNS, list_tasks, now_iso, read_json, write_json_atomic
@@ -31,6 +31,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--agent", choices=runs.AGENT_KINDS, default="real")
     parser.add_argument("--tasks", default=None, help="comma-separated task ids (default: every task with an answer key)")
     parser.add_argument("--label", default="")
+    parser.add_argument("--parallel", type=int, default=1, help="how many tasks run at the same time")
     args = parser.parse_args(argv)
 
     all_tasks = {t["task_id"]: t for t in list_tasks()}
@@ -47,25 +48,28 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     batch_id = "b-" + now_iso().replace(":", "").replace("-", "").replace("T", "-").rstrip("Z")
-    results = []
-    for i, tid in enumerate(task_ids, start=1):
+    def run_one(numbered: tuple[int, str]) -> dict:
+        i, tid = numbered
         limit_min = float((all_tasks[tid].get("limits") or {}).get("max_minutes", 30))
         print(f"[{i}/{len(task_ids)}] {tid} ...", flush=True)
         try:
             run_id = runs.start_run(tid, args.agent, auto_approve=True)
         except ValueError as exc:
-            print(f"    could not start: {exc}")
-            results.append({"task_id": tid, "run_id": None, "status": "not_started", "correct": 0, "total": 0, "obstacles": []})
-            continue
+            print(f"    {tid} could not start: {exc}", flush=True)
+            return {"task_id": tid, "run_id": None, "status": "not_started", "correct": 0, "total": 0, "obstacles": []}
         status = runs.wait_for(run_id, timeout_s=limit_min * 60 + 120)
         rdir = RUNS / run_id
         score = score_run(rdir)
         report = read_json(rdir / "report.json", {}) or {}
-        results.append({"task_id": tid, "run_id": run_id, "status": status,
-                        "correct": score["correct"] if score else 0, "total": score["total"] if score else 0,
-                        "all_correct": bool(score and score["all_correct"]),
-                        "obstacles": report.get("obstacles") or []})
-        print(f"    {status}: {results[-1]['correct']}/{results[-1]['total']} answers correct ({run_id})")
+        result = {"task_id": tid, "run_id": run_id, "status": status,
+                  "correct": score["correct"] if score else 0, "total": score["total"] if score else 0,
+                  "all_correct": bool(score and score["all_correct"]),
+                  "obstacles": report.get("obstacles") or []}
+        print(f"    {tid} {status}: {result['correct']}/{result['total']} answers correct ({run_id})", flush=True)
+        return result
+
+    with ThreadPoolExecutor(max_workers=max(1, args.parallel)) as pool:
+        results = list(pool.map(run_one, enumerate(task_ids, start=1)))  # keeps task order
 
     reproduced = sum(1 for r in results if r.get("all_correct"))
     correct = sum(r["correct"] for r in results)

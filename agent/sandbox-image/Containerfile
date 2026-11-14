@@ -1,0 +1,52 @@
+# Repro Bot's sandbox image: what old research code usually needs, preinstalled.
+#
+#   agent/sandbox-image/build.sh          # builds localhost/repro-sandbox:1 with rootless Podman
+#
+# The agent uses this image automatically when it exists (else python:3.12-slim), unless
+# REPRO_SANDBOX_IMAGE names another one.
+#
+# - conda (Miniforge, conda-forge only): old Pythons such as 3.6 and 3.7 with old builds of
+#   numpy, scikit-learn, pandas; also the way to install R packages with compiled code.
+# - uv: fast installs and any CPython from 3.8 up (`uv venv -p 3.8`).
+# - compilers (gcc, g++, gfortran, make) and BLAS/LAPACK headers, for packages that build from source.
+# - current R (CRAN's Ubuntu build) with build dependencies, pandoc, the common packages
+#   preinstalled, and fast binary installs of the rest (Posit Package Manager).
+# - jupyter nbconvert, to run notebooks headless.
+FROM docker.io/condaforge/miniforge3:26.9.4-2
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PIP_DISABLE_PIP_VERSION_CHECK=1 \
+    PYTHONUNBUFFERED=1 \
+    MPLBACKEND=Agg
+
+RUN echo 'APT::Sandbox::User "root";' > /etc/apt/apt.conf.d/99-rootless-podman \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends \
+      build-essential gfortran pkg-config cmake git curl wget unzip xz-utils ca-certificates gpg \
+      libopenblas-dev liblapack-dev libhdf5-dev libxml2-dev libcurl4-openssl-dev libssl-dev \
+      libfontconfig1-dev libfreetype6-dev libpng-dev libjpeg-dev libtiff-dev libharfbuzz-dev libfribidi-dev \
+      libgsl-dev libgmp-dev libmpfr-dev libudunits2-dev libgdal-dev libgeos-dev libproj-dev \
+      pandoc \
+ && wget -qO- https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | gpg --dearmor -o /usr/share/keyrings/cran.gpg \
+ && echo "deb [signed-by=/usr/share/keyrings/cran.gpg] https://cloud.r-project.org/bin/linux/ubuntu noble-cran40/" > /etc/apt/sources.list.d/cran.list \
+ && apt-get update \
+ && apt-get install -y --no-install-recommends r-base-core r-base-dev \
+ && rm -rf /var/lib/apt/lists/*
+
+# Tools in conda's base environment (on PATH as python, pip, uv, jupyter).
+RUN pip install --no-cache-dir uv==0.13.0 nbconvert==7.17.2 nbclient==0.11.0 ipykernel==7.4.0 \
+ && conda config --system --set channel_priority flexible \
+ && conda clean -afy
+
+# R installs prebuilt Linux binaries from Posit Package Manager (seconds instead of minutes of
+# compiling). It sends binaries only when the user agent names the R version.
+RUN printf '%s\n' \
+  'local({ r <- getOption("repos"); r["CRAN"] <- "https://packagemanager.posit.co/cran/__linux__/noble/latest"; options(repos = r) })' \
+  'options(HTTPUserAgent = sprintf("R/%s R (%s)", getRversion(), paste(getRversion(), R.version["platform"], R.version["arch"], R.version["os"])))' \
+  >> /etc/R/Rprofile.site
+
+# The R packages most papers load, as binaries (about a minute to install here, saved on every run).
+RUN Rscript -e 'install.packages(c("rmarkdown", "knitr", "tidyverse", "data.table", "lme4", "remotes", "BiocManager", "devtools", "here", "car", "psych", "broom"), Ncpus = 4)' \
+ && Rscript -e 'stopifnot(all(c("rmarkdown", "tidyverse", "lme4") %in% rownames(installed.packages())))'
+
+CMD ["sleep", "infinity"]

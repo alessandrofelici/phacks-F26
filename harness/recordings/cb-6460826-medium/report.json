@@ -1,0 +1,83 @@
+{
+  "contract_version": 1,
+  "task_id": "cb-6460826-medium",
+  "run_id": "c0-culp-medium",
+  "status": "completed",
+  "answers": [
+    {
+      "question_id": "q1",
+      "value": 100.0,
+      "evidence": {
+        "file": "logs/07-cd-work-repo-code-work-venv-bin-python-u.txt",
+        "quote": "Prediction Accuracy for Iris Dataset (λ=CN) = 100.0%"
+      },
+      "confidence": "low"
+    },
+    {
+      "question_id": "q2",
+      "value": 100.0,
+      "evidence": {
+        "file": "logs/07-cd-work-repo-code-work-venv-bin-python-u.txt",
+        "quote": "Prediction Accuracy for Iris Dataset (λ=AA) = 100.0%"
+      },
+      "confidence": "low"
+    },
+    {
+      "question_id": "q3",
+      "value": 100.0,
+      "evidence": {
+        "file": "logs/07-cd-work-repo-code-work-venv-bin-python-u.txt",
+        "quote": "Prediction Accuracy for Zoo Dataset (λ=CN) = 100.0%"
+      },
+      "confidence": "low"
+    },
+    {
+      "question_id": "q4",
+      "value": 100.0,
+      "evidence": {
+        "file": "logs/07-cd-work-repo-code-work-venv-bin-python-u.txt",
+        "quote": "Prediction Accuracy for Zoo Dataset (λ=AA) = 100.0%"
+      },
+      "confidence": "low"
+    },
+    {
+      "question_id": "q5",
+      "value": 97.22,
+      "evidence": {
+        "file": "logs/07-cd-work-repo-code-work-venv-bin-python-u.txt",
+        "quote": "Prediction Accuracy for Wine Dataset (λ=CN) = 97.22%"
+      },
+      "confidence": "high"
+    },
+    {
+      "question_id": "q6",
+      "value": 97.22,
+      "evidence": {
+        "file": "logs/07-cd-work-repo-code-work-venv-bin-python-u.txt",
+        "quote": "Prediction Accuracy for Wine Dataset (λ=AA) = 97.22%"
+      },
+      "confidence": "high"
+    }
+  ],
+  "obstacles": [
+    {
+      "stage": "run",
+      "summary": "iris_sample.py and zoo_sample.py loop over lp in CN/AA/RA/CS but always call culp(..., link_predictor='CS'), so the lines labelled CN and AA for Iris and Zoo are actually Compatibility Score results (identical to the CS line). Only wine_sample.py passes lp.",
+      "fix": "Did not edit repo files. Reported the printed values with low confidence and flagged that they are CS-based.",
+      "resolved": false
+    },
+    {
+      "stage": "env",
+      "summary": "zoo_sample.py and wine_sample.py read absolute /data/*.txt paths, which did not exist in the sandbox; Dockerfile pins Python 3.6/sklearn 0.19 but modern numpy/pandas/sklearn 1.9/networkx 3.7 ran fine.",
+      "fix": "Created /data and copied data/zoo.txt and data/wine.txt there (outside the repo); installed current packages into /work/.venv.",
+      "resolved": true
+    }
+  ],
+  "usage": {
+    "wall_seconds": 104.6,
+    "tokens": 192820
+  },
+  "trace_url": "https://smith.langchain.com/o/36ab15a5-ee3d-4092-ad3e-3bd35284cd6d/projects/p/01a1da50-f1b9-79be-8c01-3deb4887cd0d/trace/01a1dac1-af9c-7287-b776-7f8c7f5f5658/run/01a1dac1-af9c-7287-b776-7f8c7f5f5658?start_time=2026-11-14T15%3A51%3A28.925101%2B00%3A00",
+  "sandbox": "podman (python:3.12-slim, network on)",
+  "source_changes": []
+}

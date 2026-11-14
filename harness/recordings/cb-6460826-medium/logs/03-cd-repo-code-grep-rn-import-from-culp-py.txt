@@ -1,0 +1,31 @@
+$ cd repo/code; grep -rn "^import\|^from" culp/ *.py | sort -u; python3 --version; head -3 ../data/zoo.txt; head -3 ../data/wine.txt; ls /skills; cat /memories/fixes.md | tail -3
+culp/classifier.py:1:import numpy
+culp/classifier.py:2:from culp import link_predictors
+culp/classifier.py:3:from culp import leg
+culp/leg.py:1:import numpy
+culp/leg.py:2:import networkx as nx
+culp/leg.py:3:from sklearn.neighbors import NearestNeighbors
+culp/link_predictors.py:1:import numpy
+culp/link_predictors.py:2:import networkx as nx
+iris_sample.py:1:from culp.classifier import culp
+iris_sample.py:2:import numpy
+iris_sample.py:3:from sklearn import datasets
+iris_sample.py:4:from sklearn.model_selection import train_test_split
+wine_sample.py:1:from culp.classifier import culp
+wine_sample.py:2:import numpy
+wine_sample.py:3:from sklearn.model_selection import train_test_split
+wine_sample.py:4:import pandas
+zoo_sample.py:1:from culp.classifier import culp
+zoo_sample.py:2:import numpy
+zoo_sample.py:3:from sklearn.model_selection import train_test_split
+zoo_sample.py:4:import pandas
+Python 3.12.16
+aardvark,1,0,0,1,0,0,1,1,1,1,0,0,4,0,0,1,1
+antelope,1,0,0,1,0,0,0,1,1,1,0,0,4,1,0,1,1
+bass,0,0,1,0,0,1,1,1,1,0,0,1,0,1,0,0,4
+1,14.23,1.71,2.43,15.6,127,2.8,3.06,.28,2.29,5.64,1.04,3.92,1065
+1,13.2,1.78,2.14,11.2,100,2.65,2.76,.26,1.28,4.38,1.05,3.4,1050
+1,13.16,2.36,2.67,18.6,101,2.8,3.24,.3,2.81,5.68,1.03,3.17,1185
+
+[stderr] ls: cannot access '/skills': No such file or directory
+[stderr] cat: /memories/fixes.md: No such file or directory

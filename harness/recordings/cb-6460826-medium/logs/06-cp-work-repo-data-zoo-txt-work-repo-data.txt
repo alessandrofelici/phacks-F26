@@ -1,0 +1,3 @@
+$ cp /work/repo/data/zoo.txt /work/repo/data/wine.txt /data/ && mkdir -p /results && cd /work && python3 -m venv .venv && .venv/bin/pip install -q numpy pandas scikit-learn networkx 2>&1 | tail -3; .venv/bin/python -c "import sklearn,networkx,pandas,numpy;print(sklearn.__version__,networkx.__version__,pandas.__version__,numpy.__version__)"
+1.9.1 3.7 3.1.1 2.5.4
+

@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import base64
 import difflib
 import os
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +18,7 @@ from langchain.agents.middleware import (
     ToolCallRequest,
 )
 from langchain.agents.middleware.human_in_the_loop import DecisionType
-from langchain_core.messages import AIMessage, ToolMessage
+from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.checkpoint.memory import InMemorySaver
 
@@ -49,8 +51,10 @@ it is thrown away after the run.
 task comes with paper text.
 - Shell commands start in that same directory, but file-tool paths are not real shell paths. In the \
 shell use relative paths (`repo/run.py`, not `/repo/run.py`).
-- For Python, create a virtual environment in the workspace (`python3 -m venv .venv`) and install \
-into it. Don't install into the system Python.
+- For Python, create a virtual environment in the workspace and install into it, never into the \
+system Python. The sandbox's own `python3` may be much newer than the code: match the repository's era \
+(a Dockerfile, an environment file, version pins). Where available, `uv venv -p 3.10 .venv` makes any \
+Python from 3.8 up and `conda create -y -p ./.py36 python=3.6` older ones; otherwise `python3 -m venv .venv`.
 
 Running commands:
 - `execute` is for setup and inspection. It stops a command after {SHORT_TIMEOUT_S} seconds. Passing \
@@ -59,8 +63,12 @@ a longer `timeout` is allowed for slow installs, and a human is asked to approve
 it before it runs, so give an honest time estimate and say what it will do.
 - `start_background_run` is for an experiment that takes more than a couple of minutes. It is \
 approved the same way, returns at once, and `check_background_run` reports on it. Use the wait for \
-work that doesn't depend on the result, and don't check in a tight loop (`sleep 30` through \
-`execute` is a fine way to wait).
+work that doesn't depend on the result. To wait for it, call `check_background_run` with \
+`wait_seconds` (up to 300) rather than running `sleep`, which needs an approval past 90 seconds.
+- Before the experiment, estimate its run time from the code (epochs, loops, dataset size) and compare it \
+with the time left. Start anything longer than about 5 minutes with `start_background_run`, so partial \
+output stays visible and you can stop waiting in time. Never pipe a run's output through `tail` or \
+`head`: all output is saved anyway, and a run cut off at its limit would then show nothing.
 - If an approval is rejected, don't retry the same thing. Find another way, or finish with what you have.
 
 How to split the work (each helper starts with only the message you give it, so include the \
@@ -70,7 +78,9 @@ needs to run. It reads and never runs anything.
 - `env-builder`: it gets the environment installed and tells you how to start the code.
 - `runner`: it runs the experiment through `run_experiment` and reports where the output is.
 - `result-judge`: it finds each answer in the output and records it with its evidence.
-For a small repository you may do a step yourself when delegating would only add a round trip.
+Delegate setup to `env-builder` and answer extraction to `result-judge` unless the repository is a \
+single short script: their long install logs and searches then stay in their own context instead of \
+yours, which keeps the run fast and cheap. Reading the repository you may do yourself.
 
 What carries over between papers:
 - `/memories/fixes.md` lists fixes that worked on earlier papers; its content is included below when \
@@ -86,6 +96,10 @@ search it.
 and what fixed it. Obstacles are part of the report, including the ones you couldn't fix.
 - For each question call `record_answer` with the value and the exact line of output it came from. \
 The quote is checked against the saved command output and rejected if it isn't there.
+- A question marked as read off a figure: run the code that draws it, read the image this run wrote with \
+`look_at_figure` (`read_file` can't show you images), and call `record_answer` with `figure` set to that \
+image and `quote` saying what was read (which panel, bar or point). An image that came with the \
+repository is not accepted.
 - Keep a short plan with `write_todos` (read the task and repo, set up the environment, run, extract \
 the answers) and update it as you go.
 
@@ -93,8 +107,13 @@ When every question has an answer or a recorded reason for not having one, reply
 sentence summary and stop."""
 
 
-def build_tools(backend: LoggingShellBackend, findings: Findings, agent: str = "main") -> dict[str, Any]:
-    """The custom tools, bound to the agent that will call them (so events name the right one)."""
+def build_tools(
+    backend: LoggingShellBackend, findings: Findings, agent: str = "main", vision_model: Any = None
+) -> dict[str, Any]:
+    """The custom tools, bound to the agent that will call them (so events name the right one).
+
+    ``vision_model`` reads figures for ``look_at_figure``; without one that tool says it can't.
+    """
 
     @tool
     def run_experiment(command: str, est_minutes: float, why: str) -> str:
@@ -127,31 +146,55 @@ def build_tools(backend: LoggingShellBackend, findings: Findings, agent: str = "
         return f"Started as {run_id}. It keeps running while you work; call check_background_run('{run_id}') to follow it."
 
     @tool
-    def check_background_run(run_id: str) -> str:
+    def check_background_run(run_id: str, wait_seconds: int = 0) -> str:
         """Report whether a background run has finished, with the last lines of its output.
 
         Args:
             run_id: The id `start_background_run` returned, for example "bg1".
+            wait_seconds: Wait up to this long (at most 300) for the run to finish before
+                reporting. Use this instead of `sleep` commands to wait for a long run.
         """
         state = backend.check_background(run_id)
         if state is None:
             return f"Error: there is no background run '{run_id}'."
+        waited_until = time.monotonic() + max(0, min(int(wait_seconds or 0), 300))
+        while not state["done"] and time.monotonic() < waited_until:
+            time.sleep(min(5.0, max(0.1, waited_until - time.monotonic())))
+            state = backend.check_background(run_id) or state
         if not state["done"]:
             return f"Still running after {state['seconds']:.0f} s. Last lines so far:\n{state['tail'] or '<no output yet>'}"
         how = "was stopped at its time limit" if state["timed_out"] else f"finished with exit code {state['exit_code']}"
         return f"The run {how} after {state['seconds']:.0f} s. Full output saved as /{state['log']}. Last lines:\n{state['tail'] or '<no output>'}"
 
     @tool
-    def record_answer(question_id: str, value: Any, quote: str, confidence: str) -> str:
-        """Record the answer to one question, with the output line that proves it.
+    def record_answer(question_id: str, value: Any, quote: str, confidence: str, figure: str | None = None) -> str:
+        """Record the answer to one question, with the evidence that proves it.
 
         Args:
             question_id: The question's id, for example "q1".
             value: A number for number questions, text for string questions, a list for list questions.
-            quote: The exact text from this run's command output that the answer came from.
+            quote: The exact text from this run's command output that the answer came from. With
+                `figure`: what you read off the image (panel, bar or point, and its value).
             confidence: "high", "medium" or "low".
+            figure: Only for questions read off a figure: the image this run wrote, as the file
+                tools show it (for example /repo/results/fig1.png). Look at it with read_file first.
         """
-        return findings.record_answer(question_id, value, quote, confidence, agent)
+        image = _workspace_file(backend, figure) if figure else None
+        return findings.record_answer(question_id, value, quote, confidence, agent, figure=image)
+
+    @tool
+    def look_at_figure(path: str, question: str) -> str:
+        """Look at an image this run wrote and answer a question about what it shows.
+
+        Use it for questions read off a figure: `read_file` can't show images to you.
+        Then record the answer with `record_answer(..., figure=path)`.
+
+        Args:
+            path: The image (PNG, JPG, GIF or WEBP), as the file tools show it, for example
+                /repo/results/fig1.png. Convert a PDF or SVG figure to PNG first.
+            question: What to read, for example "the ACC value of the GRU bar for dataset 1".
+        """
+        return _read_figure(vision_model, _workspace_file(backend, path), question)
 
     @tool
     def record_obstacle(stage: str, summary: str, fix: str | None = None, resolved: bool = False) -> str:
@@ -170,8 +213,56 @@ def build_tools(backend: LoggingShellBackend, findings: Findings, agent: str = "
         "start_background_run": start_background_run,
         "check_background_run": check_background_run,
         "record_answer": record_answer,
+        "look_at_figure": look_at_figure,
         "record_obstacle": record_obstacle,
     }
+
+
+_IMAGE_TYPES = {".png": "image/png", ".jpg": "image/jpeg", ".jpeg": "image/jpeg", ".gif": "image/gif", ".webp": "image/webp"}
+_FIGURE_PROMPT = """You are reading a figure that a paper's code just produced. Answer from the image only.
+Give the value as precisely as the axis ticks, gridlines, labels or annotations allow, and say how you
+read it (which panel, series, bar or point, and against which axis). If several readings are possible,
+give the most likely one and the range. If the image doesn't show what is asked, say so.
+
+Question: {question}"""
+
+
+def _read_figure(model: Any, image: Path, question: str) -> str:
+    """Ask the model about an image, sent as a user message (tool results can't carry images)."""
+    if model is None or not hasattr(model, "invoke"):
+        return "Error: no model that can read images is configured for this run."
+    mime = _IMAGE_TYPES.get(image.suffix.lower())
+    if not image.is_file():
+        return "Error: there is no such image. Give its path as the file tools show it (for example /repo/results/fig1.png)."
+    if mime is None:
+        return f"Error: {image.name} is not a PNG, JPG, GIF or WEBP image. Convert it first (for example with matplotlib or pdftoppm)."
+    data = image.read_bytes()
+    if len(data) > 8_000_000:
+        return f"Error: {image.name} is {len(data) // 1_000_000} MB; save a smaller PNG (lower dpi) first."
+    encoded = base64.b64encode(data).decode("ascii")
+    message = HumanMessage(
+        content=[
+            {"type": "text", "text": _FIGURE_PROMPT.format(question=question)},
+            {"type": "image_url", "image_url": {"url": f"data:{mime};base64,{encoded}"}},
+        ]
+    )
+    try:
+        reply = model.invoke([message])
+    except Exception as exc:  # noqa: BLE001 - report to the agent, which can try another way
+        return f"Error: the figure could not be read ({type(exc).__name__}: {str(exc)[:300]})."
+    return _text(reply.content) or "Error: the model returned no reading."
+
+
+def _workspace_file(backend: LoggingShellBackend, path: str) -> Path:
+    """A file-tool path (or a /work/... sandbox path) as a real path inside the workspace."""
+    work = Path(backend.cwd).resolve()
+    rel = path.strip()
+    for prefix in ("/work/", "work/"):
+        rel = rel.removeprefix(prefix)
+    if rel.startswith("/results/") and not (work / rel.lstrip("/")).exists():
+        rel = "repo" + rel  # Code Ocean's /results is linked to repo/results
+    target = (work / rel.lstrip("/")).resolve()
+    return target if target == work or work in target.parents else work / "__outside_the_workspace__"
 
 
 def _needs_long_run_approval(request: ToolCallRequest) -> bool:
@@ -213,8 +304,10 @@ Before installing anything, read `/memories/fixes.md`: fixes that worked on earl
 matches what the dependency files show, apply it straight away without rediscovering it. After you \
 fix something new that would help with another repository, add one line there (symptom, then fix).
 
-For Python, create a virtual environment in the workspace (`python3 -m venv .venv`) and install into it. \
-Otherwise try the documented install first. When it fails, read the error and fix the cause with the smallest \
+For Python, create a virtual environment in the workspace and install into it. Match the Python version \
+to the repository's era (a Dockerfile, an environment file, version pins): `uv venv -p 3.X .venv` for 3.8 \
+and up, `conda create -y -p ./.pyXY python=3.X` for older ones, `python3 -m venv .venv` when neither tool \
+exists. Otherwise try the documented install first. When it fails, read the error and fix the cause with the smallest \
 change that works. Never edit files that came with the repository: put relaxed pins in a new \
 requirements file and install from that.
 
@@ -236,8 +329,8 @@ Use `run_experiment` for the command that produces the results. A human approves
 so give an honest time estimate. If the approval is rejected, do not retry: report that it was rejected.
 
 When the run will take more than a couple of minutes, use `start_background_run` instead. It returns \
-at once; follow it with `check_background_run`, waiting between checks (`sleep 30` through `execute`), \
-and report when it has finished.
+at once; follow it with `check_background_run(run_id, wait_seconds=300)`, which waits for the run to \
+finish (don't use `sleep`), and report when it has finished.
 
 If the command fails, report the error text. Don't change the paper's code to get past it; a missing \
 package or path is the environment's problem, and the caller decides what to do. Record what went \
@@ -248,12 +341,16 @@ Finish by reporting the exit status, roughly how long it took, and which file un
     {
         "name": "result-judge",
         "description": "Finds each answer in the run's saved output and records it with the line that proves it.",
-        "tools": ["record_answer", "record_obstacle"],
+        "tools": ["record_answer", "look_at_figure", "record_obstacle"],
         "system_prompt": f"""You extract answers from the output of a paper's code. {_WORKSPACE_NOTE}
 
 Search `/logs` (every command's output is saved there) and any files the run wrote. For each question \
 call `record_answer` with the value and the exact line it came from. The quote is checked against the \
 saved output and refused if it isn't there. Keep the precision the output shows; don't round.
+
+For a question read off a figure, read the image the run wrote with `look_at_figure` (`read_file` can't \
+show you images) and pass it to `record_answer` as `figure`, with `quote` saying what was read (panel, \
+bar or point, and its value).
 
 If the paper text states a value, say in your report whether the output agrees with it. The recorded \
 answer is always what the run printed. If the output doesn't contain an answer, say so and call \
@@ -291,7 +388,7 @@ def build_agent(
     )
     subagents: list[SubAgent] = []
     for spec in SUBAGENTS:
-        tools = build_tools(shell, findings, agent=spec["name"])
+        tools = build_tools(shell, findings, agent=spec["name"], vision_model=subagent_model or model)
         subagent = SubAgent(
             name=spec["name"],
             description=spec["description"],
@@ -315,7 +412,7 @@ def build_agent(
     }
     return create_deep_agent(
         model=model,
-        tools=list(build_tools(shell, findings).values()),
+        tools=list(build_tools(shell, findings, vision_model=model).values()),
         system_prompt=SYSTEM_PROMPT,
         # Planning is opt-in in deepagents 0.7.38: without this there is no `write_todos` tool.
         middleware=[TodoListMiddleware()],

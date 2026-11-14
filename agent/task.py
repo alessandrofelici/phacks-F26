@@ -6,6 +6,8 @@ Standard library only.
 from __future__ import annotations
 
 import json
+import shutil
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -13,6 +15,7 @@ from typing import Any
 from agent.rundir import RunWriter
 
 CONTRACT_VERSION = 1
+FIGURE_SUFFIXES = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".pdf")
 STAGES = ("read", "env", "data", "run", "extract", "other")
 CONFIDENCES = ("high", "medium", "low")
 
@@ -117,9 +120,25 @@ class Findings:
     writer: RunWriter
     answers: dict[str, dict[str, Any]] = field(default_factory=dict)
     obstacles: list[dict[str, Any]] = field(default_factory=list)
+    # The workspace is copied with the capsule's own timestamps, so a file modified after
+    # this moment was written by the run.
+    started: float = field(default_factory=time.time)
 
-    def record_answer(self, question_id: str, value: Any, quote: str, confidence: str, agent: str = "main") -> str:
-        """Store an answer if its quote is in a saved command output. Returns a message for the model."""
+    def record_answer(
+        self,
+        question_id: str,
+        value: Any,
+        quote: str,
+        confidence: str,
+        agent: str = "main",
+        figure: Path | None = None,
+    ) -> str:
+        """Store an answer if its evidence holds up. Returns a message for the model.
+
+        The evidence is a quote found in a saved command output or, for a question that
+        needs a figure, an image this run wrote (copied into the run directory) with the
+        quote saying what was read off it.
+        """
         question = self.task.question(question_id)
         if question is None:
             known = ", ".join(q["id"] for q in self.task.questions)
@@ -131,15 +150,26 @@ class Findings:
         if confidence not in CONFIDENCES:
             return f"Error: confidence must be one of {', '.join(CONFIDENCES)}."
         quote = (quote or "").strip()
-        if not quote:
-            return "Error: quote is empty. Give the exact line of command output the answer came from."
-        log = self.writer.find_quote(quote)
-        if log is None:
-            return (
-                "Error: that quote is not in the output of any command run so far. "
-                "Answers must come from output produced in this run: copy the line exactly, "
-                "or run the command that prints it."
-            )
+        if figure is not None:
+            if not question.get("needs_figure"):
+                return f"Error: {question_id} is not read off a figure. Quote the line of command output instead."
+            if not quote:
+                return "Error: quote is empty. Say what you read off the figure (which panel, bar or point, and its value)."
+            log = self._keep_figure(question_id, figure)
+            if log.startswith("Error"):
+                return log
+        else:
+            if not quote:
+                return "Error: quote is empty. Give the exact line of command output the answer came from."
+            found = self.writer.find_quote(quote)
+            if found is None:
+                hint = " For this question you may instead pass the image as `figure`." if question.get("needs_figure") else ""
+                return (
+                    "Error: that quote is not in the output of any command run so far. "
+                    "Answers must come from output produced in this run: copy the line exactly, "
+                    f"or run the command that prints it.{hint}"
+                )
+            log = found
         self.answers[question_id] = {
             "question_id": question_id,
             "value": value,
@@ -148,6 +178,23 @@ class Findings:
         }
         self.writer.event("answer_found", {"question_id": question_id, "value": value}, agent)
         return f"Recorded {question_id} = {value!r} with evidence from {log}."
+
+    def _keep_figure(self, question_id: str, figure: Path) -> str:
+        """Copy an image this run wrote into the run directory; its relative path, or an error."""
+        if not figure.is_file():
+            return "Error: there is no such image. Give its path as the file tools show it (for example /repo/results/fig1.png)."
+        if figure.suffix.lower() not in FIGURE_SUFFIXES:
+            return f"Error: {figure.name} is not an image ({', '.join(FIGURE_SUFFIXES)})."
+        if figure.stat().st_mtime < self.started - 2:
+            return (
+                f"Error: {figure.name} came with the repository; this run didn't write it. "
+                "Run the code that draws the figure and read the new image."
+            )
+        rel = f"figures/{question_id}-{figure.name}"
+        dest = self.writer.run_dir / rel
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(figure, dest)
+        return rel
 
     def record_obstacle(self, stage: str, summary: str, fix: str | None, resolved: bool) -> str:
         if stage not in STAGES:

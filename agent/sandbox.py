@@ -37,6 +37,8 @@ from agent.task import Task
 # Commands that take longer than this need an approval (contract 3.1: "more than about a minute").
 SHORT_TIMEOUT_S = int(os.environ.get("REPRO_SHORT_TIMEOUT", "90"))
 DEFAULT_IMAGE = "docker.io/library/python:3.12-slim"
+# Built by agent/sandbox-image/build.sh: conda, uv, compilers, R, nbconvert. Used when present.
+FULL_IMAGE = "localhost/repro-sandbox:2"
 
 # Passed through to commands so installs work behind a proxy. API keys are deliberately not.
 _PASS_ENV = ("HTTPS_PROXY", "HTTP_PROXY", "NO_PROXY", "https_proxy", "http_proxy", "no_proxy", "LANG", "TZ")
@@ -76,7 +78,10 @@ def remove_workdir(work: Path) -> None:
     """Delete the workspace, including files a container wrote as another user."""
     shutil.rmtree(work, ignore_errors=True)
     if work.exists() and shutil.which("podman"):
-        subprocess.run(["podman", "unshare", "rm", "-rf", str(work)], capture_output=True, timeout=120, check=False)
+        try:
+            subprocess.run(["podman", "unshare", "rm", "-rf", str(work)], capture_output=True, timeout=120, check=False)
+        except (OSError, subprocess.TimeoutExpired):
+            pass  # a leftover temp directory is not worth failing the run over
 
 
 def _base_env() -> dict[str, str]:
@@ -272,7 +277,27 @@ class PodmanShellBackend(LoggingShellBackend):
         return _format(result.stdout, result.stderr, result.returncode, self._max_output_bytes)
 
     def close(self) -> None:
-        subprocess.run(["podman", "rm", "-f", "-t", "0", self.container], capture_output=True, timeout=60, check=False)
+        """Remove the container. Never raises: a slow podman (another build holding the storage
+        lock, a busy machine) must not cost the run its report."""
+        argv = ["podman", "rm", "-f", "-t", "0", self.container]
+        try:
+            subprocess.run(argv, capture_output=True, timeout=60, check=False)
+        except (OSError, subprocess.TimeoutExpired):
+            try:  # finish the removal in the background; the run goes on to write its report
+                subprocess.Popen(argv, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, start_new_session=True)
+            except OSError:
+                pass
+
+
+def default_image() -> str:
+    """``REPRO_SANDBOX_IMAGE``, else the full image when it has been built, else the slim one."""
+    if os.environ.get("REPRO_SANDBOX_IMAGE"):
+        return os.environ["REPRO_SANDBOX_IMAGE"]
+    try:
+        found = subprocess.run(["podman", "image", "exists", FULL_IMAGE], capture_output=True, timeout=30, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return DEFAULT_IMAGE
+    return FULL_IMAGE if found.returncode == 0 else DEFAULT_IMAGE
 
 
 def make_backend(task: Task, work: Path, writer: RunWriter, deadline: float) -> tuple[LoggingShellBackend, str | None]:
@@ -282,7 +307,7 @@ def make_backend(task: Task, work: Path, writer: RunWriter, deadline: float) -> 
         raise SandboxError(f"REPRO_SANDBOX must be auto, podman or local, not '{choice}'")
     if choice == "local" or (choice == "auto" and not shutil.which("podman")):
         return LoggingShellBackend(work, writer, deadline=deadline), None
-    image = os.environ.get("REPRO_SANDBOX_IMAGE", DEFAULT_IMAGE)
+    image = default_image()
     try:
         return PodmanShellBackend(work, writer, deadline=deadline, image=image, network=task.network), None
     except SandboxError as exc:
@@ -295,11 +320,19 @@ def make_backend(task: Task, work: Path, writer: RunWriter, deadline: float) -> 
 # -- did the run change the paper's own files? ---------------------------------------
 
 
+_CACHE_DIRS = {"__pycache__", ".ipynb_checkpoints", ".pytest_cache", ".Rproj.user"}
+
+
+def _is_cache(path: Path) -> bool:
+    """Compiled or editor caches that running the code rewrites; they are not the paper's source."""
+    return path.suffix in (".pyc", ".pyo") or any(part in _CACHE_DIRS for part in path.parts)
+
+
 def snapshot(repo: Path) -> dict[str, str]:
     """A fingerprint of every file that came with the repository."""
     marks: dict[str, str] = {}
     for path in sorted(repo.rglob("*")):
-        if not path.is_file() or path.is_symlink():
+        if not path.is_file() or path.is_symlink() or _is_cache(path):
             continue
         stat = path.stat()
         if stat.st_size <= _HASH_LIMIT:

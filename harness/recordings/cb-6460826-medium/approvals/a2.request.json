@@ -1,0 +1,7 @@
+{
+  "id": "a2",
+  "kind": "long_run",
+  "summary": "Run cd /work/repo/code && /work/.venv/bin/python -u iris_sample.py && /work/.venv/bin/python -u zoo_sample.py && /work/.venv/bin/python -u wine_sample.py (est. 2 min): Runs the three sample scripts (run.sh order) to print the prediction accuracies for Iris, Zoo and Wine.",
+  "command": "cd /work/repo/code && /work/.venv/bin/python -u iris_sample.py && /work/.venv/bin/python -u zoo_sample.py && /work/.venv/bin/python -u wine_sample.py",
+  "diff": null
+}

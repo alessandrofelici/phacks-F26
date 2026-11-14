@@ -61,7 +61,11 @@ def main(argv: list[str] | None = None) -> int:
     if choice == "local" or (choice == "auto" and not have_podman):
         print("sandbox:        local shell (no isolation: the paper's code can read this disk)")
     elif have_podman:
-        print(f"sandbox:        podman, image {os.environ.get('REPRO_SANDBOX_IMAGE', 'docker.io/library/python:3.12-slim')}")
+        from agent.sandbox import FULL_IMAGE, default_image
+
+        image = default_image()
+        hint = "" if image != "docker.io/library/python:3.12-slim" else f" (build {FULL_IMAGE} with agent/sandbox-image/build.sh)"
+        print(f"sandbox:        podman, image {image}{hint}")
     else:
         print("sandbox:        REPRO_SANDBOX=podman but podman is not installed")
         ok = False

@@ -6,8 +6,10 @@ Same command line as the real one (contract section 3):
 
 It replays the golden run's events with delays and follows the approval
 protocol for real (writes the request, waits for the decision). It calls no
-model and runs no code. It only "solves" the toy task; for any other task it
-reports a failure, which is useful for testing the failed state.
+model and runs no code. It "solves" the toy task, and any task with a saved
+recording in harness/recordings/<task_id>/ (a real agent run, kept as the demo's
+fallback; save one with `python -m harness.record runs/<run_id>`). For any other
+task it reports a failure, which is useful for testing the failed state.
 
 Extra flags (not part of the contract, for testing the UI):
     --speed N        divide every delay by N (default 4; 0 = no delays)
@@ -19,13 +21,23 @@ reuse it and skip the failed install.
 from __future__ import annotations
 
 import argparse
-import os
 import json
+import os
 import sys
 import time
 from pathlib import Path
 
-from .common import GOLDEN_RUN, RUNS, now_iso, read_events, read_json, write_json_atomic
+from .common import (
+    GOLDEN_RUN,
+    ROOT,
+    RUNS,
+    now_iso,
+    read_events,
+    read_json,
+    write_json_atomic,
+)
+
+RECORDINGS = ROOT / "harness" / "recordings"
 
 MEMORY = RUNS / ".fake_memory.json"
 APPROVAL_TIMEOUT_S = 600
@@ -99,6 +111,10 @@ def main(argv: list[str] | None = None) -> int:
     task = json.loads((args.task / "task.json").read_text(encoding="utf-8"))
     run_id = args.run.resolve().name
     run = Run(args.run, args.speed)
+
+    recording = RECORDINGS / task["task_id"]
+    if task["task_id"] != "toy-linreg" and (recording / "report.json").is_file():
+        return replay_recording(recording, task, run, run_id, args, started)
 
     if task["task_id"] != "toy-linreg":
         run.emit("run_started", "main", {"task_id": task["task_id"], "run_id": run_id, "model": "fake agent (no model)"})
@@ -174,6 +190,41 @@ def main(argv: list[str] | None = None) -> int:
     if remembered:
         report["obstacles"] = [{"stage": "env", "summary": "numpy==1.19.5 can't be installed on this Python (known from an earlier run)",
                                 "fix": "Applied the remembered fix straight away: numpy>=1.26 from requirements.repro.txt", "resolved": True}]
+    run.finish(report)
+    return 0
+
+
+def replay_recording(recording: Path, task: dict, run: Run, run_id: str, args, started: float) -> int:
+    """Play back a saved real run: same events, logs and answers, approvals asked for real."""
+    import shutil
+
+    for sub in ("logs", "figures"):
+        if (recording / sub).is_dir():
+            shutil.copytree(recording / sub, run.dir / sub, dirs_exist_ok=True)
+    prev_ts = None
+    for ev in read_events(recording):
+        etype, agent, data = ev["type"], ev["agent"], dict(ev["data"])
+        gap = max(0.0, _seconds(ev["ts"]) - _seconds(prev_ts)) if prev_ts else 0.0
+        prev_ts = ev["ts"]
+        if etype in ("run_finished", "approval_resolved"):
+            continue  # run.finish() and run.approval() write these
+        run.wait(min(gap, 8))
+        if etype == "run_started":
+            data.update({"run_id": run_id, "model": f"recorded run ({data.get('model', 'real agent')}), replayed"})
+        if etype == "approval_requested":
+            request = read_json(recording / "approvals" / f"{data['id']}.request.json") or {
+                "id": data["id"], "kind": data.get("kind", "long_run"), "summary": data.get("summary", ""), "command": None, "diff": None}
+            decision = run.approval(request, args.auto_approve)
+            if decision["decision"] != "approve":
+                report = base_report(task, run_id, "rejected", started)
+                report["obstacles"] = [{"stage": "run", "summary": "The run command was not approved, so there is nothing to read the answers from", "fix": None, "resolved": False}]
+                run.finish(report)
+                return 0
+            continue
+        run.emit(etype, agent, data)
+    report = dict(read_json(recording / "report.json"))
+    report.update({"run_id": run_id, "trace_url": report.get("trace_url"),
+                   "usage": {"wall_seconds": round(time.time() - started, 1), "tokens": None}})
     run.finish(report)
     return 0
 
