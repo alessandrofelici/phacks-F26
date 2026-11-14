@@ -1,0 +1,7 @@
+{
+  "id": "a2",
+  "kind": "long_run",
+  "summary": "Run cd /work && timeout 85 .venv/bin/python -c \"\nfrom sklearn.datasets import fetch_openml\nimport numpy as np\nds=fetch_openml(data_id=40589, parser='liac-arff', as_frame=False)\nprint(type(ds.data), ds.data.shape, ds.target.shape, ds.target[:3], ds.feature_names[-8:], ds.target_names if hasattr(ds,'target_names') else None)\nprint(ds.data[:2,-3:])\n\" 2>&1 | tail -8 (allowed up to 100 s)",
+  "command": "cd /work && timeout 85 .venv/bin/python -c \"\nfrom sklearn.datasets import fetch_openml\nimport numpy as np\nds=fetch_openml(data_id=40589, parser='liac-arff', as_frame=False)\nprint(type(ds.data), ds.data.shape, ds.target.shape, ds.target[:3], ds.feature_names[-8:], ds.target_names if hasattr(ds,'target_names') else None)\nprint(ds.data[:2,-3:])\n\" 2>&1 | tail -8",
+  "diff": null
+}

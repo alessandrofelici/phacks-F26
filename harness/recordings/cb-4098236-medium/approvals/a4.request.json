@@ -1,0 +1,7 @@
+{
+  "id": "a4",
+  "kind": "long_run",
+  "summary": "Run .venv/bin/python -u run_wrapper.py (est. 5 min): Runs the repo's mainMLCA.py (10-fold CV of MLCA on emotions, with a wrapper replacing the dead dataset download by OpenML data) to print Exact Match and Hamming Loss.",
+  "command": ".venv/bin/python -u run_wrapper.py",
+  "diff": null
+}

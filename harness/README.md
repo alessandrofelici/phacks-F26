@@ -15,7 +15,11 @@ python -m harness.server            # then open http://localhost:8000
 | `python -m harness.corebench fetch 6460826 4098236 [--level hard]` | Download capsules into `tasks/` and write their answer keys |
 | `python -m harness.batch --label "cycle 1"` | Run every task unattended, score it, add a row to `harness/SCOREBOARD.md`, print failures grouped for triage |
 | `python -m harness.score runs/<run_id>` | Score one run |
-| `python -m harness.fake_agent --task … --run …` | Stand-in agent that replays the golden run (`--scenario crash` or `wrong`, `--speed 0`) |
+| `python -m harness.batch --tasks id1,id2 --parallel 5` | The same, for chosen tasks, several at a time; stops starting tasks if the model provider is out of credit |
+| `python -m harness.fake_agent --task … --run …` | Stand-in agent that replays the golden run, or a saved recording of a real run (`--scenario crash` or `wrong`, `--speed 0`) |
+| `python -m harness.record runs/<run_id>` | Save a completed real run as that task's recording (`harness/recordings/`), the demo's fallback: Demo replay then plays it back with no model |
+| `python -m harness.compare runs/<a> runs/<b>` | Two runs of a task side by side (memory read, fixes, failed commands, obstacles, time, tokens, score) |
+| `python -m harness.tester_check [--agent fake]` | The tester script below, unattended: starts runs the way the UI does, approves, rejects, and checks the plan, report, score and memory |
 
 The real agent is started as `python -m agent.run …` (contract section 3). To point at something else, set `REPRO_AGENT_CMD`.
 

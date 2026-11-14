@@ -1,0 +1,23 @@
+$ ls -R repo | head -80
+repo:
+REPRODUCING.md
+code
+environment
+metadata
+results
+
+repo/code:
+LICENSE
+README.md
+mainMLCA.py
+mlca.py
+run
+
+repo/environment:
+Dockerfile
+
+repo/metadata:
+metadata.yml
+
+repo/results:
+

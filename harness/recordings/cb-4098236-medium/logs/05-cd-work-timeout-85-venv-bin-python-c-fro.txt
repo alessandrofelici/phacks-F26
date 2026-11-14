@@ -1,0 +1,13 @@
+$ cd /work && timeout 85 .venv/bin/python -c "
+from sklearn.datasets import fetch_openml
+import numpy as np
+ds=fetch_openml(data_id=40589, parser='liac-arff', as_frame=False)
+print(type(ds.data), ds.data.shape, ds.target.shape, ds.target[:3], ds.feature_names[-8:], ds.target_names if hasattr(ds,'target_names') else None)
+print(ds.data[:2,-3:])
+" 2>&1 | tail -8
+<class 'numpy.ndarray'> (593, 72) (593, 6) [['FALSE' 'TRUE' 'TRUE' 'FALSE' 'FALSE' 'FALSE']
+ ['TRUE' 'FALSE' 'FALSE' 'FALSE' 'FALSE' 'TRUE']
+ ['FALSE' 'TRUE' 'FALSE' 'FALSE' 'FALSE' 'TRUE']] ['BH_LowPeakAmp', 'BH_LowPeakBPM', 'BH_HighPeakAmp', 'BH_HighPeakBPM', 'BH_HighLowRatio', 'BHSUM1', 'BHSUM2', 'BHSUM3'] ['amazed.suprised', 'happy.pleased', 'relaxing.calm', 'quiet.still', 'sad.lonely', 'angry.aggresive']
+[[0.245457 0.105065 0.405399]
+ [0.343547 0.276366 0.710924]]
+

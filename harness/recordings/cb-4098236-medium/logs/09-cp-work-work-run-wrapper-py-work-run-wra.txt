@@ -1,0 +1,3 @@
+$ cp /work/work/run_wrapper.py /work/run_wrapper.py && cd /work && timeout 85 .venv/bin/python -c "import ast;ast.parse(open('run_wrapper.py').read());print('ok')"
+ok
+

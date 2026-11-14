@@ -1,0 +1,8 @@
+$ cd /work && (uv venv -p 3.9 .venv 2>&1 | tail -2) && uv pip install -p .venv/bin/python "numpy<1.24" "scipy<1.11" scikit-learn==1.2.2 networkx scikit-multilearn liac-arff requests pandas 2>&1 | tail -3; .venv/bin/python -c "import skmultilearn, sklearn; print(sklearn.__version__)"
+Using CPython 3.9.25
+Creating virtual environment at: .venv
+ + threadpoolctl==3.7.0
+ + tzdata==2026.6
+ + urllib3==2.6.3
+1.2.2
+

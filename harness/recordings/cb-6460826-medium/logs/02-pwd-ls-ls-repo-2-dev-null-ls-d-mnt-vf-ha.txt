@@ -1,0 +1,12 @@
+$ pwd; ls; ls repo 2>/dev/null; ls -d /mnt/vf/hack 2>/dev/null
+/work
+logs
+repo
+REPRODUCING.md
+code
+data
+environment
+metadata
+results
+
+Exit code: 2

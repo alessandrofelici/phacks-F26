@@ -1,0 +1,31 @@
+$ pwd; ls -la /work | head; ls /
+/work
+total 28
+drwx------  7 root root 4096 Nov 14 18:12 .
+dr-xr-xr-x 18 root root 4096 Nov 14 18:11 ..
+drwxrwxr-x  5 root root 4096 Nov 14 18:12 .home
+drwxr-xr-x  4 root root 4096 Nov 14 18:11 .venv
+drwxrwxr-x  2 root root 4096 Nov 14 18:12 logs
+drwxrwxr-x  6 root root 4096 Nov 14 15:51 repo
+drwxrwxr-x  2 root root 4096 Nov 14 18:12 work
+bin
+boot
+dev
+etc
+home
+lib
+lib64
+media
+mnt
+opt
+proc
+root
+run
+sbin
+srv
+sys
+tmp
+usr
+var
+work
+

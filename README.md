@@ -6,7 +6,7 @@ An agent that runs a paper's code and checks whether the published numbers hold 
 
 - [contract/CONTRACT.md](contract/CONTRACT.md): the interface between the two halves, frozen. [contract/ROLES.md](contract/ROLES.md) says who builds which half and how to start as Role A.
 - [harness/](harness/README.md): task loaders, scoring, web UI, batch runner (Role B). Try it: `python -m harness.server`, open http://localhost:8000, choose Demo replay.
-- `agent/`: the deep agent (Role A). Not started yet.
+- [agent/](agent/README.md): the deep agent (Role A). Results so far: [harness/SCOREBOARD.md](harness/SCOREBOARD.md); review notes of the autonomous run: [research/autonomous-run-2026-11-14.md](research/autonomous-run-2026-11-14.md).
 - Plan: [research/repro-bot-build-plan.md](research/repro-bot-build-plan.md)
 
 ## Research

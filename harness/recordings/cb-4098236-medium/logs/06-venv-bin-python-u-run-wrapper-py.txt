@@ -1,0 +1,4 @@
+$ .venv/bin/python -u run_wrapper.py
+[stderr] .venv/bin/python: can't open file '/work/run_wrapper.py': [Errno 2] No such file or directory
+
+Exit code: 2

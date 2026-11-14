@@ -1,0 +1,8 @@
+$ cd /work && timeout 80 .venv/bin/python -c "
+from skmultilearn.dataset import load_dataset
+X,y,f,l=load_dataset('emotions','undivided'); print(X.shape,y.shape)
+" 2>&1 | tail -3
+  File "/work/.venv/lib/python3.9/site-packages/requests/models.py", line 1026, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 410 Client Error: Gone for url: http://scikit.ml/datasets/data.list
+

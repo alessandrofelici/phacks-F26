@@ -1,0 +1,4 @@
+$ cd /work && (ln -s /work/repo/data /data && echo linked) 2>&1; ls -la /data 2>&1 | head -3
+linked
+lrwxrwxrwx 1 root root 15 Nov 14 17:07 /data -> /work/repo/data
+

@@ -1,0 +1,20 @@
+$ ls -la /work/work /work/logs; find / -name run_wrapper.py 2>/dev/null | head
+/work/logs:
+total 36
+drwxrwxr-x 2 root root 4096 Nov 14 18:12 .
+drwx------ 7 root root 4096 Nov 14 18:12 ..
+-rw-rw-r-- 1 root root  179 Nov 14 18:11 01-cd-repo-2-dev-null-pwd-ls-r-repo-head-80.txt
+-rw-rw-r-- 1 root root  208 Nov 14 18:11 02-ls-r-repo-head-80.txt
+-rw-rw-r-- 1 root root  411 Nov 14 18:11 03-cd-work-uv-venv-p-3-9-venv-2-1-tail-2-uv.txt
+-rw-rw-r-- 1 root root  430 Nov 14 18:12 04-cd-work-timeout-80-venv-bin-python-c-fro.txt
+-rw-rw-r-- 1 root root  838 Nov 14 18:12 05-cd-work-timeout-85-venv-bin-python-c-fro.txt
+-rw-rw-r-- 1 root root  154 Nov 14 18:12 06-venv-bin-python-u-run-wrapper-py.txt
+-rw-rw-r-- 1 root root  465 Nov 14 18:12 07-pwd-ls-la-work-head-ls.txt
+
+/work/work:
+total 12
+drwxrwxr-x 2 root root 4096 Nov 14 18:12 .
+drwx------ 7 root root 4096 Nov 14 18:12 ..
+-rw-r--r-- 1 root root  924 Nov 14 18:12 run_wrapper.py
+/work/work/run_wrapper.py
+

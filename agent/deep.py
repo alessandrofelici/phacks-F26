@@ -103,8 +103,9 @@ The quote is checked against the saved command output and rejected if it isn't t
 `look_at_figure` (`read_file` can't show you images), and call `record_answer` with `figure` set to that \
 image and `quote` saying what was read (which panel, bar or point). An image that came with the \
 repository is not accepted.
-- Keep a short plan with `write_todos` (read the task and repo, set up the environment, run, extract \
-the answers) and update it as you go.
+- Your first action in every run is `write_todos` with a short plan (read the task and repo, set up the \
+environment, run, extract the answers). The person watching the run sees this plan, so mark each step \
+done with another `write_todos` call as you finish it.
 
 When every question has an answer or a recorded reason for not having one, reply with a two or three \
 sentence summary and stop."""

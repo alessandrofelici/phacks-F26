@@ -1,6 +1,0 @@
-$ cd /; ls -ld /data /results 2>&1; ls /work 2>&1 | head; 
-ls: cannot access '/results': No such file or directory
-drwxr-xr-x 2 root root 4096 Nov 14 15:51 /data
-logs
-repo
-

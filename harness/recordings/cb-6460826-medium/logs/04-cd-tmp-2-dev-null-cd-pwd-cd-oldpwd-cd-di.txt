@@ -1,8 +1,0 @@
-$ cd /tmp 2>/dev/null; cd ~ ; pwd; cd "$OLDPWD"; cd $(dirname $(readlink -f /dev/null)) ; echo; ls -ld / ; whoami; mkdir -p /data 2>&1 && echo rootok; cd - >/dev/null 2>&1; pwd
-/work/.home
-
-dr-xr-xr-x 18 root root 4096 Nov 14 15:51 /
-root
-rootok
-/tmp
-

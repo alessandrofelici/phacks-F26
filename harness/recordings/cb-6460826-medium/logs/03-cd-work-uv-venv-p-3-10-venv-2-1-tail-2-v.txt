@@ -1,0 +1,8 @@
+$ cd /work && uv venv -p 3.10 .venv 2>&1 | tail -2; . .venv/bin/activate && uv pip install numpy pandas scikit-learn networkx 2>&1 | tail -3 && python -c "import sklearn,networkx,numpy,pandas;print(sklearn.__version__,networkx.__version__,numpy.__version__,pandas.__version__)"
+Using CPython 3.10.22
+Creating virtual environment at: .venv
+ + six==1.17.0
+ + threadpoolctl==3.8.0
+ + tzdata==2026.6
+1.7.2 3.4.2 2.2.6 2.3.3
+
