@@ -34,6 +34,16 @@ SKILLS_DIR = Path(__file__).resolve().parent / "skills"
 MEMORY_FILE = "/memories/fixes.md"
 MEMORY_HEADER = "# Fixes that worked\n"
 PROBE_MAX_S = 180  # a runtime probe never runs longer than this
+
+
+def probe_cap(seconds: Any) -> int:
+    """The probe's time cap in seconds, 30 to 180 (120 when not given). Shown in its approval and enforced."""
+    if isinstance(seconds, bool) or not isinstance(seconds, (int, float)):
+        try:
+            seconds = float(seconds)
+        except (TypeError, ValueError):
+            return 120
+    return max(30, min(int(seconds), PROBE_MAX_S))
 _SCOPER_ONLY = frozenset({"record_plan", "probe_runtime"})  # the main agent must delegate planning
 
 SYSTEM_PROMPT = f"""You are Repro Bot. You check whether a paper's published code produces the numbers \
@@ -253,7 +263,7 @@ def build_tools(
         """Record the run's plan, before any experiment: full, scaled or not verifiable within the budget.
 
         Args:
-            path: "full" (the full run fits in 60% of the minutes left), "scaled" (it doesn't, but a
+            path: "full" (the full run fits: at most 60% of the task's limit, leaving time for the answers), "scaled" (it doesn't, but a
                 setting can shrink) or "not_verifiable" (nothing can shrink enough).
             projected_minutes: Your estimate of the FULL run's time in minutes, from a probe when the code
                 has a heavy setting. May be null only for "not_verifiable".
@@ -283,7 +293,7 @@ def build_tools(
             seconds: How long to let it run before stopping it: 30 to 180.
             why: One sentence on what it runs and which heavy setting you want to time.
         """
-        cap = max(30, min(int(seconds or 120), PROBE_MAX_S))
+        cap = probe_cap(seconds)
         run_id = backend.start_background(command, cap)
         if not run_id:
             return "Error: the run's time limit is used up; nothing was started."
@@ -296,6 +306,9 @@ def build_tools(
             return "Error: the probe could not be followed."
         output = backend.background_output(run_id)
         finished = bool(state["done"]) and not state["timed_out"]
+        if state.get("log") and not (finished and state["exit_code"] == 0):
+            # A probe stopped part-way printed numbers from an unfinished run: they can't be answers.
+            findings.writer.exclude_from_evidence(state["log"])
         text = describe_probe(output, float(state["seconds"]), finished, state["exit_code"])
         tail = "\n".join(output.splitlines()[-15:]) or "<no output>"
         saved = f" Full output saved as /{state['log']}." if state.get("log") else ""
@@ -420,12 +433,18 @@ undeclared package, a data file or path that doesn't exist, a preprocessing scri
 a hard-coded GPU (`cuda`) call. Give each a short fix.
 4. Find the settings that set the runtime: epochs, iterations, number of trees, bootstrap or permutation \
 counts, MCMC samples, seeds or repetitions, grid sizes, dataset size. Note where each is set.
-5. Estimate the full runtime. When the code has a heavy setting, measure instead of guessing: get the \
-environment just far enough to start the code (short installs with `execute`), then call `probe_runtime` \
-with the experiment's command and 60 to 180 seconds. It runs the command that long, stops it, and projects \
-the total from the progress lines it printed. If the code finishes inside the probe, that output already \
-counts as the run.
-6. Call `record_plan` with one path. It tells you the minutes left; a full run may use at most 60% of them.
+5. Estimate the full runtime, and record the plan within about the first 8 minutes of the run.
+   - No heavy setting (no training loop, no large iteration counts, a small dataset): don't probe. Record a \
+"full" plan straight away with an honest estimate; the main agent sets up and runs the code.
+   - A heavy setting: measure instead of guessing. Get the environment just far enough to start the code \
+(short installs with `execute`), then call `probe_runtime` with the experiment's command and 60 to 180 \
+seconds. It runs the command that long, stops it, and projects the total from the progress lines it \
+printed. A bare progress bar or step counter gives only a lower bound (it may be one epoch of many): check \
+the code for outer loops. If the code finishes inside the probe, that output already counts as the run.
+   - Setup taking long: don't wait for it. Estimate from the code (time per step × number of steps), record \
+the plan, and say what setup is left; you can probe and call `record_plan` again later to revise it.
+6. Call `record_plan` with one path. A full run may take at most 60% of the task's time limit and must leave \
+a few minutes after it for the answers; when a plan doesn't fit, `record_plan` says so with the numbers.
    - "full" when the projected runtime fits. Use it for code without a heavy setting, with an honest estimate.
    - "scaled" when it doesn't fit but a setting can shrink. List each change in `scale_down` with its kind: \
 "precision" (trees, bootstrap or permutation counts, MCMC samples, repeated seeds: same expected result, more \
@@ -648,8 +667,7 @@ def approval_request(action: dict[str, Any], work: Path, findings: Findings | No
     command = str(args.get("command") or "")
     extra: dict[str, Any] = {}
     if name == "probe_runtime":
-        seconds = args.get("seconds")
-        cap = max(30, min(int(seconds), PROBE_MAX_S)) if isinstance(seconds, (int, float)) else 120
+        cap = probe_cap(args.get("seconds"))
         why = f": {args['why']}" if args.get("why") else ""
         summary = f"Time a probe: run {command} for at most {cap} s, then stop it, to measure its speed{why}"
     elif name in ("run_experiment", "start_background_run"):

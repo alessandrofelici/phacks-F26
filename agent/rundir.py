@@ -32,12 +32,27 @@ def _slug(text: str, limit: int = 40) -> str:
 
 
 _PRINT_WORDS = {"echo", "printf"}
-_HARMLESS_WORDS = {"cd", "true", ":", "export", "sleep"}
+_HARMLESS_WORDS = {"cd", "true", ":", "export", "sleep", "tee"}
+_QUOTED = re.compile(r"'[^']*'|\"(?:\\.|[^\"\\])*\"")
+_ASSIGNMENT = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*=")
 
 
 def prints_only(command: str) -> bool:
-    """True for a command that only prints text written into it (``cd repo && echo "acc 0.9"``)."""
-    words = [segment.strip().split(maxsplit=1)[0] for segment in re.split(r"&&|\|\||;|\|", command) if segment.strip()]
+    """True for a command that only prints text written into it (``cd repo && echo "acc 0.9"``).
+
+    Quoted text is set aside before splitting, so a ``;`` inside an echoed string doesn't hide the
+    echo. A command substitution (``$(...)`` or backticks) runs real code, so its output can count.
+    """
+    if "$(" in command or "`" in command:
+        return False
+    unquoted = _QUOTED.sub(" '' ", command)
+    words = []
+    for segment in re.split(r"&&|\|\||;|\||\n", unquoted):
+        tokens = segment.strip().lstrip("({ ").split()
+        while tokens and _ASSIGNMENT.match(tokens[0]):
+            tokens.pop(0)  # VAR=value before the command
+        if tokens:
+            words.append(tokens[0].rsplit("/", 1)[-1])  # /bin/echo is echo
     return bool(words) and any(w in _PRINT_WORDS for w in words) and all(w in _PRINT_WORDS | _HARMLESS_WORDS for w in words)
 
 
@@ -78,6 +93,7 @@ class RunWriter:
         self._approval_count = 0
         self.logs: list[str] = []  # paths relative to the run directory, oldest first
         self._commands: dict[str, str] = {}  # log path -> the command whose output it holds
+        self._not_evidence: set[str] = set()  # logs whose output can't be quoted as an answer
 
     # -- events -----------------------------------------------------------------
 
@@ -102,9 +118,16 @@ class RunWriter:
             self._log_count += 1
             rel = f"logs/{self._log_count:02d}-{_slug(label)}.txt"
         (self.run_dir / rel).write_text(text, encoding="utf-8")
-        self.logs.append(rel)
-        self._commands[rel] = label
+        with self._lock:
+            # The command is known before the log can be found, so find_quote never sees it half registered.
+            self._commands[rel] = label
+            self.logs.append(rel)
         return rel
+
+    def exclude_from_evidence(self, rel: str) -> None:
+        """Keep a saved log out of evidence (a probe stopped part-way: its numbers aren't the results)."""
+        with self._lock:
+            self._not_evidence.add(rel)
 
     def find_quote(self, quote: str) -> str | None:
         """The newest saved log whose output contains ``quote`` exactly, or None.
@@ -112,7 +135,12 @@ class RunWriter:
         Output of commands that only print text they were given (``echo``, ``printf``) and the
         ``$ <command>`` line at the top of a log don't count: they hold what the agent typed.
         """
-        for rel in reversed(self.logs):
+        with self._lock:
+            logs = list(self.logs)
+            skip = set(self._not_evidence)
+        for rel in reversed(logs):
+            if rel in skip:
+                continue
             command = self._commands.get(rel)
             if command is not None and prints_only(command):
                 continue

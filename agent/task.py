@@ -26,7 +26,9 @@ CONFIDENCES = ("high", "medium", "low")
 PLAN_PATHS = ("full", "scaled", "not_verifiable")
 SCALE_KINDS = ("precision", "convergence", "data", "hardware")
 NO_ANSWER_CATEGORIES = ("not_verifiable_within_budget", "environment", "not_in_output", "other")
-FULL_RUN_SHARE = 0.6  # a full run must fit in this share of the minutes left
+FULL_RUN_SHARE = 0.6  # a full run may take at most this share of the task's time limit ...
+RESERVE_SHARE = 0.15  # ... and must leave this share of it (at least 3 minutes) for reading the output
+PLAN_NUDGE_MINUTES = 6  # with no plan by then, command output reminds the scoper to record one
 # A projection's half-width, as a share of its value, beyond which harness/score.py calls it too vague.
 INTERVAL_CAP = 0.10
 # Text that means "I have no answer" and must never be recorded as a value.
@@ -34,7 +36,10 @@ PLACEHOLDERS = frozenset(
     {"no answer", "noanswer", "n/a", "na", "none", "null", "nan", "unknown", "not found", "not available",
      "error", "failed", "-", "--", "?", "tbd", "could not reproduce", "not reproduced"}
 )
-_NUMBER = re.compile(r"[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:[eE][-+]?\d+)?|[-+]?\.\d+(?:[eE][-+]?\d+)?")
+# A number not glued to a word or another number ("r2", the second half of "0.44-0.46"): a sign counts
+# only after a space or punctuation, so a range's dash isn't read as a minus.
+_NUMBER = re.compile(r"(?<![\w.])(?:[-+](?=\.?\d))?(?:\d+(?:\.\d+)?|\.\d+)(?:[eE][-+]?\d+)?(%?)")
+_THOUSANDS = re.compile(r"(?<![\w.,])(?:[-+](?=\d))?\d{1,3}(?:,\d{3})+(?:\.\d+)?(?![\d,])")
 NO_PLAN_MESSAGE = (
     "Error: there is no plan for this run yet, so nothing was run. Hand the task to the `scoper` helper first "
     "(task tool, subagent_type 'scoper'; give it the question texts, the task's instructions and the time "
@@ -111,14 +116,18 @@ def _coerce(value: Any, qtype: str) -> Any:
         if isinstance(value, bool):
             raise ValueError("a number is needed, not true/false")
         if isinstance(value, (int, float)):
-            return value
-        if isinstance(value, str):
+            number = value
+        elif isinstance(value, str):
             text = value.strip().rstrip("%").replace(",", "")
             try:
-                return int(text)
+                number = int(text)
             except ValueError:
-                return float(text)  # raises ValueError when it isn't a number
-        raise ValueError("a number is needed")
+                number = float(text)  # raises ValueError when it isn't a number
+        else:
+            raise ValueError("a number is needed")
+        if not math.isfinite(number):
+            raise ValueError("a finite number is needed (inf and nan can't be checked or stored as JSON)")
+        return number
     if qtype == "string":
         if isinstance(value, (dict, list)):
             raise ValueError("a string is needed")
@@ -134,21 +143,45 @@ def _coerce(value: Any, qtype: str) -> Any:
     return value
 
 
-def numbers_in(text: str) -> list[float]:
-    """Every number written in ``text`` (thousands separators allowed)."""
-    found = []
-    for match in _NUMBER.findall((text or "").replace("−", "-")):  # a typographic minus counts as one
+def _tokens(text: str) -> list[tuple[float, bool]]:
+    """Every number written in ``text``, with whether it may be a percentage of a fraction or the reverse.
+
+    A number counts as such when it is written with a decimal point or followed by ``%``: 81.2 and
+    0.812 are the same accuracy, but "seed 3" is not 0.03. A comma group such as 1,234 is read both as
+    one number and as a list (1 and 234), since outputs use commas for both.
+    """
+    text = (text or "").replace("\u2212", "-")  # a typographic minus counts as one
+    found: list[tuple[float, bool]] = []
+    for match in _NUMBER.finditer(text):
+        raw = match.group(0).rstrip("%")
         try:
-            found.append(float(match.replace(",", "")))
+            number = float(raw)
+        except ValueError:
+            continue
+        if math.isfinite(number):
+            found.append((number, "." in raw or bool(match.group(1))))
+    for match in _THOUSANDS.finditer(text):
+        try:
+            found.append((float(match.group(0).replace(",", "")), "." in match.group(0)))
         except ValueError:
             continue
     return found
 
 
+def numbers_in(text: str) -> list[float]:
+    """Every number written in ``text``."""
+    return [number for number, _ in _tokens(text)]
+
+
 def _half_unit(value: float) -> float:
-    """Half of the last written digit of ``value``: how far a correctly rounded number can be off."""
+    """Half of the last written digit of ``value``: how far a correctly rounded number can be off.
+
+    The value is taken as written: 1 allows 0.5, but 1.0 allows only 0.05.
+    """
+    if isinstance(value, int) and not isinstance(value, bool):
+        return 0.5
     try:
-        exponent = Decimal(repr(float(value))).normalize().as_tuple().exponent
+        exponent = Decimal(repr(float(value))).as_tuple().exponent
     except (InvalidOperation, ValueError):
         return 1e-9
     if not isinstance(exponent, int):
@@ -164,20 +197,23 @@ def number_in_quote(value: float, quote: str, precision_of: float | None = None)
     """
     unit = _half_unit(value) if precision_of is None else min(_half_unit(value), _half_unit(precision_of))
     tolerance = unit + 1e-9 * abs(value)
-    for seen in numbers_in(quote):
-        for candidate in (seen, seen * 100.0, seen / 100.0):
-            if math.isfinite(candidate) and abs(candidate - value) <= tolerance:
-                return True
+    for seen, scalable in _tokens(quote):
+        # Zero is zero as a fraction or a percentage, so it never needs (or allows) a conversion.
+        candidates = (seen, seen * 100.0, seen / 100.0) if scalable and value != 0 else (seen,)
+        if any(abs(candidate - value) <= tolerance for candidate in candidates):
+            return True
     return False
 
 
 def quote_shows(value: Any, quote: str, qtype: str) -> bool:
     """Does the evidence quote contain the answer? Numbers may be rounded; text must appear as written."""
     if qtype == "number":
-        return isinstance(value, (int, float)) and number_in_quote(float(value), quote)
+        return isinstance(value, (int, float)) and not isinstance(value, bool) and number_in_quote(value, quote)
     if qtype == "list":
-        return all(quote_shows(item, quote, "number" if isinstance(item, (int, float)) and not isinstance(item, bool) else "string")
-                   for item in value)
+        return bool(value) and all(
+            quote_shows(item, quote, "number" if isinstance(item, (int, float)) and not isinstance(item, bool) else "string")
+            for item in value
+        )
     wanted, seen = (" ".join(str(s).casefold().split()) for s in (value, quote))
     return bool(wanted) and wanted in seen
 
@@ -204,6 +240,32 @@ class Findings:
             return max(0.0, (self.deadline - time.monotonic()) / 60)
         return max(0.0, self.task.max_minutes - (time.time() - self.started) / 60)
 
+    def reserve_minutes(self) -> float:
+        """Time kept after the experiment for reading its output and recording the answers."""
+        return max(3.0, RESERVE_SHARE * self.task.max_minutes)
+
+    def full_run_allowance(self) -> float:
+        """The longest run a plan may choose now.
+
+        At most 60% of the task's whole limit, and never more than what is left minus the reserve.
+        Measured against the whole limit rather than the minutes left, so a plan recorded late
+        (after a slow setup) doesn't scale a paper whose full run still fits.
+        """
+        return max(0.0, min(FULL_RUN_SHARE * self.task.max_minutes, self.minutes_left() - self.reserve_minutes()))
+
+    def plan_reminder(self) -> str | None:
+        """A note for command output when a run is past the point where it should have a plan."""
+        if self.plan is not None:
+            return None
+        spent = self.task.max_minutes - self.minutes_left()
+        if spent < min(PLAN_NUDGE_MINUTES, 0.25 * self.task.max_minutes):
+            return None
+        return (
+            f"Note from the run: minute {spent:.0f} of {self.task.max_minutes:g} and still no plan. The scoper should "
+            "record it now with record_plan, estimating the runtime from the code if setup isn't finished; setup "
+            "can continue after the plan."
+        )
+
     def record_plan(
         self,
         path: str,
@@ -227,7 +289,7 @@ class Findings:
             return "Error: give the reason for this path in one or two sentences."
         projected = _minutes(projected_minutes)
         left = self.minutes_left()
-        allowed = FULL_RUN_SHARE * left
+        allowed = self.full_run_allowance()
         if path in ("full", "scaled") and projected is None:
             return "Error: give projected_minutes, your estimate of the full run's time in minutes (from a probe when the code has a heavy setting)."
         plan: dict[str, Any] = {"path": path, "projected_minutes": None if projected is None else round(projected, 1),
@@ -237,8 +299,9 @@ class Findings:
                                 "reason": reason}
         if path == "full" and projected is not None and projected > allowed:
             return (
-                f"Error: a full run needs about {projected:g} min, but only {left:.0f} min are left and a full run may "
-                f"take at most {allowed:.0f} min (60% of what is left). Choose 'scaled' with a scale_down, or "
+                f"Error: a full run needs about {projected:g} min, but {left:.0f} min are left and a run may take at "
+                f"most {allowed:.0f} min now (60% of the task's {self.task.max_minutes:g} minutes, leaving "
+                f"{self.reserve_minutes():.0f} min after it for the answers). Choose 'scaled' with a scale_down, or "
                 "'not_verifiable' with the reason."
             )
         if path == "scaled":
@@ -330,7 +393,8 @@ class Findings:
             value = _coerce(value, question["type"])
         except ValueError as exc:
             return f"Error: {question_id} is a {question['type']} question; {exc}."
-        if question["type"] == "string" and " ".join(str(value).casefold().split()) in PLACEHOLDERS:
+        placeholder = question["type"] == "string" and " ".join(str(value).casefold().split()) in PLACEHOLDERS
+        if placeholder and figure is not None:
             return (
                 f"Error: {value!r} is not an answer. When a question can't be answered, call record_no_answer "
                 "with the reason instead."
@@ -379,6 +443,11 @@ class Findings:
                 )
             log = found
             if not quote_shows(value, quote, question["type"]):
+                if placeholder:
+                    return (
+                        f"Error: {value!r} is not an answer. When a question can't be answered, call "
+                        "record_no_answer with the reason instead."
+                    )
                 seen = ", ".join(f"{n:g}" for n in numbers_in(quote)[:8]) or "none"
                 return (
                     f"Error: the quote doesn't show the answer {value!r}. Quote the output line that contains the "

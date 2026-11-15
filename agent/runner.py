@@ -92,6 +92,7 @@ def run_task(task_dir: Path | str, run_dir: Path | str, *, auto_approve: bool = 
         remove_workdir(work)
         raise ConfigError(str(exc)) from exc
     mapper = EventMapper(writer, backend)
+    backend.reminder = findings.plan_reminder  # command output says so when a run is late with its plan
     # `sandbox` is an optional field beyond contract v1; readers ignore what they don't know.
     started_data = {"task_id": task.task_id, "run_id": run_id, "model": model_label, "sandbox": backend.label}
     container = getattr(backend, "container", None)
@@ -119,7 +120,7 @@ def run_task(task_dir: Path | str, run_dir: Path | str, *, auto_approve: bool = 
             _drive(agent, task, run_id, writer, mapper, deadline, rejected, approved_edits, work, findings)
         if backend.out_of_time or time.monotonic() > deadline:
             raise RunTimeout
-        if findings.missing() and rejected:
+        if findings.missing() and rejected and not findings.finished_within_budget():
             status = "rejected"
             why_missing = f"approval {', '.join(rejected)} was rejected and the run could not continue without it"
         elif findings.answers or findings.finished_within_budget():

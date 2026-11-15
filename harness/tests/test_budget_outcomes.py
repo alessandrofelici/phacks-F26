@@ -81,8 +81,18 @@ class OutcomeTest(unittest.TestCase):
         # A full plan whose experiment turned out too slow, said so per question: not verifiable either.
         late = score_report(report(answer("q1", None, no_answer=reason), answer("q2", "ridge-weak"), plan="full"), KEY)
         self.assertEqual(late["outcome"], "not_verifiable")
-        # A scaled plan that ran out of time with nothing recorded.
-        self.assertEqual(classify({"plan": {"path": "scaled"}}, {"q1": {"correct": False}}), "not_verifiable")
+        # A scaled plan that ran out of time with nothing recorded is a failure, not a budget result.
+        self.assertEqual(classify({"plan": {"path": "scaled"}}, {"q1": {"correct": False}}), "not_reproduced")
+
+    def test_wrong_answers_are_never_hidden_behind_a_budget_outcome(self) -> None:
+        reason = {"category": "not_verifiable_within_budget", "reason": "too slow"}
+        wrong_and_budget = score_report(report(answer("q1", 0.91), answer("q2", None, no_answer=reason), plan="full"), KEY)
+        self.assertEqual(wrong_and_budget["outcome"], "not_reproduced")
+        right_and_wrong = score_report(report(answer("q1", 0.4555), answer("q2", "lasso"), plan="scaled"), KEY)
+        self.assertEqual(right_and_wrong["outcome"], "partly")
+        # A plan revised to not_verifiable after both answers were found exactly still reproduced the paper.
+        revised = score_report(report(answer("q1", 0.4555), answer("q2", "ridge-weak"), plan="not_verifiable"), KEY)
+        self.assertEqual((revised["outcome"], revised["all_correct"]), ("reproduced", True))
 
 
 class FakeAgentScenarioTest(unittest.TestCase):
