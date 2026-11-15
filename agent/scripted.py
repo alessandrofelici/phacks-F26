@@ -86,7 +86,19 @@ class ScriptedChatModel(BaseChatModel):
         return ChatResult(generations=[ChatGeneration(message=message)])
 
 
-_PLAN = ["Read the task and the repo", "Set up the environment", "Run the experiment", "Extract and check the answers"]
+_PLAN = ["Read the repo and plan the run with scoper", "Set up the environment", "Run the experiment", "Extract and check the answers"]
+
+# Test switch REPRO_SCRIPT_PLAN: which plan the scoper records (full, scaled or not_verifiable).
+_STEPS = ["Install numpy from a relaxed requirements file", "Run `python run.py --seed 0` in repo/", "Read q1 and q2 off its output"]
+_MISSING = ["requirements.txt pins numpy==1.19.5, which can't be installed on a current Python: install numpy>=1.26 from a new file"]
+# A projection computed from the run's saved output, the way a scaled run's projection script would print it.
+_PROJECT = (
+    "python3 -c \"import glob, re; t = ' '.join(open(f).read() for f in sorted(glob.glob('logs/*.txt'))); "
+    "v = float(re.findall(r'test r2: *(-?[0-9.]+)', t)[-1]); "
+    "print(f'projected test r2: {v:.4f} (interval {v - 0.01:.4f} to {v + 0.01:.4f})')\""
+)
+# A stand-in experiment that prints epochs, for the runtime probe.
+_EPOCHS = "python3 -c \"import time\nfor e in range(1, 21):\n    print(f'Epoch {e}/20', flush=True); time.sleep(0.1)\""
 
 
 def _todos(done: int) -> AIMessage:
@@ -117,6 +129,65 @@ def _toy_flow() -> Flow:
         "answers q1 and the line starting 'best model:' answers q2. The only dependency is numpy, pinned to "
         "1.19.5 in repo/requirements.txt, which is too old for a current Python."
     )
+
+    # --- main: the plan, from scoper
+    plan = os.environ.get("REPRO_SCRIPT_PLAN", "full")
+    if os.environ.get("REPRO_SCRIPT_EARLY_RUN"):
+        # Test switch: try the experiment before there is a plan; it is refused without asking anyone.
+        yield call("run_experiment", command="cd repo && python3 run.py --seed 0", est_minutes=1, why="before any plan")
+    yield call(
+        "task",
+        subagent_type="scoper",
+        description="Plan the run before any experiment. Questions: q1 'Report the test R^2 printed by run.py.' and "
+        "q2 'Report the name of the selected model.' The task says: run run.py with seed 0. Limit: 15 minutes. "
+        "paper-reader found that `python run.py --seed 0` in repo/ prints both, and numpy is pinned to 1.19.5.",
+    )
+    yield call("read_file", file_path="/repo/run.py")
+    if os.environ.get("REPRO_SCRIPT_PROBE_RUN"):
+        # Test switch: time a stand-in experiment that prints its epochs.
+        yield call("probe_runtime", command=_EPOCHS, seconds=30, why="times a loop of 20 short epochs")
+    if plan == "not_verifiable":
+        yield call(
+            "record_plan",
+            path="not_verifiable",
+            projected_minutes=None,
+            steps=_STEPS,
+            reason="Test switch: pretend the code needs a GPU, which this task doesn't allow.",
+        )
+    elif plan == "scaled":
+        yield call(
+            "record_plan",
+            path="scaled",
+            projected_minutes=999,
+            steps=_STEPS,
+            reason="Test switch: pretend the full run takes 999 minutes; one seed instead of three fits.",
+            missing_steps=_MISSING,
+            heavy_settings=["seeds: run.py --seed, 3 in the paper"],
+            scale_down=[{"setting": "seeds", "original": 3, "scaled": 1, "kind": "precision", "where": "run.py --seed"}],
+            scaled_minutes=1,
+        )
+    else:
+        yield call(
+            "record_plan",
+            path="full",
+            projected_minutes=1,
+            steps=_STEPS,
+            reason="One short script with no training loop; it runs in about a second.",
+            missing_steps=_MISSING,
+            heavy_settings=[],
+        )
+    yield say(f"Plan recorded ({plan}). Start the code with .venv/bin/python run.py --seed 0 inside repo/.")
+    if plan == "not_verifiable":
+        for qid in ("q1", "q2"):
+            yield call(
+                "record_no_answer",
+                question_id=qid,
+                category="not_verifiable_within_budget",
+                reason="The plan says the code needs a GPU, which this task doesn't allow.",
+            )
+        yield _todos(4)
+        yield say("Not verifiable within the budget: the code needs a GPU. No question was answered, each says why.")
+        return
 
     # --- main: environment
     yield _todos(1)
@@ -221,7 +292,20 @@ def _toy_flow() -> Flow:
     r2 = re.search(r"test r2: *(-?[0-9.]+)", last_result(messages, "grep"))
     messages = yield call("grep", pattern="best model:", path="/logs", output_mode="content")
     best = re.search(r"best model: *([\w.-]+)", last_result(messages, "grep"))
-    if r2:
+    if plan == "scaled":
+        # A scaled run's number answers are projections, printed with their interval by a script.
+        messages = yield call("execute", command=_PROJECT)
+        line = re.search(r"projected test r2: (-?[0-9.]+) \(interval (-?[0-9.]+) to (-?[0-9.]+)\)", last_result(messages, "execute"))
+        if line:
+            yield call(
+                "record_answer",
+                question_id="q1",
+                value=float(line.group(1)),
+                quote=line.group(0),
+                confidence="medium",
+                interval=[float(line.group(2)), float(line.group(3))],
+            )
+    elif r2:
         yield call("record_answer", question_id="q1", value=float(r2.group(1)), quote=r2.group(0), confidence="high")
     if best:
         yield call("record_answer", question_id="q2", value=best.group(1), quote=best.group(0), confidence="high")

@@ -208,6 +208,11 @@ class LoggingShellBackend(LocalShellBackend):
             "log": run["log"],
         }
 
+    def background_output(self, run_id: str) -> str:
+        """Everything a background run has printed so far."""
+        out_file = Path(self.cwd) / ".bg" / f"{run_id}.out"
+        return out_file.read_text(encoding="utf-8", errors="replace") if out_file.exists() else ""
+
     def take_record(self, command: str) -> CommandRecord | None:
         """The oldest unclaimed record of ``command``, removed from the list."""
         for i, record in enumerate(self.commands):

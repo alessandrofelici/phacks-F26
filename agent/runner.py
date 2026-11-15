@@ -82,6 +82,7 @@ def run_task(task_dir: Path | str, run_dir: Path | str, *, auto_approve: bool = 
     findings = Findings(task, writer)
     started = time.monotonic()
     deadline = started + task.max_minutes * 60
+    findings.deadline = deadline
     work = make_workdir(task, run_id)
     originals = snapshot(work / "repo")
     try:
@@ -115,13 +116,18 @@ def run_task(task_dir: Path | str, run_dir: Path | str, *, auto_approve: bool = 
         shutil.copytree(SKILLS_DIR, skills_dir)
         agent = build_agent(model, backend, findings, memory_dir, skills_dir, subagent_model)
         with run_trace(task.task_id, run_id, model_label) as trace:
-            _drive(agent, task, run_id, writer, mapper, deadline, rejected, approved_edits, work)
+            _drive(agent, task, run_id, writer, mapper, deadline, rejected, approved_edits, work, findings)
         if backend.out_of_time or time.monotonic() > deadline:
             raise RunTimeout
+        budget_reasoned = (findings.plan or {}).get("path") == "not_verifiable" and all(
+            q["id"] in findings.no_answers for q in findings.missing_questions()
+        )
         if findings.missing() and rejected:
             status = "rejected"
             why_missing = f"approval {', '.join(rejected)} was rejected and the run could not continue without it"
-        elif findings.answers:
+        elif findings.answers or budget_reasoned:
+            # A plan that says "not verifiable within budget", with a reason for every question, is a
+            # finished run, not a give-up.
             status = "completed"
         else:
             status = "failed"
@@ -187,6 +193,7 @@ def _drive(
     rejected: list[str],
     approved_edits: set[str],
     work: Path,
+    findings: Findings | None = None,
 ) -> None:
     """Stream the agent, pausing at each approval until the run ends."""
     config = {"configurable": {"thread_id": run_id}, "recursion_limit": 400}
@@ -206,7 +213,13 @@ def _drive(
             decisions: list[dict[str, Any]] = []
             resume[interrupt_id] = {"decisions": decisions}
             for action in interrupt.value.get("action_requests", []):
-                request = approval_request(action, work)
+                if findings is not None and action.get("name") in ("run_experiment", "start_background_run"):
+                    allowed, why_not = findings.runs_allowed()
+                    if not allowed:
+                        # No plan yet (or a plan that rules the run out): refused without asking a human.
+                        decisions.append({"type": "reject", "message": why_not.removeprefix("Error: ")})
+                        continue
+                request = approval_request(action, work, findings)
                 decision = writer.request_approval(
                     request["kind"],
                     request["summary"],
@@ -214,6 +227,7 @@ def _drive(
                     diff=request["diff"],
                     agent=mapper.current_agent(),
                     deadline=deadline,
+                    extra=request.get("extra"),
                 )
                 if decision["decision"] == "approve":
                     decisions.append({"type": "approve"})

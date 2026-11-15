@@ -13,8 +13,10 @@ task it reports a failure, which is useful for testing the failed state.
 
 Extra flags (not part of the contract, for testing the UI):
     --speed N        divide every delay by N (default 4; 0 = no delays)
-    --scenario X     ok | crash | wrong   (crash exits 1 mid-run with no report;
-                     wrong reports a wrong q1)
+    --scenario X     ok | crash | wrong | scaled | not_verifiable   (crash exits 1
+                     mid-run with no report; wrong reports a wrong q1; scaled plays a
+                     plan-first run scaled down to fit, q1 a projection; not_verifiable
+                     plays a plan that can't fit, every question with its reason)
 It also imitates memory: once a run has written the numpy fix, later runs
 reuse it and skip the failed install.
 """
@@ -104,7 +106,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--run", type=Path, required=True)
     parser.add_argument("--auto-approve", action="store_true")
     parser.add_argument("--speed", type=float, default=float(os.environ.get("REPRO_FAKE_SPEED", "4")))
-    parser.add_argument("--scenario", choices=["ok", "crash", "wrong"], default="ok")
+    parser.add_argument("--scenario", choices=["ok", "crash", "wrong", "scaled", "not_verifiable"],
+                        default=os.environ.get("REPRO_FAKE_SCENARIO", "ok"))
     args = parser.parse_args(argv)
 
     started = time.time()
@@ -125,9 +128,15 @@ def main(argv: list[str] | None = None) -> int:
         run.finish(report)
         return 0
 
+    if args.scenario == "not_verifiable":
+        return play_not_verifiable(task, run, run_id, started)
+
     golden = read_events(GOLDEN_RUN)
     golden_report = read_json(GOLDEN_RUN / "report.json")
     request = read_json(GOLDEN_RUN / "approvals" / "a1.request.json")
+    if args.scenario == "scaled":
+        request = dict(request, summary=request["summary"] + " · scaled down per the plan: " + _SCALE_NOTE,
+                       scale_down=SCALED_PLAN["scale_down"])
     remembered = MEMORY.exists()
     # Golden events 9-13: memory miss, failed install, write the fix file, install, memory write.
     skip_when_remembered = {10, 13}
@@ -174,6 +183,10 @@ def main(argv: list[str] | None = None) -> int:
             data["value"] = 0.91
 
         run.emit(etype, agent, data)
+        if etype == "run_started" and args.scenario == "scaled":
+            run.wait(2)
+            run.emit("plan_recorded", "scoper", {"path": "scaled", "projected_minutes": SCALED_PLAN["projected_minutes"],
+                                                 "minutes_left": SCALED_PLAN["minutes_left"], "summary": _SCALED_SUMMARY})
         if etype == "memory_written":
             MEMORY.parent.mkdir(parents=True, exist_ok=True)
             write_json_atomic(MEMORY, {"fixes": [data["note"]], "saved": now_iso()})
@@ -190,6 +203,54 @@ def main(argv: list[str] | None = None) -> int:
     if remembered:
         report["obstacles"] = [{"stage": "env", "summary": "numpy==1.19.5 can't be installed on this Python (known from an earlier run)",
                                 "fix": "Applied the remembered fix straight away: numpy>=1.26 from requirements.repro.txt", "resolved": True}]
+    if args.scenario == "scaled":
+        quote = "projected test r2: 0.4555 (interval 0.4455 to 0.4655)"
+        (run.dir / "logs" / "projection.txt").write_text(f"$ python project.py\n{quote}\n", encoding="utf-8")
+        report["answers"][0].update({"evidence": {"file": "logs/projection.txt", "quote": quote}, "confidence": "medium",
+                                     "scaled": True, "interval": [0.4455, 0.4655]})
+        report["answers"][1]["scaled"] = True
+        report["plan"] = SCALED_PLAN
+    run.finish(report)
+    return 0
+
+
+# The plans the scaled and not_verifiable scenarios play (shapes as agent/task.py writes them).
+SCALED_PLAN = {
+    "path": "scaled", "projected_minutes": 96.0, "minutes_left": 14.5, "revision": 1,
+    "steps": ["Install numpy from a relaxed requirements file", "Run run.py once per seed", "Project q1 from the seeds run"],
+    "missing_steps": ["requirements.txt pins numpy==1.19.5, which can't be installed on a current Python"],
+    "heavy_settings": ["seeds: 3 in the paper (demo)"],
+    "reason": "Demo: the full run is taken to need 96 minutes; one seed instead of three fits in the time left.",
+    "scale_down": [{"setting": "seeds", "original": 3, "scaled": 1, "kind": "precision", "where": "run.py --seed"}],
+    "scaled_minutes": 1.0,
+}
+_SCALE_NOTE = "seeds 3 → 1 (precision)"
+_SCALED_SUMMARY = f"scaled run: the full run needs about 96 min of 15 left, the scaled runs about 1 min; {_SCALE_NOTE}"
+_NOT_VERIFIABLE_REASON = "Demo: the code is taken to need a GPU, which this task doesn't allow, and nothing can shrink enough."
+
+
+def play_not_verifiable(task: dict, run: Run, run_id: str, started: float) -> int:
+    """A plan-first run whose plan says the paper can't be verified within the budget."""
+    run.emit("run_started", "main", {"task_id": task["task_id"], "run_id": run_id, "model": "fake agent (no model)"})
+    run.wait(2)
+    run.emit("subagent_started", "main", {"name": "scoper", "task": "Plan the run before any experiment"})
+    run.wait(3)
+    run.emit("tool_call", "scoper", {"tool": "read_file", "summary": "/repo/run.py", "ok": True})
+    run.wait(2)
+    run.emit("plan_recorded", "scoper", {"path": "not_verifiable", "projected_minutes": None, "minutes_left": 14.8,
+                                         "summary": f"not verifiable within budget: {_NOT_VERIFIABLE_REASON}"})
+    run.emit("subagent_finished", "main", {"name": "scoper", "summary": "Not verifiable within the budget: it needs a GPU."})
+    report = base_report(task, run_id, "completed", started)
+    for answer in report["answers"]:
+        answer["no_answer"] = {"category": "not_verifiable_within_budget", "reason": _NOT_VERIFIABLE_REASON}
+        run.wait(1)
+        run.emit("no_answer", "main", {"question_id": answer["question_id"], "category": "not_verifiable_within_budget",
+                                       "reason": _NOT_VERIFIABLE_REASON})
+        report["obstacles"].append({"stage": "other", "summary": f"No answer for {answer['question_id']}: (not verifiable "
+                                    f"within budget) {_NOT_VERIFIABLE_REASON}", "fix": None, "resolved": False})
+    report["plan"] = {"path": "not_verifiable", "projected_minutes": None, "minutes_left": 14.8, "revision": 1,
+                      "steps": ["Run run.py on a GPU"], "missing_steps": [], "heavy_settings": ["device: cuda (demo)"],
+                      "reason": _NOT_VERIFIABLE_REASON}
     run.finish(report)
     return 0
 

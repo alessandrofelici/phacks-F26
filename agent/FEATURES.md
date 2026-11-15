@@ -7,16 +7,16 @@ the toy task and 20 CORE-Bench papers (2026-11-14, `harness/SCOREBOARD.md`).
 
 | deepagents feature | What it does in Repro Bot | Where it shows | Checked |
 |---|---|---|---|
-| Planning (`write_todos`, `TodoListMiddleware`) | The main agent keeps a plan: read, set up, run, extract | `todo_updated` events; the Plan panel in the UI | Real runs |
+| Planning (`write_todos`, `TodoListMiddleware`), plus a recorded run plan | The main agent keeps a to-do plan: plan with `scoper`, set up, run, extract. The `scoper` subagent records the run's plan (`record_plan`: full, scaled or not verifiable within the budget), and the experiment tools refuse until it has | `todo_updated` events; the Plan panel in the UI | Real runs |
 | Filesystem tools (`read_file`, `ls`, `glob`, `grep`, `write_file`, `edit_file`) | Read the paper's repo and Dockerfile, write fix files outside it, search saved output | `tool_call` events named after the tool | Real runs |
 | `execute` with a sandbox backend | Every command runs in a rootless Podman container that only holds the workspace (`PodmanShellBackend`, built on `LocalShellBackend`), on an image with conda, uv, compilers and R (`agent/sandbox-image/`) | `tool_call` with the real exit code in `ok`; full output in `logs/`; `run_started.data.sandbox` | Real runs |
 | Large tool results offloaded | A 1.5 MB command output reached the model as a pointer to `/large_tool_results/...`; the full text stays in `logs/` | The `logs/` file; the model's context stays small | Probe |
-| Subagents (`task`) | `paper-reader`, `env-builder`, `runner`, `result-judge`, each with its own instructions and tools | `subagent_started` / `subagent_finished`; the `agent` field on every step; `lc_agent_name` in LangSmith | Real runs **in strict mode only**: Haiku does every step itself by default. With `REPRO_DELEGATION=strict` (a `wrap_model_call` middleware that hides the command tools from the main agent) it delegates to all three working subagents |
+| Subagents (`task`) | `scoper` (plans every run, see below), `paper-reader`, `env-builder`, `runner`, `result-judge`, each with its own instructions and tools | `subagent_started` / `subagent_finished`; the `agent` field on every step; `lc_agent_name` in LangSmith | Real runs **in strict mode only**: Haiku does every step itself by default. With `REPRO_DELEGATION=strict` (a `wrap_model_call` middleware that hides the command tools from the main agent) it delegates to all three working subagents |
 | Middleware (`wrap_model_call`) | `DelegateCommands`: dynamic tool selection for the main agent only, so long install logs stay in subagent contexts | Subagent steps in the timeline; fewer tokens in the main context | Real runs (strict mode) |
 | Human in the loop (`interrupt_on` with `when` predicates) | Pauses before the experiment, before a background run, before a command with a long timeout, and before any write inside the paper's repo | `approvals/<id>.request.json`, `approval_requested` / `approval_resolved`, kinds `long_run` and `edit_source` | Real runs: approved over the harness API and with `--auto-approve`; approve and reject clicked in the UI on scripted runs; timeout with the scripted model |
 | Long-term memory (`memory=`, a `CompositeBackend` route) | `/memories/fixes.md` keeps fixes that worked; loaded into the main agent's instructions | `memory_read` / `memory_written`; `python -m harness.compare` on two runs | Real runs: the second toy run loaded the first one's fix, 1 obstacle fewer, 15% fewer tokens |
 | Skills (`SKILL.md`) | Five how-to notes: Code Ocean capsules, old Python pins, conda files, R projects, headless notebooks | `read_file` of `/skills/.../SKILL.md` at the start of real runs | Real runs: the agent reads `code-ocean-capsule` first on CORE-Bench tasks |
-| Custom tools | `run_experiment`, `start_background_run`, `check_background_run(wait_seconds)`, `record_answer`, `record_obstacle`, `look_at_figure` | `tool_call` events; `answer_found`; `figures/` | Real runs |
+| Custom tools | `run_experiment`, `start_background_run`, `check_background_run(wait_seconds)`, `record_answer` (value must be in the quote; `interval` on a scaled plan), `record_no_answer`, `record_obstacle`, `look_at_figure`; `record_plan` and `probe_runtime` for `scoper` only | `tool_call` events; `answer_found`; `figures/` | Real runs |
 | Summarization, prompt caching | deepagents' defaults, left on | Nothing visible | On; not measured |
 | LangSmith tracing | One parent trace per run (`langsmith.trace`), agent-based workspaces (`LANGSMITH_AGENT_ID`), flushed before exit | `report.json` `trace_url`; `python -m agent.check --call` reads the trace back | Real runs: every run is one trace with each model call, tool call and subagent inside |
 
@@ -45,3 +45,13 @@ keeps that image as the evidence (`figures/` in the run directory).
 An answer is only accepted with evidence from this run: a quote found in this run's saved command
 output, or, for a figure question, an image this run wrote (images that came with the repository
 are refused). The agent can't report the paper's number in place of what the code produced.
+
+## Plan-first runs (branch `plan-first`, 2026-11-14 evening)
+
+From the research doc "Repro Bot: Plan-First Runs and Budget-Scaled Verification". The `scoper`
+subagent is the only one with `record_plan` and `probe_runtime`, and `run_experiment` /
+`start_background_run` are refused until a plan exists, so every run delegates at least once,
+Haiku included. Where it shows: a `plan_recorded` event (agent `scoper`), `report.plan`, the plan
+block in the UI's Plan panel, and on a scaled plan the experiment's approval request listing the
+scale-down. Checked with the scripted model (full, scaled, not verifiable, a probe, and an
+experiment tried before the plan); not yet with a real model.

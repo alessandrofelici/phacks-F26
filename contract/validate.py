@@ -26,6 +26,8 @@ APPROVAL_KINDS = {"long_run", "edit_source", "publish"}
 DECISIONS = {"approve", "reject"}
 DECIDERS = {"human", "auto", "timeout"}
 TODO_STATUSES = {"pending", "in_progress", "completed"}
+# Optional fields beyond v1 (contract/CHANGES.md, "plan-first runs"): checked only when present.
+PLAN_PATHS = {"full", "scaled", "not_verifiable"}
 
 # Required keys of `data` per event type. Unknown types are accepted.
 EVENT_DATA = {
@@ -265,6 +267,17 @@ def _validate_report(run_dir: Path, task: dict | None, events: list[dict], error
                     errors.append(f"{where}: evidence needs string 'file' and 'quote'")
             if ans.get("value") is not None and ans.get("confidence") not in CONFIDENCES:
                 errors.append(f"{where}: 'confidence' must be one of {sorted(CONFIDENCES)}")
+            if "interval" in ans:
+                iv = ans["interval"]
+                if not (isinstance(iv, list) and len(iv) == 2 and all(isinstance(b, (int, float)) and not isinstance(b, bool) for b in iv)
+                        and iv[0] <= iv[1]):
+                    errors.append(f"{where}: 'interval' must be [low, high], two numbers with low <= high")
+            if "no_answer" in ans:
+                na = ans["no_answer"]
+                if ans.get("value") is not None:
+                    errors.append(f"{where}: 'no_answer' only goes with a null value")
+                if not isinstance(na, dict) or not isinstance(na.get("category"), str) or not isinstance(na.get("reason"), str):
+                    errors.append(f"{where}: 'no_answer' needs string 'category' and 'reason'")
 
     obstacles = report.get("obstacles")
     if not isinstance(obstacles, list):
@@ -283,6 +296,11 @@ def _validate_report(run_dir: Path, task: dict | None, events: list[dict], error
                 errors.append(f"{where}: 'fix' must be a string or null")
             if not isinstance(ob.get("resolved"), bool):
                 errors.append(f"{where}: 'resolved' must be true or false")
+
+    if "plan" in report:
+        plan = report["plan"]
+        if not isinstance(plan, dict) or plan.get("path") not in PLAN_PATHS:
+            errors.append(f"report.json: 'plan.path' must be one of {sorted(PLAN_PATHS)}")
 
     usage = report.get("usage")
     if not isinstance(usage, dict) or not isinstance(usage.get("wall_seconds"), (int, float)):

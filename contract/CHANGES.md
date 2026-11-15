@@ -47,3 +47,15 @@ Status: proposed (information only; all optional, nothing to adopt)
 - Event type `source_changed` with `data.files` (same list), emitted just before `run_finished` when the list has unapproved entries. The same information is also in `obstacles`.
 - Approvals can now come from a subagent: the `agent` field of `approval_requested` / `approval_resolved` is the subagent's name (`runner`, `env-builder`), not always `main`.
 - A run can raise more than one approval (`a1`, `a2`, ...): `edit_source` when the agent wants to change a file inside the paper's repo (the request's `diff` is a unified diff), then `long_run` before the experiment.
+
+## 2026-11-14 A+B — plan-first runs and budget outcomes
+Status: proposed (all additive: optional fields and new event types, which v1 readers ignore)
+Problem: papers too big for the limits (30 minutes, CPU only) used to run until the time limit and score as plain failures; 6 of the 15 failed runs on 14 November were compute walls, not agent mistakes. There was also no way to record why a question has no answer, so a run once recorded the text "no answer" as a value.
+Proposal (from research doc "Repro Bot: Plan-First Runs and Budget-Scaled Verification"):
+- `report.plan` (A writes): `{"path": "full" | "scaled" | "not_verifiable", "projected_minutes", "minutes_left", "steps", "missing_steps", "heavy_settings", "reason", "revision"}`, plus `"scale_down": [{"setting", "original", "scaled", "kind", "where"}]` and `"scaled_minutes"` on a scaled plan. `kind` is `precision`, `convergence`, `data` or `hardware`.
+- `answers[].scaled: true` on answers from a scaled run, and `answers[].interval: [low, high]` on a scaled number answer: the value is then a projection of the full run, printed with its interval by a script in the run.
+- `answers[].no_answer: {"category", "reason"}` next to `value: null`; categories `not_verifiable_within_budget`, `environment`, `not_in_output`, `other`.
+- Event types `plan_recorded` (`{"path", "projected_minutes", "minutes_left", "summary"}`) and `no_answer` (`{"question_id", "category", "reason"}`).
+- `approvals/<id>.request.json` may carry `scale_down` (same list as the plan) on the experiment's `long_run` request: approving that run approves the smaller settings. No new approval kind.
+- B scores a scaled answer as never correct; it is "verifiable" when the reference value lies inside its interval and the half-width is at most 10% of the value. Each run gets one outcome, the weakest across its answers: `reproduced`, `partly`, `verifiable`, `not_verifiable`, `not_reproduced` (`harness/score.py`).
+Workaround until then: already built that way on branch `plan-first`; `contract/validate.py` checks the new fields' shapes only when they are present.

@@ -29,6 +29,15 @@ Top item first. Done items stay, checked, so a restart can see where the loop is
       run, verdict per claim
 - [x] Waiting for background runs without `sleep` commands (`check_background_run(wait_seconds=)`)
 
+## Done on branch `plan-first` (2026-11-14 evening, scripted model only)
+
+- [x] Plan before any experiment: `scoper` subagent, `record_plan`, experiments refused until a plan exists
+- [x] Runtime probe (`probe_runtime`): run the command up to 180 s, project the total from its progress lines
+- [x] Scaled runs: an approved scale-down, number answers recorded as projections with an interval
+- [x] `record_no_answer` with a category; placeholder values such as "no answer" refused
+- [x] Evidence: the quote must show the value; `echo`/`printf` output and the command line itself don't count
+- [ ] A real-model cycle on the three compute-wall papers (0238624, 5496369, 9370340) and three that reproduced
+
 ## Next
 
 - [ ] **Hard level** (Dockerfile, REPRODUCING.md and run scripts removed): a cycle on the same 20 papers.

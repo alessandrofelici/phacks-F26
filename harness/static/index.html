@@ -98,6 +98,8 @@
   th { font-size: 12px; color: var(--muted); font-weight: 600; border-top: 0; }
   td.num { font-family: var(--mono); }
   a.link { color: var(--accent); cursor: pointer; text-decoration: underline; }
+  .scope { margin: 0 0 12px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
+  ul.scale { margin: 6px 0 0; padding-left: 18px; font-size: 13px; }
 </style>
 </head>
 <body>
@@ -162,6 +164,17 @@ const STATUS = {
   rejected: ["Stopped by reviewer", "warn"], crashed: ["Crashed", "bad"], stopped: ["Stopped", "warn"],
 };
 const statusChip = (s) => el("span", { class: "chip " + (STATUS[s] || ["", ""])[1], text: (STATUS[s] || [s])[0] });
+// Outcomes from harness/score.py. "Not verifiable" is neutral on purpose: it says nothing about the paper being wrong.
+const OUTCOME = {
+  reproduced: ["Reproduced", "ok"], partly: ["Partly reproduced", "warn"], verifiable: ["Verifiable within budget", "warn"],
+  not_verifiable: ["Not verifiable within budget", ""], not_reproduced: ["Not reproduced", "bad"],
+};
+const outcomeChip = (o) => el("span", { class: "chip " + (OUTCOME[o] || ["", ""])[1], text: (OUTCOME[o] || [o])[0] });
+const isBudget = (o) => o === "verifiable" || o === "not_verifiable";
+const PATHS = { full: ["Full run", "ok"], scaled: ["Scaled run", "warn"], not_verifiable: ["Not verifiable within budget", ""] };
+const NO_ANSWER = { not_verifiable_within_budget: "Not verifiable within budget", environment: "Couldn't get the code running",
+  not_in_output: "Not in the output", other: "No answer" };
+const scaleLine = (c) => `${c.setting}: ${c.original} → ${c.scaled} (${c.kind})${c.where ? ` · ${c.where}` : ""}`;
 const isLive = (s) => s === "running" || s === "waiting_approval";
 const fmt = (v) => v === null || v === undefined ? "" : (typeof v === "number" ? String(Math.round(v * 1e6) / 1e6) : (Array.isArray(v) ? JSON.stringify(v) : String(v)));
 
@@ -201,7 +214,9 @@ async function loadRuns() {
   if (!runs.length) return;
   $("runs").replaceChildren(...runs.map((r) => {
     const title = (tasksById[r.task_id] || {}).title || r.task_id || "Unknown paper";
-    const score = r.score ? el("span", { class: "chip " + (r.score.correct === r.score.total ? "ok" : "bad"), text: `${r.score.correct}/${r.score.total}` }) : null;
+    const score = !r.score ? null : isBudget(r.score.outcome)
+      ? el("span", { class: "chip " + OUTCOME[r.score.outcome][1], text: r.score.outcome === "verifiable" ? "Verifiable" : "Not verifiable" })
+      : el("span", { class: "chip " + (r.score.correct === r.score.total ? "ok" : "bad"), text: `${r.score.correct}/${r.score.total}` });
     return el("button", { class: "run-item" + (r.run_id === selected ? " selected" : ""), onclick: () => select(r.run_id) },
       el("div", { class: "row" }, el("strong", { text: title }), score),
       el("div", { class: "row sub" }, el("span", { text: (r.started || "").replace("T", " ").replace("Z", "") + (r.agent === "fake" ? " · demo" : "") }), statusChip(r.status)));
@@ -249,7 +264,7 @@ function render() {
     ...pending.map(renderApproval),
     el("div", { class: "cols" },
       el("div", {},
-        el("section", { class: "panel" }, el("h2", { text: "Plan" }), renderTodos()),
+        el("section", { class: "panel" }, el("h2", { text: "Plan" }), renderScope(), renderTodos()),
         el("section", { class: "panel" }, el("h2", { text: "Report" }), renderReport(task))),
       el("section", { class: "panel" }, el("h2", { text: "What the agent did" }), renderTimeline())),
     el("div", { id: "logview" },
@@ -264,6 +279,8 @@ function renderApproval(a) {
     el("h4", { text: `The agent wants to ${kinds[r.kind] || r.kind}` }),
     el("p", { text: r.summary }),
     r.command ? el("pre", { text: r.command }) : null,
+    r.scale_down ? el("div", {}, el("p", { class: "hint", text: "Scaled down from the paper's settings (approving this approves the smaller run):" }),
+      el("ul", { class: "scale" }, r.scale_down.map((c) => el("li", { text: scaleLine(c) })))) : null,
     r.diff ? el("pre", { text: r.diff }) : null,
     el("div", { class: "buttons" },
       el("button", { class: "primary", text: "Approve", disabled: deciding, onclick: () => decide(r.id, "approve") }),
@@ -278,6 +295,20 @@ async function decide(id, decision) {
 async function stopRun() { try { await api(`/api/runs/${selected}/stop`, {}); } catch (e) { alertInline(e.message); } }
 function alertInline(msg) { notice = msg; if (detail) render(); }
 
+function renderScope() {
+  // The scoper's plan: from the report once the run is over, from its event while it runs.
+  const p = detail.report && detail.report.plan, ev = [...events].reverse().find((e) => e.type === "plan_recorded");
+  if (!p && !ev) return null;
+  const path = p ? p.path : ev.data.path, [label, cls] = PATHS[path] || [path, ""];
+  return el("div", { class: "scope" },
+    el("div", {}, el("span", { class: "chip " + cls, text: label }), " ",
+      el("span", { text: p && p.projected_minutes !== null && p.projected_minutes !== undefined
+        ? `projected ${fmt(p.projected_minutes)} min with ${fmt(p.minutes_left)} min left` + (p.scaled_minutes ? `, scaled runs ${fmt(p.scaled_minutes)} min` : "")
+        : (ev ? ev.data.summary : "") })),
+    p && p.reason ? el("div", { class: "hint", text: p.reason }) : null,
+    p && p.scale_down ? el("ul", { class: "scale" }, p.scale_down.map((c) => el("li", { text: scaleLine(c) }))) : null,
+    p && (p.missing_steps || []).length ? el("div", { class: "hint", text: "Missing steps it found: " + p.missing_steps.join("; ") }) : null);
+}
 function renderTodos() {
   const last = [...events].reverse().find((e) => e.type === "todo_updated");
   if (!last) return el("div", { class: "empty", text: isLive(detail.status) ? "Waiting for the agent's plan…" : "The agent didn't publish a plan." });
@@ -294,19 +325,28 @@ function renderReport(task) {
   }
   const byId = Object.fromEntries((rep.answers || []).map((a) => [a.question_id, a]));
   const out = [];
-  if (d.score) out.push(el("div", { class: "scoreline" },
-    el("span", { text: `${d.score.correct} of ${d.score.total} answers match the reference ` }),
-    el("span", { class: "chip " + (d.score.all_correct ? "ok" : "bad"), text: d.score.all_correct ? "Reproduced" : "Not reproduced" })));
-  else out.push(el("p", { class: "hint", text: "No reference answers for this paper, so the answers below aren't scored." }));
+  if (d.score) {
+    const o = d.score.outcome || (d.score.all_correct ? "reproduced" : "not_reproduced");
+    out.push(el("div", { class: "scoreline" },
+      el("span", { text: isBudget(o) ? `${d.score.verifiable || 0} of ${d.score.total} answers in range of a scaled run ` : `${d.score.correct} of ${d.score.total} answers match the reference ` }),
+      outcomeChip(o)));
+    if (isBudget(o)) out.push(el("p", { class: "hint", text: "This paper was too big for the run's limits. A scaled-down result never counts as reproduced, and \"not verifiable\" says nothing about whether the paper is right." }));
+  } else out.push(el("p", { class: "hint", text: "No reference answers for this paper, so the answers below aren't scored." }));
   for (const q of task.questions) {
     const a = byId[q.id] || {}, s = d.score && d.score.per_question[q.id];
+    const has = a.value !== null && a.value !== undefined;
+    const verdict = !s ? null : s.scaled
+      ? el("span", { class: "chip " + (s.verifiable ? "warn" : ""), text: s.verifiable ? "In range" : "Not shown" })
+      : (!has && a.no_answer ? null : el("span", { class: "chip " + (s.correct ? "ok" : "bad"), text: s.correct ? "Matches" : "Doesn't match" }));
     out.push(el("div", { class: "answer" },
       el("div", { class: "q", text: q.text }),
       el("div", { class: "v" },
-        a.value === null || a.value === undefined ? el("span", { class: "none", text: "No answer" }) : el("span", { text: fmt(a.value) }),
-        s ? el("span", { class: "chip " + (s.correct ? "ok" : "bad"), text: s.correct ? "Matches" : "Doesn't match" }) : null,
-        a.confidence && a.value !== null && a.value !== undefined ? el("span", { class: "chip", text: `${a.confidence} confidence` }) : null),
-      s ? el("div", { class: "expected", text: `Reference: ${fmt(s.expected)}` + (s.range ? ` (accepted ${fmt(s.range[0])} to ${fmt(s.range[1])})` : "") }) : null,
+        !has ? el("span", { class: "none", text: a.no_answer ? NO_ANSWER[a.no_answer.category] || "No answer" : "No answer" })
+          : el("span", { text: a.interval ? `${fmt(a.value)} projected (${fmt(a.interval[0])} to ${fmt(a.interval[1])})` : fmt(a.value) }),
+        verdict,
+        a.confidence && has ? el("span", { class: "chip", text: `${a.confidence} confidence` }) : null),
+      a.no_answer && !has ? el("div", { class: "hint", text: a.no_answer.reason }) : null,
+      s ? el("div", { class: "expected", text: `Reference: ${fmt(s.expected)}` + (s.range ? ` (accepted ${fmt(s.range[0])} to ${fmt(s.range[1])})` : "") + (s.scaled ? ` · ${s.why}` : "") }) : null,
       a.evidence ? el("blockquote", {}, el("span", { text: a.evidence.quote }),
         el("a", { href: "#", text: a.evidence.file, onclick: (e) => { e.preventDefault(); showFile(a.evidence.file); } })) : null));
   }
@@ -345,6 +385,8 @@ function renderTimeline() {
       case "memory_read": what = [el("strong", { text: "Checked memory: " }), d.note]; cls += " memory"; break;
       case "memory_written": what = [el("strong", { text: "Remembered for next time: " }), d.note]; cls += " memory"; break;
       case "answer_found": what = [el("strong", { text: "Answer found: " }), el("code", { text: fmt(d.value) })]; break;
+      case "plan_recorded": what = [el("strong", { text: "Plan: " }), d.summary]; break;
+      case "no_answer": what = [el("strong", { text: `No answer for ${d.question_id}: ` }), d.reason]; break;
       case "error": what = [el("span", { class: "fail", text: "Error: " }), d.message]; break;
       case "run_finished": what = [el("strong", { text: "Run ended" })]; break;
       default: what = [el("span", { class: "kind", text: e.type })];
@@ -373,23 +415,27 @@ async function loadBoard() {
     el("div", { class: "run-head" }, el("h3", { text: "Scoreboard" }),
       data.running ? el("span", { class: "chip live", text: "A batch is running" }) : null,
       el("button", { class: "primary", text: "Run all papers", disabled: data.running, onclick: startBatch })),
-    el("p", { class: "hint", text: `Runs every paper that has reference answers, one after another, with approvals granted automatically, using the ${agent === "fake" ? "demo replay" : "real"} agent selected on the left. A paper counts as reproduced only when every answer matches.` }));
+    el("p", { class: "hint", text: `Runs every paper that has reference answers, one after another, with approvals granted automatically, using the ${agent === "fake" ? "demo replay" : "real"} agent selected on the left. A paper counts as reproduced only when every answer matches. A paper too big for the limits is verifiable within budget when a scaled-down run projects its numbers within ±10%; that never counts as reproduced.` }));
   const panels = [head];
   if (!data.batches.length) panels.push(el("section", { class: "panel" }, el("div", { class: "empty", text: "No batch has finished yet." })));
   else {
     panels.push(el("section", { class: "panel" }, el("h2", { text: "Batches" }), el("table", {},
-      el("tr", {}, ["When (UTC)", "Label", "Agent", "Papers reproduced", "Answers correct"].map((h) => el("th", { text: h }))),
+      el("tr", {}, ["When (UTC)", "Label", "Agent", "Papers reproduced", "Verifiable within budget", "Not verifiable", "Answers correct"].map((h) => el("th", { text: h }))),
       data.batches.map((b) => {
         const rep = b.results.filter((r) => r.all_correct).length, c = b.results.reduce((n, r) => n + r.correct, 0), t = b.results.reduce((n, r) => n + r.total, 0);
+        const ver = b.results.filter((r) => r.outcome === "verifiable").length, nv = b.results.filter((r) => r.outcome === "not_verifiable").length;
         return el("tr", {}, el("td", { text: b.when.replace("T", " ").replace("Z", "") }), el("td", { text: b.label || "-" }),
-          el("td", { text: b.agent === "fake" ? "demo replay" : "real" }), el("td", { class: "num", text: `${rep}/${b.results.length}` }), el("td", { class: "num", text: `${c}/${t}` }));
+          el("td", { text: b.agent === "fake" ? "demo replay" : "real" }), el("td", { class: "num", text: `${rep}/${b.results.length}` }),
+          el("td", { class: "num", text: String(ver) }), el("td", { class: "num", text: String(nv) }), el("td", { class: "num", text: `${c}/${t}` }));
       }))));
     const latest = data.batches[0], groups = Object.entries(latest.failure_groups || {}).sort((a, b) => b[1].length - a[1].length);
     panels.push(el("section", { class: "panel" }, el("h2", { text: "Latest batch, paper by paper" }), el("table", {},
-      el("tr", {}, ["Paper", "Result", "Answers", ""].map((h) => el("th", { text: h }))),
+      el("tr", {}, ["Paper", "Result", "Plan", "Answers", ""].map((h) => el("th", { text: h }))),
       latest.results.map((r) => el("tr", {},
         el("td", { text: (tasksById[r.task_id] || {}).title || r.task_id }),
-        el("td", {}, r.all_correct ? el("span", { class: "chip ok", text: "Reproduced" }) : statusChip(r.status === "completed" ? "failed" : r.status), r.status === "completed" && !r.all_correct ? el("span", { class: "hint", text: " finished, answers differ" }) : null),
+        el("td", {}, r.all_correct ? el("span", { class: "chip ok", text: "Reproduced" }) : isBudget(r.outcome) ? outcomeChip(r.outcome)
+          : statusChip(r.status === "completed" ? "failed" : r.status), r.status === "completed" && !r.all_correct && !isBudget(r.outcome) ? el("span", { class: "hint", text: " finished, answers differ" }) : null),
+        el("td", { class: "hint", text: r.plan ? (PATHS[r.plan.path] || [r.plan.path])[0] + (r.plan.projected_minutes !== null && r.plan.projected_minutes !== undefined ? `, ~${fmt(r.plan.projected_minutes)} min` : "") : "-" }),
         el("td", { class: "num", text: `${r.correct}/${r.total}` }),
         el("td", {}, r.run_id ? el("a", { class: "link", text: "Open run", onclick: () => select(r.run_id) }) : null))))));
     panels.push(el("section", { class: "panel" }, el("h2", { text: "What went wrong in the latest batch" }),

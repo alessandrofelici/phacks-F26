@@ -25,6 +25,7 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
 from langchain_core.tools import tool
 from langgraph.checkpoint.memory import InMemorySaver
 
+from agent.probe import describe as describe_probe
 from agent.rundir import RunWriter
 from agent.sandbox import SHORT_TIMEOUT_S, LoggingShellBackend
 from agent.task import Findings
@@ -32,6 +33,8 @@ from agent.task import Findings
 SKILLS_DIR = Path(__file__).resolve().parent / "skills"
 MEMORY_FILE = "/memories/fixes.md"
 MEMORY_HEADER = "# Fixes that worked\n"
+PROBE_MAX_S = 180  # a runtime probe never runs longer than this
+_SCOPER_ONLY = frozenset({"record_plan", "probe_runtime"})  # the main agent must delegate planning
 
 SYSTEM_PROMPT = f"""You are Repro Bot. You check whether a paper's published code produces the numbers \
 the task asks about. You get a private copy of the paper's repository and a list of questions. \
@@ -68,16 +71,33 @@ it before it runs, so give an honest time estimate and say what it will do.
 approved the same way, returns at once, and `check_background_run` reports on it. Use the wait for \
 work that doesn't depend on the result. To wait for it, call `check_background_run` with \
 `wait_seconds` (up to 300) rather than running `sleep`, which needs an approval past 90 seconds.
-- Before the experiment, estimate its run time from the code (epochs, loops, dataset size) and compare it \
-with the time left. Start anything longer than about 5 minutes with `start_background_run`, so partial \
-output stays visible and you can stop waiting in time. Never pipe a run's output through `tail` or \
-`head`: all output is saved anyway, and a run cut off at its limit would then show nothing.
+- Every run starts with a plan. Before any experiment, hand the task to `scoper` (give it the question \
+texts, the task's instructions and the time limit): it lists the steps, flags missing ones, estimates the \
+runtime (timing a short probe when the code has a heavy setting) and records the plan. `run_experiment` \
+and `start_background_run` refuse until a plan exists.
+- The plan's path decides what happens next:
+  - `full`: reproduce as usual. Start anything longer than about 5 minutes with `start_background_run`, \
+so partial output stays visible and you can stop waiting in time.
+  - `scaled`: the full run doesn't fit in the time left, so run the smaller version the plan lists \
+(`scale_down`: fewer epochs, trees, samples or seeds), passing each change as a command-line option or a \
+new config file; changing the paper's files needs an approval. Then compute the projection of the full \
+run with a short script that prints the value and its interval: for precision settings the mean of 3 small \
+runs with different seeds and their spread, for epochs a fit of the learning curve extrapolated to the full \
+count. Record each number answer with `interval=[low, high]`, quoting that printed line. A scaled answer \
+never counts as reproduced; it shows whether the paper's number is within reach.
+  - `not_verifiable`: don't run the experiment. Call `record_no_answer` for each question with category \
+`not_verifiable_within_budget` and the reason.
+- Never pipe a run's output through `tail` or `head`: all output is saved anyway, and a run cut off at its \
+limit would then show nothing.
 - If an approval is rejected, don't retry the same thing. Find another way, or finish with what you have.
 
 How to split the work (each helper starts with only the message you give it, so include the \
 file paths, commands and question texts it needs):
-- `paper-reader` first: it finds which command produces each asked value and what the repository \
-needs to run. It reads and never runs anything.
+- `scoper` first, in every run: it plans the run and records the plan. Nothing runs an experiment before it has. \
+Its report already covers the repository, the missing steps and how to start the code (it may have set up the \
+environment too), so build on it instead of reading everything again.
+- `paper-reader` when you want a closer reading: it finds which command produces each asked value and \
+what the repository needs to run. It reads and never runs anything.
 - `env-builder`: it gets the environment installed and tells you how to start the code.
 - `runner`: it runs the experiment through `run_experiment` and reports where the output is.
 - `result-judge`: it finds each answer in the output and records it with its evidence.
@@ -98,13 +118,17 @@ search it.
 - When something fails, read the error, fix the cause, and call `record_obstacle` with what happened \
 and what fixed it. Obstacles are part of the report, including the ones you couldn't fix.
 - For each question call `record_answer` with the value and the exact line of output it came from. \
-The quote is checked against the saved command output and rejected if it isn't there.
+The quote is checked against the saved command output and rejected if it isn't there or doesn't show \
+the value itself (rounding it is fine). Output of `echo` or `printf` doesn't count.
+- When a question can't be answered, call `record_no_answer` with a category (`not_verifiable_within_budget`, \
+`environment`, `not_in_output` or `other`) and the reason. Never record placeholder text such as \
+"no answer" as a value.
 - A question marked as read off a figure: run the code that draws it, read the image this run wrote with \
 `look_at_figure` (`read_file` can't show you images), and call `record_answer` with `figure` set to that \
 image and `quote` saying what was read (which panel, bar or point). An image that came with the \
 repository is not accepted.
-- Your first action in every run is `write_todos` with a short plan (read the task and repo, set up the \
-environment, run, extract the answers). The person watching the run sees this plan, so mark each step \
+- Your first action in every run is `write_todos` with a short plan (plan the run with `scoper`, set up \
+the environment, run, extract the answers). The person watching the run sees this plan, so mark each step \
 done with another `write_todos` call as you finish it.
 
 When every question has an answer or a recorded reason for not having one, reply with a two or three \
@@ -128,6 +152,9 @@ def build_tools(
             est_minutes: Your honest estimate of how long it takes, in minutes.
             why: One sentence on what this run produces and which questions it answers.
         """
+        allowed, why_not = findings.runs_allowed()
+        if not allowed:
+            return why_not
         timeout = max(120, int(est_minutes * 60 * 3))
         response = backend.execute(command, timeout=timeout)
         return response.output
@@ -144,6 +171,9 @@ def build_tools(
             est_minutes: Your honest estimate of how long it takes, in minutes.
             why: One sentence on what this run produces and which questions it answers.
         """
+        allowed, why_not = findings.runs_allowed()
+        if not allowed:
+            return why_not
         run_id = backend.start_background(command, max(120, int(est_minutes * 60 * 3)))
         if not run_id:
             return "Error: the run's time limit is used up; nothing was started."
@@ -171,20 +201,105 @@ def build_tools(
         return f"The run {how} after {state['seconds']:.0f} s. Full output saved as /{state['log']}. Last lines:\n{state['tail'] or '<no output>'}"
 
     @tool
-    def record_answer(question_id: str, value: Any, quote: str, confidence: str, figure: str | None = None) -> str:
+    def record_answer(
+        question_id: str,
+        value: Any,
+        quote: str,
+        confidence: str,
+        figure: str | None = None,
+        interval: list[float] | None = None,
+    ) -> str:
         """Record the answer to one question, with the evidence that proves it.
 
         Args:
             question_id: The question's id, for example "q1".
             value: A number for number questions, text for string questions, a list for list questions.
-            quote: The exact text from this run's command output that the answer came from. With
-                `figure`: what you read off the image (panel, bar or point, and its value).
+            quote: The exact text from this run's command output that the answer came from. It must show
+                the value itself (rounding it is fine). With `figure`: what you read off the image (panel,
+                bar or point, and its value).
             confidence: "high", "medium" or "low".
             figure: Only for questions read off a figure: the image this run wrote, as the file
                 tools show it (for example /repo/results/fig1.png). Look at it with read_file first.
+            interval: Only on a scaled plan, for a number answer: [low, high] of the projection of the full
+                run, as printed (with the value) by the script that computed it.
         """
         image = _workspace_file(backend, figure) if figure else None
-        return findings.record_answer(question_id, value, quote, confidence, agent, figure=image)
+        return findings.record_answer(question_id, value, quote, confidence, agent, figure=image, interval=interval)
+
+    @tool
+    def record_no_answer(question_id: str, category: str, reason: str) -> str:
+        """Say why a question has no answer. Use this instead of recording placeholder text as a value.
+
+        Args:
+            question_id: The question's id, for example "q1".
+            category: "not_verifiable_within_budget" (the plan says the run can't fit the limits),
+                "environment" (the code could not be made to run), "not_in_output" (it ran, but the output
+                doesn't contain the value) or "other".
+            reason: One sentence with the key error text or the projected runtime.
+        """
+        return findings.record_no_answer(question_id, category, reason, agent)
+
+    @tool
+    def record_plan(
+        path: str,
+        projected_minutes: float | None,
+        steps: list[str],
+        reason: str,
+        missing_steps: list[str] | None = None,
+        heavy_settings: list[str] | None = None,
+        scale_down: list[dict[str, Any]] | None = None,
+        scaled_minutes: float | None = None,
+    ) -> str:
+        """Record the run's plan, before any experiment: full, scaled or not verifiable within the budget.
+
+        Args:
+            path: "full" (the full run fits in 60% of the minutes left), "scaled" (it doesn't, but a
+                setting can shrink) or "not_verifiable" (nothing can shrink enough).
+            projected_minutes: Your estimate of the FULL run's time in minutes, from a probe when the code
+                has a heavy setting. May be null only for "not_verifiable".
+            steps: The steps that produce the answers, in order.
+            reason: Why this path, in one or two sentences, with the probe's numbers when there was one.
+            missing_steps: What the instructions leave out that the code needs, each with its fix.
+            heavy_settings: The settings that set the runtime, and where each is set.
+            scale_down: Only for "scaled": the changes, each {"setting", "original", "scaled", "kind",
+                "where"}, kind being "precision", "convergence", "data" or "hardware".
+            scaled_minutes: Only for "scaled": the time all the scaled runs together will take, in minutes.
+        """
+        return findings.record_plan(
+            path, projected_minutes, steps, reason, missing_steps, heavy_settings, scale_down, scaled_minutes, agent
+        )
+
+    @tool
+    def probe_runtime(command: str, seconds: int, why: str) -> str:
+        """Time the experiment: run its command for a short while, stop it, and project the full runtime.
+
+        Progress lines in the output (epochs, steps, progress bars) give the share of the work done in
+        that time. A human approves the probe first. If the command finishes inside the probe, its
+        output counts as the run and can be quoted for answers.
+
+        Args:
+            command: The experiment's shell command, with relative paths (it starts in the workspace
+                directory). Turn verbose progress output on if the code has an option for it.
+            seconds: How long to let it run before stopping it: 30 to 180.
+            why: One sentence on what it runs and which heavy setting you want to time.
+        """
+        cap = max(30, min(int(seconds or 120), PROBE_MAX_S))
+        run_id = backend.start_background(command, cap)
+        if not run_id:
+            return "Error: the run's time limit is used up; nothing was started."
+        state = backend.check_background(run_id)
+        give_up = time.monotonic() + cap + 30
+        while state is not None and not state["done"] and time.monotonic() < give_up:
+            time.sleep(1.0)
+            state = backend.check_background(run_id) or state
+        if state is None:
+            return "Error: the probe could not be followed."
+        output = backend.background_output(run_id)
+        finished = bool(state["done"]) and not state["timed_out"]
+        text = describe_probe(output, float(state["seconds"]), finished, state["exit_code"])
+        tail = "\n".join(output.splitlines()[-15:]) or "<no output>"
+        saved = f" Full output saved as /{state['log']}." if state.get("log") else ""
+        return f"{text}{saved}\nLast lines:\n{tail}"
 
     @tool
     def look_at_figure(path: str, question: str) -> str:
@@ -217,8 +332,11 @@ def build_tools(
         "start_background_run": start_background_run,
         "check_background_run": check_background_run,
         "record_answer": record_answer,
+        "record_no_answer": record_no_answer,
         "look_at_figure": look_at_figure,
         "record_obstacle": record_obstacle,
+        "record_plan": record_plan,
+        "probe_runtime": probe_runtime,
     }
 
 
@@ -281,6 +399,51 @@ _WORKSPACE_NOTE = (
 )
 
 SUBAGENTS: list[dict[str, Any]] = [
+    {
+        "name": "scoper",
+        "description": (
+            "Plans the run before any experiment: lists the steps that produce each answer, flags missing steps, "
+            "finds the settings that set the runtime, times a short probe, and records the plan (full, scaled "
+            "or not verifiable within the budget). Call it first in every run."
+        ),
+        "tools": ["record_plan", "probe_runtime", "record_obstacle"],
+        "skills": ["/skills/"],
+        "system_prompt": f"""You plan a paper's reproduction before the experiment runs, so the run fits its \
+time budget and the result is honest. {_WORKSPACE_NOTE}
+
+1. Read what you were given, the README and any reproduction notes, the Dockerfile or environment files, \
+the entry-point scripts and `/paper.md` if it exists. Read `/memories/fixes.md` too: it may hold fixes and \
+timings from earlier runs.
+2. List the steps that produce every asked value, in order (setup, data preparation, each script).
+3. Check for missing steps: anything the code needs that the instructions don't mention, such as an \
+undeclared package, a data file or path that doesn't exist, a preprocessing script that must run first, or \
+a hard-coded GPU (`cuda`) call. Give each a short fix.
+4. Find the settings that set the runtime: epochs, iterations, number of trees, bootstrap or permutation \
+counts, MCMC samples, seeds or repetitions, grid sizes, dataset size. Note where each is set.
+5. Estimate the full runtime. When the code has a heavy setting, measure instead of guessing: get the \
+environment just far enough to start the code (short installs with `execute`), then call `probe_runtime` \
+with the experiment's command and 60 to 180 seconds. It runs the command that long, stops it, and projects \
+the total from the progress lines it printed. If the code finishes inside the probe, that output already \
+counts as the run.
+6. Call `record_plan` with one path. It tells you the minutes left; a full run may use at most 60% of them.
+   - "full" when the projected runtime fits. Use it for code without a heavy setting, with an honest estimate.
+   - "scaled" when it doesn't fit but a setting can shrink. List each change in `scale_down` with its kind: \
+"precision" (trees, bootstrap or permutation counts, MCMC samples, repeated seeds: same expected result, more \
+noise; plan 3 small runs with different seeds), "convergence" (epochs, iterations: results stay off until \
+training ends, so the code must log a learning curve to extrapolate from), "data" (a subsample of rows or \
+subjects), "hardware" (GPU code moved to the CPU, always together with one of the others). Shrink as little \
+as possible: the smallest change whose runs fit, with margin. Never change the model, the data splits, the \
+preprocessing or the metrics. Give `scaled_minutes` for all the scaled runs together.
+   - "not_verifiable" when nothing can shrink enough: GPU-only code with no CPU path, data missing from the \
+capsule, or a convergence setting with no learning curve to extrapolate. Give the reason.
+7. Reply in a few lines: the path, the projected minutes, the steps, the missing steps with their fixes, how \
+to start the code, and for a scaled plan exactly how to apply each change (a command-line option or a new \
+config file; editing the paper's own files needs a human's approval).
+
+After a probe, add one line to `/memories/fixes.md` with the timing (library, what ran, time per epoch or \
+step on this sandbox), so later runs can estimate without a probe. Use `edit_file` for that: the shell \
+can't see `/memories`. Record problems you hit with `record_obstacle`.""",
+    },
     {
         "name": "paper-reader",
         "description": "Reads the repository and paper text to find which command produces each asked value. Runs nothing.",
@@ -345,12 +508,15 @@ Finish by reporting the exit status, roughly how long it took, and which file un
     {
         "name": "result-judge",
         "description": "Finds each answer in the run's saved output and records it with the line that proves it.",
-        "tools": ["record_answer", "look_at_figure", "record_obstacle"],
+        "tools": ["record_answer", "record_no_answer", "look_at_figure", "record_obstacle"],
         "system_prompt": f"""You extract answers from the output of a paper's code. {_WORKSPACE_NOTE}
 
 Search `/logs` (every command's output is saved there) and any files the run wrote. For each question \
 call `record_answer` with the value and the exact line it came from. The quote is checked against the \
-saved output and refused if it isn't there. Keep the precision the output shows; don't round.
+saved output and refused if it isn't there or doesn't show the value. Keep the precision the output \
+shows; don't round. If you were told the run was scaled down, each number answer is a projection: \
+give `interval=[low, high]` and quote the line where the projection script printed the value and its \
+interval. When a question has no answer, call `record_no_answer` with the reason, never a placeholder value.
 
 For a question read off a figure, read the image the run wrote with `look_at_figure` (`read_file` can't \
 show you images) and pass it to `record_answer` as `figure`, with `quote` saying what was read (panel, \
@@ -435,9 +601,14 @@ def build_agent(
         if subagent_model is not None:
             subagent["model"] = subagent_model
         subagents.append(subagent)
+    # The experiment tools always pause. Without a plan the run loop (agent/runner.py) refuses
+    # them at that pause without asking anyone, so a call made in the same turn as the scoper's
+    # can't slip through once the plan lands. (A `when` predicate is evaluated before the turn's
+    # tools run, and again on resume, so it can't express "a plan exists" safely.)
     interrupt_on: dict[str, bool | InterruptOnConfig] = {
         "run_experiment": {"allowed_decisions": decisions},
         "start_background_run": {"allowed_decisions": decisions},
+        "probe_runtime": {"allowed_decisions": decisions},
         "execute": {"allowed_decisions": decisions, "when": _needs_long_run_approval},
         # Changing a file inside the paper's repository pauses for an `edit_source` approval.
         # (`permissions=` would be the deepagents way, but 0.7.38 refuses permissions on a
@@ -445,9 +616,10 @@ def build_agent(
         "write_file": {"allowed_decisions": decisions, "when": _writes_into_repo},
         "edit_file": {"allowed_decisions": decisions, "when": _writes_into_repo},
     }
+    main_tools = [t for name, t in build_tools(shell, findings, vision_model=model).items() if name not in _SCOPER_ONLY]
     return create_deep_agent(
         model=model,
-        tools=list(build_tools(shell, findings, vision_model=model).values()),
+        tools=main_tools,
         system_prompt=SYSTEM_PROMPT + (_STRICT_NOTE if strict else ""),
         middleware=middleware,
         subagents=subagents,
@@ -461,8 +633,12 @@ def build_agent(
     )
 
 
-def approval_request(action: dict[str, Any], work: Path) -> dict[str, Any]:
-    """Turn a paused tool call into the fields of a contract approval request."""
+def approval_request(action: dict[str, Any], work: Path, findings: Findings | None = None) -> dict[str, Any]:
+    """Turn a paused tool call into the fields of a contract approval request.
+
+    On a scaled plan, the experiment's request also lists the scale-down, so approving the run
+    is approving the smaller settings (``extra`` holds optional fields for the request file).
+    """
     name = action.get("name")
     args = action.get("args") or {}
     if name in ("write_file", "edit_file"):
@@ -470,15 +646,25 @@ def approval_request(action: dict[str, Any], work: Path) -> dict[str, Any]:
         summary = f"Change {path} (a file inside the paper's repository)"
         return {"kind": "edit_source", "summary": summary, "command": None, "diff": _diff(name, args, work)}
     command = str(args.get("command") or "")
-    if name in ("run_experiment", "start_background_run"):
+    extra: dict[str, Any] = {}
+    if name == "probe_runtime":
+        seconds = args.get("seconds")
+        cap = max(30, min(int(seconds), PROBE_MAX_S)) if isinstance(seconds, (int, float)) else 120
+        why = f": {args['why']}" if args.get("why") else ""
+        summary = f"Time a probe: run {command} for at most {cap} s, then stop it, to measure its speed{why}"
+    elif name in ("run_experiment", "start_background_run"):
         minutes = args.get("est_minutes")
         estimate = f" (est. {minutes:g} min)" if isinstance(minutes, (int, float)) else ""
         why = f": {args['why']}" if args.get("why") else ""
         where = " in the background" if name == "start_background_run" else ""
         summary = f"Run {command}{where}{estimate}{why}"
+        plan = findings.plan if findings is not None else None
+        if plan and plan.get("path") == "scaled":
+            summary += f" · scaled down per the plan: {findings.scale_note()}"
+            extra["scale_down"] = plan.get("scale_down")
     else:
         summary = f"Run {command} (allowed up to {args.get('timeout')} s)"
-    return {"kind": "long_run", "summary": summary, "command": command or None, "diff": None}
+    return {"kind": "long_run", "summary": summary, "command": command or None, "diff": None, "extra": extra or None}
 
 
 def _diff(name: str, args: dict[str, Any], work: Path) -> str:
@@ -513,7 +699,8 @@ def _one_line(text: str, limit: int = 140) -> str:
     return line if len(line) <= limit else line[: limit - 1] + "…"
 
 
-_QUIET_TOOLS = {"write_todos", "record_answer", "record_obstacle"}  # shown through other events
+# Shown through other events (answer_found, no_answer, plan_recorded, todo_updated, the report).
+_QUIET_TOOLS = {"write_todos", "record_answer", "record_obstacle", "record_plan", "record_no_answer"}
 
 
 class EventMapper:
@@ -610,7 +797,10 @@ class EventMapper:
                 self.writer.event("memory_written", {"path": path, "note": note}, call["agent"])
             return
         data: dict[str, Any] = {"tool": name}
-        if name in ("start_background_run", "check_background_run"):
+        if name == "probe_runtime":
+            data["summary"] = _one_line(f"time a probe: {args.get('command', '')}")
+            data["detail"] = text[:1800]
+        elif name in ("start_background_run", "check_background_run"):
             if name == "start_background_run":
                 data["summary"] = _one_line(f"start in the background: {args.get('command', '')}")
             else:

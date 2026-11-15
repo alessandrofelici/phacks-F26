@@ -215,6 +215,47 @@ they're wrong.
     Any tracing failure ends in `trace_url: null`, never in a failed run. Checked with tracing
     off and with a fake key; **not checked with a real LangSmith key**.
 
+### Plan-first runs and budget outcomes (branch `plan-first`, 2026-11-14 evening)
+
+Asked for in the research doc "Repro Bot: Plan-First Runs and Budget-Scaled Verification" after the
+evaluation of the 14 November runs (`research/eval-2026-11-14/`): 6 of 15 failed runs were compute walls.
+
+- **The plan is enforced in code, not the prompt.** Only `scoper` has `record_plan` and
+  `probe_runtime`; `run_experiment` and `start_background_run` refuse without a plan. The refusal
+  happens at the approval pause in `runner._drive`, without asking a human. A `when` predicate
+  can't do it: it is evaluated before the turn's tools run and again on resume, so a call made in
+  the same turn as the scoper's would slip through unapproved once the plan landed.
+- **Full runs may use 60% of the minutes left** (`FULL_RUN_SHARE`). `record_plan` checks the path
+  against the numbers and refuses inconsistent plans (a scaled plan that would fit in full, a scaled
+  run that still doesn't fit, a hardware-only "scale-down").
+- **No new approval kind.** The scaled experiment's own `long_run` request lists the scale-down in
+  its summary and in an optional `scale_down` field, so approving the run approves the smaller
+  settings. `contract/validate.py` would reject an unknown kind, and this needs none.
+- **The probe projects from progress lines** (`agent/probe.py`): Keras/tqdm bars, `Epoch k/N`,
+  `tree k of N` and similar. Start-up time counts as work done, so projections lean high, the safe
+  side. A command that finishes inside the probe is simply the run.
+- **Projections must be printed by code.** On a scaled plan a number answer needs
+  `interval=[low, high]`, and the quote must show the value and both bounds (bounds at least as
+  precise as the value), so the projection comes from a script in the run, not the model's arithmetic.
+- **The harness judges the range**, never the agent, which still never sees expected values:
+  in range and at most ±10% wide → verifiable within budget (`harness/score.py`).
+- **Evidence tightened.** The quote must show the value (rounding and fraction/percent allowed);
+  output of commands that only `echo`/`printf` and the `$ command` line at the top of a log no
+  longer count. Replayed over every recorded answer in the 14 November runs: all 92 non-figure
+  answers still pass, and the two "no answer" values from run d657 are refused.
+- **Known gap:** `execute` with a long timeout is not gated by the plan (it is how long installs
+  run), so a model could still start an experiment that way. The prompt says experiments go through
+  `run_experiment`. Short `execute` calls (90 s) can run the code before the plan, which works as a
+  free probe for quick scripts.
+- **One real-model check** (Haiku 5.5, toy task, run dir `/mnt/vf/hack/tmp/pf-toy-034528` in CT 120,
+  the last of the OpenRouter credit): the main agent handed the task to `scoper` first without being
+  refused; the plan was full (0.1 min of 14.6 left) with the numpy pin flagged as a missing step; the
+  experiment's approval came after the plan; 2/2 correct in 57 s. It used 367k tokens against about
+  80-110k for the toy before: the scoper set up the environment and timed the script with `execute`,
+  then the main agent read the repository again. The prompt now tells the main agent to build on the
+  scoper's report, and the scoper to write memory with `edit_file` (it tried `echo >> /memories/...`,
+  which the shell can't reach). Neither tweak has run on a real model yet.
+
 ## Failures and what changed
 
 For `FAILURES.md` (the "what did you try and fail on" question).

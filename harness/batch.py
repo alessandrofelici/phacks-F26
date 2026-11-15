@@ -22,8 +22,18 @@ SCOREBOARD = ROOT / "harness" / "SCOREBOARD.md"
 HEADER = (
     "# Scoreboard\n\n"
     "One row per batch run (`python -m harness.batch`). A task counts as reproduced only when every answer matches.\n\n"
-    "| When (UTC) | Label | Agent | Tasks reproduced | Answers correct | Not finished | Batch |\n"
-    "|---|---|---|---|---|---|---|\n"
+)
+# Since plan-first runs: two budget columns. Older rows above this header keep their own columns.
+TABLE = (
+    "| When (UTC) | Label | Agent | Tasks reproduced | Verifiable within budget | Not verifiable within budget "
+    "| Answers correct | Not finished | Batch |\n"
+    "|---|---|---|---|---|---|---|---|---|\n"
+)
+TABLE_NOTE = (
+    "\n## Since plan-first runs\n\n"
+    "Verifiable within budget: the paper was too big for the limits, and a scaled-down run projected its numbers "
+    "within ±10%. It never counts as reproduced. Not verifiable within budget: too big, and no scaled run could "
+    "show it. Neither says the paper is wrong.\n\n"
 )
 
 
@@ -70,17 +80,27 @@ def main(argv: list[str] | None = None) -> int:
             out_of_credit.set()
         score = score_run(rdir)
         report = read_json(rdir / "report.json", {}) or {}
+        plan = report.get("plan") if isinstance(report.get("plan"), dict) else {}
         result = {"task_id": tid, "run_id": run_id, "status": status,
                   "correct": score["correct"] if score else 0, "total": score["total"] if score else 0,
                   "all_correct": bool(score and score["all_correct"]),
+                  "outcome": score["outcome"] if score else None,
+                  "verifiable": score.get("verifiable", 0) if score else 0,
+                  "plan": {"path": plan.get("path"), "projected_minutes": plan.get("projected_minutes"),
+                           "reason": plan.get("reason")} if plan else None,
                   "obstacles": report.get("obstacles") or []}
-        print(f"    {tid} {status}: {result['correct']}/{result['total']} answers correct ({run_id})", flush=True)
+        label = f", {score['outcome_label'].lower()}" if score and score["outcome"] in ("verifiable", "not_verifiable") else ""
+        projected = f", plan: {plan['path']} ~{plan['projected_minutes']} min" if plan and plan.get("projected_minutes") is not None else (
+            f", plan: {plan['path']}" if plan else "")
+        print(f"    {tid} {status}: {result['correct']}/{result['total']} answers correct{label}{projected} ({run_id})", flush=True)
         return result
 
     with ThreadPoolExecutor(max_workers=max(1, args.parallel)) as pool:
         results = list(pool.map(run_one, enumerate(task_ids, start=1)))  # keeps task order
 
     reproduced = sum(1 for r in results if r.get("all_correct"))
+    verifiable = sum(1 for r in results if r.get("outcome") == "verifiable")
+    not_verifiable = sum(1 for r in results if r.get("outcome") == "not_verifiable")
     correct = sum(r["correct"] for r in results)
     total = sum(r["total"] for r in results)
     unfinished = sum(1 for r in results if r["status"] != "completed")
@@ -90,7 +110,12 @@ def main(argv: list[str] | None = None) -> int:
         if r.get("all_correct"):
             continue
         open_obstacles = [o for o in r["obstacles"] if not o.get("resolved")]
-        if r["status"] in ("crashed", "stopped", "not_started"):
+        if r.get("outcome") == "verifiable":
+            groups["verifiable within budget (scaled run in range; not counted as reproduced)"].append(r["task_id"])
+        elif r.get("outcome") == "not_verifiable":
+            reason = ((r.get("plan") or {}).get("reason") or "no scaled run could show it")[:90]
+            groups[f"not verifiable within budget: {reason}"].append(r["task_id"])
+        elif r["status"] in ("crashed", "stopped", "not_started"):
             groups[f"agent {r['status'].replace('_', ' ')}"].append(r["task_id"])
         elif open_obstacles:
             for o in open_obstacles:
@@ -103,10 +128,15 @@ def main(argv: list[str] | None = None) -> int:
                        "results": results, "failure_groups": groups})
     if not SCOREBOARD.exists():
         SCOREBOARD.write_text(HEADER, encoding="utf-8")
+    if TABLE not in SCOREBOARD.read_text(encoding="utf-8"):
+        with open(SCOREBOARD, "a", encoding="utf-8") as fh:
+            fh.write(TABLE_NOTE + TABLE)
     with open(SCOREBOARD, "a", encoding="utf-8") as fh:
-        fh.write(f"| {now_iso()} | {args.label or '-'} | {args.agent} | {reproduced}/{len(results)} | {correct}/{total} | {unfinished} | {batch_id} |\n")
+        fh.write(f"| {now_iso()} | {args.label or '-'} | {args.agent} | {reproduced}/{len(results)} | {verifiable} | "
+                 f"{not_verifiable} | {correct}/{total} | {unfinished} | {batch_id} |\n")
 
-    print(f"\nReproduced {reproduced}/{len(results)} tasks, {correct}/{total} answers correct, {unfinished} not finished.")
+    budget = f", {verifiable} verifiable and {not_verifiable} not verifiable within budget" if verifiable or not_verifiable else ""
+    print(f"\nReproduced {reproduced}/{len(results)} tasks{budget}, {correct}/{total} answers correct, {unfinished} not finished.")
     if groups:
         print("Failures to triage:")
         for reason, tids in sorted(groups.items(), key=lambda kv: -len(kv[1])):

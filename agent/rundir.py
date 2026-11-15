@@ -31,6 +31,16 @@ def _slug(text: str, limit: int = 40) -> str:
     return slug[:limit].strip("-") or "output"
 
 
+_PRINT_WORDS = {"echo", "printf"}
+_HARMLESS_WORDS = {"cd", "true", ":", "export", "sleep"}
+
+
+def prints_only(command: str) -> bool:
+    """True for a command that only prints text written into it (``cd repo && echo "acc 0.9"``)."""
+    words = [segment.strip().split(maxsplit=1)[0] for segment in re.split(r"&&|\|\||;|\|", command) if segment.strip()]
+    return bool(words) and any(w in _PRINT_WORDS for w in words) and all(w in _PRINT_WORDS | _HARMLESS_WORDS for w in words)
+
+
 def _write_json_atomic(path: Path, payload: dict[str, Any]) -> None:
     tmp = path.with_name(f".{path.name}.tmp")
     tmp.write_text(json.dumps(payload, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
@@ -67,6 +77,7 @@ class RunWriter:
         self._log_count = 0
         self._approval_count = 0
         self.logs: list[str] = []  # paths relative to the run directory, oldest first
+        self._commands: dict[str, str] = {}  # log path -> the command whose output it holds
 
     # -- events -----------------------------------------------------------------
 
@@ -82,22 +93,38 @@ class RunWriter:
     # -- logs -------------------------------------------------------------------
 
     def save_log(self, label: str, text: str) -> str:
-        """Save full command output under logs/ and return its path relative to the run dir."""
+        """Save full command output under logs/ and return its path relative to the run dir.
+
+        ``label`` is the command; a log that starts with ``$ <command>`` has that line skipped
+        when quotes are looked up, so the command's own text is never evidence.
+        """
         with self._lock:
             self._log_count += 1
             rel = f"logs/{self._log_count:02d}-{_slug(label)}.txt"
         (self.run_dir / rel).write_text(text, encoding="utf-8")
         self.logs.append(rel)
+        self._commands[rel] = label
         return rel
 
     def find_quote(self, quote: str) -> str | None:
-        """The newest saved log that contains ``quote`` exactly, or None."""
+        """The newest saved log whose output contains ``quote`` exactly, or None.
+
+        Output of commands that only print text they were given (``echo``, ``printf``) and the
+        ``$ <command>`` line at the top of a log don't count: they hold what the agent typed.
+        """
         for rel in reversed(self.logs):
+            command = self._commands.get(rel)
+            if command is not None and prints_only(command):
+                continue
             try:
-                if quote in (self.run_dir / rel).read_text(encoding="utf-8"):
-                    return rel
+                text = (self.run_dir / rel).read_text(encoding="utf-8")
             except OSError:
                 continue
+            head = f"$ {command}\n" if command is not None else None
+            if head and text.startswith(head):
+                text = text[len(head):]
+            if quote in text:
+                return rel
         return None
 
     # -- approvals --------------------------------------------------------------
@@ -111,16 +138,18 @@ class RunWriter:
         diff: str | None = None,
         agent: str = "main",
         deadline: float | None = None,
+        extra: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """Write the request, wait for the decision and return it (contract 3.1).
 
-        ``deadline`` is a ``time.monotonic()`` value; waiting never goes past it.
+        ``deadline`` is a ``time.monotonic()`` value; waiting never goes past it. ``extra`` adds
+        optional fields to the request file (for example a scaled plan's ``scale_down``).
         """
         with self._lock:
             self._approval_count += 1
             approval_id = f"a{self._approval_count}"
         adir = self.run_dir / "approvals"
-        request = {"id": approval_id, "kind": kind, "summary": summary, "command": command, "diff": diff}
+        request = {**(extra or {}), "id": approval_id, "kind": kind, "summary": summary, "command": command, "diff": diff}
         _write_json_atomic(adir / f"{approval_id}.request.json", request)
         self.event("approval_requested", {"id": approval_id, "kind": kind, "summary": summary}, agent)
 

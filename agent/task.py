@@ -6,9 +6,12 @@ Standard library only.
 from __future__ import annotations
 
 import json
+import math
+import re
 import shutil
 import time
 from dataclasses import dataclass, field
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +21,25 @@ CONTRACT_VERSION = 1
 FIGURE_SUFFIXES = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".pdf")
 STAGES = ("read", "env", "data", "run", "extract", "other")
 CONFIDENCES = ("high", "medium", "low")
+
+# Plan-first runs (research proposal "Plan-First Runs and Budget-Scaled Verification").
+PLAN_PATHS = ("full", "scaled", "not_verifiable")
+SCALE_KINDS = ("precision", "convergence", "data", "hardware")
+NO_ANSWER_CATEGORIES = ("not_verifiable_within_budget", "environment", "not_in_output", "other")
+FULL_RUN_SHARE = 0.6  # a full run must fit in this share of the minutes left
+# A projection's half-width, as a share of its value, beyond which harness/score.py calls it too vague.
+INTERVAL_CAP = 0.10
+# Text that means "I have no answer" and must never be recorded as a value.
+PLACEHOLDERS = frozenset(
+    {"no answer", "noanswer", "n/a", "na", "none", "null", "nan", "unknown", "not found", "not available",
+     "error", "failed", "-", "--", "?", "tbd", "could not reproduce", "not reproduced"}
+)
+_NUMBER = re.compile(r"[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:[eE][-+]?\d+)?|[-+]?\.\d+(?:[eE][-+]?\d+)?")
+NO_PLAN_MESSAGE = (
+    "Error: there is no plan for this run yet, so nothing was run. Hand the task to the `scoper` helper first "
+    "(task tool, subagent_type 'scoper'; give it the question texts, the task's instructions and the time "
+    "limit). It records a plan with the projected runtime; experiments are allowed once it has."
+)
 
 
 class TaskError(RuntimeError):
@@ -112,6 +134,54 @@ def _coerce(value: Any, qtype: str) -> Any:
     return value
 
 
+def numbers_in(text: str) -> list[float]:
+    """Every number written in ``text`` (thousands separators allowed)."""
+    found = []
+    for match in _NUMBER.findall((text or "").replace("−", "-")):  # a typographic minus counts as one
+        try:
+            found.append(float(match.replace(",", "")))
+        except ValueError:
+            continue
+    return found
+
+
+def _half_unit(value: float) -> float:
+    """Half of the last written digit of ``value``: how far a correctly rounded number can be off."""
+    try:
+        exponent = Decimal(repr(float(value))).normalize().as_tuple().exponent
+    except (InvalidOperation, ValueError):
+        return 1e-9
+    if not isinstance(exponent, int):
+        return 1e-9
+    return 0.5 * 10.0 ** min(0, exponent)
+
+
+def number_in_quote(value: float, quote: str, precision_of: float | None = None) -> bool:
+    """True when the quote shows ``value``, possibly with more digits, or as a fraction of a percentage.
+
+    ``precision_of``: also require at least the precision of this number (an interval's bounds
+    must be written as precisely as its value, so they can't be loosened by rounding).
+    """
+    unit = _half_unit(value) if precision_of is None else min(_half_unit(value), _half_unit(precision_of))
+    tolerance = unit + 1e-9 * abs(value)
+    for seen in numbers_in(quote):
+        for candidate in (seen, seen * 100.0, seen / 100.0):
+            if math.isfinite(candidate) and abs(candidate - value) <= tolerance:
+                return True
+    return False
+
+
+def quote_shows(value: Any, quote: str, qtype: str) -> bool:
+    """Does the evidence quote contain the answer? Numbers may be rounded; text must appear as written."""
+    if qtype == "number":
+        return isinstance(value, (int, float)) and number_in_quote(float(value), quote)
+    if qtype == "list":
+        return all(quote_shows(item, quote, "number" if isinstance(item, (int, float)) and not isinstance(item, bool) else "string")
+                   for item in value)
+    wanted, seen = (" ".join(str(s).casefold().split()) for s in (value, quote))
+    return bool(wanted) and wanted in seen
+
+
 @dataclass
 class Findings:
     """Answers and obstacles recorded during a run, and the report built from them."""
@@ -123,6 +193,117 @@ class Findings:
     # The workspace is copied with the capsule's own timestamps, so a file modified after
     # this moment was written by the run.
     started: float = field(default_factory=time.time)
+    deadline: float | None = None  # time.monotonic() value when the run's limit is reached
+    plan: dict[str, Any] | None = None  # recorded by the scoper before any experiment
+    no_answers: dict[str, dict[str, str]] = field(default_factory=dict)  # question id -> category and reason
+
+    # -- the plan ---------------------------------------------------------------
+
+    def minutes_left(self) -> float:
+        if self.deadline is not None:
+            return max(0.0, (self.deadline - time.monotonic()) / 60)
+        return max(0.0, self.task.max_minutes - (time.time() - self.started) / 60)
+
+    def record_plan(
+        self,
+        path: str,
+        projected_minutes: float | None,
+        steps: list[str],
+        reason: str,
+        missing_steps: list[str] | None = None,
+        heavy_settings: list[str] | None = None,
+        scale_down: list[dict[str, Any]] | None = None,
+        scaled_minutes: float | None = None,
+        agent: str = "scoper",
+    ) -> str:
+        """Store the run's plan if it is consistent with the time left. Returns a message for the model."""
+        if path not in PLAN_PATHS:
+            return f"Error: path must be one of {', '.join(PLAN_PATHS)}."
+        steps = [str(s).strip() for s in (steps or []) if str(s).strip()]
+        if not steps:
+            return "Error: list the steps that produce the answers (at least one)."
+        reason = (reason or "").strip()
+        if not reason:
+            return "Error: give the reason for this path in one or two sentences."
+        projected = _minutes(projected_minutes)
+        left = self.minutes_left()
+        allowed = FULL_RUN_SHARE * left
+        if path in ("full", "scaled") and projected is None:
+            return "Error: give projected_minutes, your estimate of the full run's time in minutes (from a probe when the code has a heavy setting)."
+        plan: dict[str, Any] = {"path": path, "projected_minutes": None if projected is None else round(projected, 1),
+                                "minutes_left": round(left, 1), "steps": steps,
+                                "missing_steps": [str(s).strip() for s in (missing_steps or []) if str(s).strip()],
+                                "heavy_settings": [str(s).strip() for s in (heavy_settings or []) if str(s).strip()],
+                                "reason": reason}
+        if path == "full" and projected is not None and projected > allowed:
+            return (
+                f"Error: a full run needs about {projected:g} min, but only {left:.0f} min are left and a full run may "
+                f"take at most {allowed:.0f} min (60% of what is left). Choose 'scaled' with a scale_down, or "
+                "'not_verifiable' with the reason."
+            )
+        if path == "scaled":
+            if projected is not None and projected <= allowed:
+                return f"Error: the full run (about {projected:g} min) fits in the {allowed:.0f} min allowed, so don't scale it: choose 'full'."
+            changes, problem = _clean_scale_down(scale_down)
+            if problem:
+                return problem
+            scaled = _minutes(scaled_minutes)
+            if scaled is None:
+                return "Error: give scaled_minutes, the time all the scaled runs together will take."
+            if scaled > allowed:
+                return f"Error: the scaled runs (about {scaled:g} min) still don't fit in the {allowed:.0f} min allowed. Shrink further, or choose 'not_verifiable'."
+            plan["scale_down"] = changes
+            plan["scaled_minutes"] = round(scaled, 1)
+        plan["revision"] = (self.plan or {}).get("revision", 0) + 1
+        self.plan = plan
+        self.writer.event("plan_recorded", {"path": path, "projected_minutes": plan["projected_minutes"],
+                                            "minutes_left": plan["minutes_left"], "summary": self.plan_summary()}, agent)
+        if path == "full":
+            return f"Plan recorded: {self.plan_summary()}. Experiments may run now."
+        if path == "scaled":
+            return (
+                f"Plan recorded: {self.plan_summary()}. The experiment's approval request will show these changes. "
+                "After the scaled runs, compute each projected value and its interval with a short script that "
+                "prints them, and record each number answer with interval=[low, high] quoting that line."
+            )
+        return (
+            f"Plan recorded: {self.plan_summary()}. Experiments are now refused. Record each question with "
+            "record_no_answer(category='not_verifiable_within_budget', reason=...)."
+        )
+
+    def plan_summary(self) -> str:
+        plan = self.plan or {}
+        path = plan.get("path")
+        if path == "full":
+            return f"full run, about {plan['projected_minutes']:g} min of {plan['minutes_left']:.0f} left"
+        if path == "scaled":
+            return (
+                f"scaled run: the full run needs about {plan['projected_minutes']:g} min of {plan['minutes_left']:.0f} "
+                f"left, the scaled runs about {plan['scaled_minutes']:g} min; {self.scale_note()}"
+            )
+        if path == "not_verifiable":
+            return f"not verifiable within budget: {plan.get('reason', '')}"
+        return "no plan"
+
+    def scale_note(self) -> str:
+        """The plan's scale-down in one line, for approval requests."""
+        changes = (self.plan or {}).get("scale_down") or []
+        return "; ".join(f"{c['setting']} {c['original']} → {c['scaled']} ({c['kind']})" for c in changes)
+
+    def runs_allowed(self) -> tuple[bool, str]:
+        """May an experiment run now? (False, the reason for the model) when it may not."""
+        if self.plan is None:
+            return False, NO_PLAN_MESSAGE
+        if self.plan["path"] == "not_verifiable":
+            return False, (
+                "Error: the plan says this paper can't be verified within the budget "
+                f"({self.plan.get('reason', '')}), so nothing was run. Call record_no_answer for each question "
+                "with category 'not_verifiable_within_budget'. If something new shows it fits after all, ask "
+                "`scoper` to revise the plan."
+            )
+        return True, ""
+
+    # -- answers ----------------------------------------------------------------
 
     def record_answer(
         self,
@@ -132,12 +313,14 @@ class Findings:
         confidence: str,
         agent: str = "main",
         figure: Path | None = None,
+        interval: Any = None,
     ) -> str:
         """Store an answer if its evidence holds up. Returns a message for the model.
 
         The evidence is a quote found in a saved command output or, for a question that
         needs a figure, an image this run wrote (copied into the run directory) with the
-        quote saying what was read off it.
+        quote saying what was read off it. A quote from command output must contain the
+        value. On a scaled plan a number answer is a projection with its interval.
         """
         question = self.task.question(question_id)
         if question is None:
@@ -147,8 +330,33 @@ class Findings:
             value = _coerce(value, question["type"])
         except ValueError as exc:
             return f"Error: {question_id} is a {question['type']} question; {exc}."
+        if question["type"] == "string" and " ".join(str(value).casefold().split()) in PLACEHOLDERS:
+            return (
+                f"Error: {value!r} is not an answer. When a question can't be answered, call record_no_answer "
+                "with the reason instead."
+            )
         if confidence not in CONFIDENCES:
             return f"Error: confidence must be one of {', '.join(CONFIDENCES)}."
+        scaled = bool(self.plan and self.plan.get("path") == "scaled")
+        bounds: list[float] | None = None
+        if interval not in (None, "", []):
+            if not scaled:
+                return "Error: an interval is only for a scaled run's projection, and this run's plan is not scaled. Leave it out."
+            try:
+                bounds = [float(b) for b in (json.loads(interval) if isinstance(interval, str) else interval)]
+            except (TypeError, ValueError):
+                bounds = None
+            if bounds is None or len(bounds) != 2 or not all(math.isfinite(b) for b in bounds):
+                return "Error: interval must be two numbers, [low, high]."
+            if question["type"] != "number":
+                return "Error: an interval only goes with a number question."
+            if not bounds[0] <= value <= bounds[1]:
+                return f"Error: the projected value {value:g} must lie inside its interval [{bounds[0]:g}, {bounds[1]:g}]."
+        elif scaled and question["type"] == "number" and figure is None:
+            return (
+                "Error: this is a scaled run, so a number answer is a projection of the full run: give "
+                "interval=[low, high] too, both printed by the script that computed the projection."
+            )
         quote = (quote or "").strip()
         if figure is not None:
             if not question.get("needs_figure"):
@@ -170,14 +378,55 @@ class Findings:
                     f"or run the command that prints it.{hint}"
                 )
             log = found
-        self.answers[question_id] = {
+            if not quote_shows(value, quote, question["type"]):
+                seen = ", ".join(f"{n:g}" for n in numbers_in(quote)[:8]) or "none"
+                return (
+                    f"Error: the quote doesn't show the answer {value!r}. Quote the output line that contains the "
+                    f"value itself (rounding it is fine). Numbers in your quote: {seen}."
+                )
+            if bounds is not None and not all(number_in_quote(b, quote, precision_of=value) for b in bounds):
+                return (
+                    "Error: the quote must show the interval's bounds too: quote the line where your projection "
+                    "script printed the value and its interval."
+                )
+        entry: dict[str, Any] = {
             "question_id": question_id,
             "value": value,
             "evidence": {"file": log, "quote": quote},
             "confidence": confidence,
         }
+        note = ""
+        if scaled:
+            entry["scaled"] = True  # optional fields beyond contract v1
+            if bounds is not None:
+                entry["interval"] = bounds
+                half = (bounds[1] - bounds[0]) / 2
+                if half > INTERVAL_CAP * abs(value):
+                    note = (
+                        " Note: this interval is wider than ±10% of the value, so the harness will count it as not "
+                        "verifiable within budget. That is an honest result; don't narrow it by hand."
+                    )
+        self.answers[question_id] = entry
+        self.no_answers.pop(question_id, None)
         self.writer.event("answer_found", {"question_id": question_id, "value": value}, agent)
-        return f"Recorded {question_id} = {value!r} with evidence from {log}."
+        kind = "projection" if bounds is not None else "answer"
+        return f"Recorded {question_id} = {value!r} ({kind}) with evidence from {log}.{note}"
+
+    def record_no_answer(self, question_id: str, category: str, reason: str, agent: str = "main") -> str:
+        """Say why a question has no answer, instead of recording a placeholder value."""
+        if self.task.question(question_id) is None:
+            known = ", ".join(q["id"] for q in self.task.questions)
+            return f"Error: there is no question '{question_id}'. The questions are: {known}."
+        if category not in NO_ANSWER_CATEGORIES:
+            return f"Error: category must be one of {', '.join(NO_ANSWER_CATEGORIES)}."
+        reason = (reason or "").strip()
+        if not reason:
+            return "Error: give the reason in one sentence, with the key error text or the projected runtime."
+        if question_id in self.answers:
+            return f"Error: {question_id} already has an answer with evidence; it stays."
+        self.no_answers[question_id] = {"category": category, "reason": reason}
+        self.writer.event("no_answer", {"question_id": question_id, "category": category, "reason": reason}, agent)
+        return f"Recorded: no answer for {question_id} ({category.replace('_', ' ')}). The report says why."
 
     def _keep_figure(self, question_id: str, figure: Path) -> str:
         """Copy an image this run wrote into the run directory; its relative path, or an error."""
@@ -209,6 +458,9 @@ class Findings:
     def missing(self) -> list[str]:
         return [q["id"] for q in self.task.questions if q["id"] not in self.answers]
 
+    def missing_questions(self) -> list[dict[str, Any]]:
+        return [q for q in self.task.questions if q["id"] not in self.answers]
+
     def report(
         self,
         *,
@@ -226,11 +478,16 @@ class Findings:
             if q["id"] in self.answers:
                 answers.append(self.answers[q["id"]])
                 continue
-            answers.append({"question_id": q["id"], "value": None, "evidence": None, "confidence": "low"})
-            obstacles.append(
-                {"stage": "other", "summary": f"No answer for {q['id']}: {why_missing}", "fix": None, "resolved": False}
-            )
-        return {
+            entry: dict[str, Any] = {"question_id": q["id"], "value": None, "evidence": None, "confidence": "low"}
+            given = self.no_answers.get(q["id"])
+            if given:
+                entry["no_answer"] = dict(given)  # optional field beyond contract v1
+                why = f"({given['category'].replace('_', ' ')}) {given['reason']}"
+            else:
+                why = why_missing
+            answers.append(entry)
+            obstacles.append({"stage": "other", "summary": f"No answer for {q['id']}: {why}", "fix": None, "resolved": False})
+        report: dict[str, Any] = {
             "contract_version": CONTRACT_VERSION,
             "task_id": self.task.task_id,
             "run_id": run_id,
@@ -240,3 +497,46 @@ class Findings:
             "usage": {"wall_seconds": round(wall_seconds, 1), "tokens": tokens},
             "trace_url": trace_url,
         }
+        if self.plan is not None:
+            report["plan"] = self.plan  # optional field beyond contract v1
+        return report
+
+
+def _minutes(value: Any) -> float | None:
+    """A non-negative number of minutes, or None."""
+    if isinstance(value, bool) or value in (None, ""):
+        return None
+    try:
+        minutes = float(value)
+    except (TypeError, ValueError):
+        return None
+    return minutes if math.isfinite(minutes) and minutes >= 0 else None
+
+
+def _clean_scale_down(scale_down: Any) -> tuple[list[dict[str, Any]], str]:
+    """Validate the scale-down list; returns (changes, "") or ([], an error for the model)."""
+    if isinstance(scale_down, str):
+        try:
+            scale_down = json.loads(scale_down)
+        except json.JSONDecodeError:
+            scale_down = None
+    if not isinstance(scale_down, list) or not scale_down:
+        return [], (
+            "Error: a scaled plan needs scale_down: a list of changes, each "
+            '{"setting": "epochs", "original": 150, "scaled": 30, "kind": "convergence", "where": "train.py line 12"}.'
+        )
+    changes = []
+    for i, change in enumerate(scale_down):
+        if not isinstance(change, dict):
+            return [], f"Error: scale_down[{i}] must be an object with setting, original, scaled and kind."
+        setting = str(change.get("setting") or "").strip()
+        kind = str(change.get("kind") or "").strip().lower()
+        if not setting or change.get("original") in (None, "") or change.get("scaled") in (None, ""):
+            return [], f"Error: scale_down[{i}] needs setting, original and scaled."
+        if kind not in SCALE_KINDS:
+            return [], f"Error: scale_down[{i}].kind must be one of {', '.join(SCALE_KINDS)}."
+        changes.append({"setting": setting, "original": change["original"], "scaled": change["scaled"], "kind": kind,
+                        "where": str(change.get("where") or "").strip() or None})
+    if not any(c["kind"] != "hardware" for c in changes):
+        return [], "Error: moving GPU code to the CPU is not a scale-down by itself; add the setting that shrinks (epochs, trees, samples)."
+    return changes, ""

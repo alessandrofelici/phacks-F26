@@ -136,9 +136,11 @@ def run_summary(rdir: Path) -> dict:
     status = run_status(rdir, meta, report, approvals)
     score = score_run(rdir) if isinstance(report, dict) else None
     task_id = (meta or {}).get("task_id") or (report or {}).get("task_id")
+    plan = (report or {}).get("plan") if isinstance(report, dict) and isinstance(report.get("plan"), dict) else None
     return {"run_id": rdir.name, "task_id": task_id, "agent": (meta or {}).get("agent"),
             "status": status, "started": (meta or {}).get("started"), "ended": (meta or {}).get("ended"),
-            "score": {"correct": score["correct"], "total": score["total"]} if score else None}
+            "score": {"correct": score["correct"], "total": score["total"], "outcome": score["outcome"]} if score else None,
+            "plan": {"path": plan.get("path"), "projected_minutes": plan.get("projected_minutes")} if plan else None}
 
 
 def run_detail(run_id: str, since: int = 0) -> dict | None:

@@ -99,17 +99,69 @@ class ScriptedToyRun(unittest.TestCase):
             "memory_read",
             "memory_written",
             "answer_found",
+            "plan_recorded",
         ):
             self.assertIn(wanted, types)
         started = [e["data"]["name"] for e in events if e["type"] == "subagent_started"]
-        self.assertEqual(started, ["paper-reader", "env-builder", "runner", "result-judge"])
+        self.assertEqual(started, ["paper-reader", "scoper", "env-builder", "runner", "result-judge"])
         doers = {e["agent"] for e in events if e["type"] == "tool_call"}
-        self.assertEqual(doers, {"paper-reader", "env-builder", "runner", "result-judge"}, "steps name the subagent that did them")
+        self.assertEqual(
+            doers, {"paper-reader", "scoper", "env-builder", "runner", "result-judge"}, "steps name the subagent that did them"
+        )
+        plan = next(e for e in events if e["type"] == "plan_recorded")
+        self.assertEqual((plan["agent"], plan["data"]["path"]), ("scoper", "full"))
+        self.assertLess(types.index("plan_recorded"), types.index("approval_requested"), "the plan comes before the experiment")
+        self.assertEqual(report["plan"]["path"], "full")
+        self.assertTrue(report["plan"]["missing_steps"], "the numpy pin is flagged as a missing step")
         self.assertEqual({e["agent"] for e in events if e["type"] == "answer_found"}, {"result-judge"})
         resolved = next(e for e in events if e["type"] == "approval_resolved")
         self.assertEqual(resolved["data"]["by"], "auto")
         original = (TOY / "repo" / "requirements.txt").read_text()
         self.assertEqual(original.strip(), "numpy==1.19.5", "the task directory must stay untouched")
+
+    def test_an_experiment_before_the_plan_is_refused_without_asking(self) -> None:
+        report = self.finish(self.start("--auto-approve", REPRO_SCRIPT_EARLY_RUN="1"))
+        self.assertEqual(report["status"], "completed", "the refusal is not a reviewer's rejection")
+        events = events_of(self.run_dir)
+        early = next(e for e in events if e["data"].get("tool") == "run_experiment")
+        self.assertFalse(early["data"]["ok"])
+        self.assertIn("no plan", early["data"]["detail"])
+        asked = [i for i, e in enumerate(events) if e["type"] == "approval_requested"]
+        self.assertEqual(len(asked), 1, "only the planned experiment asked for approval")
+        planned = next(i for i, e in enumerate(events) if e["type"] == "plan_recorded")
+        self.assertLess(planned, asked[0])
+
+    def test_a_not_verifiable_plan_runs_nothing_and_says_why(self) -> None:
+        report = self.finish(self.start("--auto-approve", REPRO_SCRIPT_PLAN="not_verifiable"))
+        self.assertEqual(report["status"], "completed", "an honest not-verifiable plan is a finished run")
+        self.assertEqual(report["plan"]["path"], "not_verifiable")
+        self.assertEqual([a["value"] for a in report["answers"]], [None, None])
+        self.assertEqual({a["no_answer"]["category"] for a in report["answers"]}, {"not_verifiable_within_budget"})
+        events = events_of(self.run_dir)
+        self.assertFalse(any(e["type"] == "approval_requested" for e in events), "nothing was run")
+        self.assertEqual([e["data"]["question_id"] for e in events if e["type"] == "no_answer"], ["q1", "q2"])
+
+    def test_a_scaled_plan_asks_for_the_smaller_run_and_records_projections(self) -> None:
+        report = self.finish(self.start("--auto-approve", REPRO_SCRIPT_PLAN="scaled"))
+        self.assertEqual(report["status"], "completed")
+        self.assertEqual(report["plan"]["path"], "scaled")
+        q1, q2 = report["answers"]
+        self.assertEqual((q1["value"], q1["interval"], q1["scaled"]), (0.4555, [0.4455, 0.4655], True))
+        self.assertTrue(q2["scaled"])
+        self.assertIn(q1["evidence"]["quote"], (self.run_dir / q1["evidence"]["file"]).read_text())
+        request = json.loads((self.run_dir / "approvals" / "a1.request.json").read_text())
+        self.assertIn("scaled down per the plan: seeds 3 → 1 (precision)", request["summary"])
+        self.assertEqual(request["scale_down"][0]["setting"], "seeds")
+
+    def test_a_runtime_probe_is_approved_and_reported(self) -> None:
+        report = self.finish(self.start("--auto-approve", REPRO_SCRIPT_PROBE_RUN="1"))
+        self.assertEqual(report["status"], "completed")
+        first = json.loads((self.run_dir / "approvals" / "a1.request.json").read_text())
+        self.assertTrue(first["summary"].startswith("Time a probe"), first["summary"])
+        probe = next(e for e in events_of(self.run_dir) if e["data"].get("tool") == "probe_runtime")
+        self.assertEqual(probe["agent"], "scoper")
+        self.assertTrue(probe["data"]["ok"])
+        self.assertIn("finished in", probe["data"]["detail"])
 
     def test_second_run_reuses_the_remembered_fix(self) -> None:
         first = self.finish(self.start("--auto-approve"))
