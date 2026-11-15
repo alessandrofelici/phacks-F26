@@ -202,8 +202,8 @@ def chart_same_papers(t, mode):
     W, H = 900, 380
     cv = Canvas(W, H, t)
     y = cv.header("On the same 11 papers, cycle 2 reproduced twice as many as cycle 1",
-                  "Papers that ran to the end in both cycles. The cycle 2 changes: a sandbox image with current R and "
-                  "preinstalled packages, background-run waits and prompt fixes.")
+                  "Papers that ran to the end in both cycles. Cycle 2 changes: a sandbox image with current R and "
+                  "preinstalled packages, background-run waits and prompt fixes; the figure-reading tool arrived during cycle 1.")
     c1, c2 = t["muted"], t["s"][0]
     y = cv.legend(32, y + 24, [("Cycle 1", c1), ("Cycle 2", c2)], shape="dot")
     rows = [("R papers", 2, 5, 6), ("Python papers", 2, 3, 5), ("All 11 papers", 4, 8, 11)]
