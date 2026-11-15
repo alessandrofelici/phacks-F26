@@ -246,7 +246,10 @@ async function poll() {
 }
 function elapsed() {
   const m = detail.meta; if (!m || !m.started_epoch) return "";
-  const end = m.ended_epoch || Date.now() / 1000; const s = Math.max(0, Math.round(end - m.started_epoch));
+  // A batch can exit before it records when its last run ended; the report's wall time is then the truth.
+  const wall = detail.report && detail.report.usage && detail.report.usage.wall_seconds;
+  const end = m.ended_epoch || (wall ? m.started_epoch + wall : Date.now() / 1000);
+  const s = Math.max(0, Math.round(end - m.started_epoch));
   return s < 60 ? `${s} s` : `${Math.floor(s / 60)} min ${s % 60} s`;
 }
 function render() {
