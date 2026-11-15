@@ -1,15 +1,53 @@
-# shared-project
+# ReproBot
 
-## Repro Bot (the build)
+**Smoke-test a research paper.** ReproBot runs a paper's code in a sandbox and tells you, in minutes, whether the published numbers come out, quoting the line of output behind every answer.
 
-An agent that runs a paper's code and checks whether the published numbers hold up. Built for LangChain's deepagents track.
+Building on someone else's paper usually starts with days of getting their code to run. ReproBot is a [LangChain Deep Agents](https://github.com/langchain-ai/deepagents) agent that does that first pass for you. Built at HackPrinceton Fall 2026 for the LangChain "Best use of deepagents" track.
 
-- [contract/CONTRACT.md](contract/CONTRACT.md): the interface between the two halves, frozen. [contract/ROLES.md](contract/ROLES.md) says who builds which half and how to start as Role A.
-- [harness/](harness/README.md): task loaders, scoring, web UI, batch runner (Role B). Try it: `python -m harness.server`, open http://localhost:8000, choose Demo replay.
-- [agent/](agent/README.md): the deep agent (Role A). Results so far: [harness/SCOREBOARD.md](harness/SCOREBOARD.md); review notes of the autonomous run: [research/autonomous-run-2026-11-14.md](research/autonomous-run-2026-11-14.md).
-- Plan: [research/repro-bot-build-plan.md](research/repro-bot-build-plan.md)
+## Results on 20 real papers
 
-## Research
+Measured on 20 papers from [CORE-Bench](https://arxiv.org/abs/2409.11363) (medium level, Claude Haiku 5.5, 30 minutes on a CPU per run):
+
+- **17 of 20 papers reproduced** in at least one run.
+- **No wrong exact number in 98 recorded answers.** Every answer quotes the output line it came from, and the quote is checked against the run's saved output.
+- **A reproduced run takes a median of 9.3 minutes;** a run costs about 9 cents on average.
+- **Papers too big for the limits are flagged, not faked.** Since the planning step, none of 19 runs hit the time limit (5 of 22 earlier runs of the same papers did). Each ends as *verifiable within budget* (a scaled-down run's projection, at most ±10% wide, contains the paper's number) or *not verifiable within budget*.
+
+<picture><source media="(prefers-color-scheme: dark)" srcset="research/eval-2026-11-15-plan-first/images/08-plan-first-outcomes-dark.png"><img alt="Outcome of every run of 13 papers, before and with the planning step" src="research/eval-2026-11-15-plan-first/images/08-plan-first-outcomes-light.png"></picture>
+
+Full reports: [the first two cycles](research/eval-2026-11-14/README.md) (14 November) and [the planning step on real papers](research/eval-2026-11-15-plan-first/README.md) (15 November).
+
+## How it works
+
+1. **Plan first.** A `scoper` subagent reads the paper and the code, flags missing steps, times a short probe of the experiment and records a plan: run in full, run a scaled-down version, or not verifiable within the budget. Experiments are refused until a plan exists.
+2. **Set up in a sandbox.** Code runs in a rootless Podman container that only holds the paper's files, with skills for common setups (Code Ocean capsules, old Python pins, conda, R, notebooks) and a memory of fixes from earlier papers.
+3. **A human approves each experiment.** A scaled-down run's approval lists every setting it changes.
+4. **Answers need evidence.** Each answer is recorded with the exact output line it came from. The harness scores it against CORE-Bench's reference values, which the agent never sees.
+
+Deep Agents features in use: `create_deep_agent`, five subagents (`scoper`, `paper-reader`, `env-builder`, `runner`, `result-judge`), `write_todos` planning, a `CompositeBackend` routing `/memories/` and `/skills/`, `interrupt_on` approvals, and a LangSmith trace per run. [agent/FEATURES.md](agent/FEATURES.md) shows where each one appears in a run.
+
+## Try it
+
+- **Without a model key:** `python3 -m harness.server`, open http://localhost:8000, pick *Toy linear regression* and choose **Demo replay**. It plays back a recorded run through the real UI, approvals included.
+- **With a model:** set up [agent/](agent/README.md) (a venv and an OpenRouter key in `.env`), fetch CORE-Bench tasks with `python -m harness.corebench fetch <capsule ids>`, then start runs from the web UI or with `python -m harness.batch`. [harness/README.md](harness/README.md) lists every command, and [harness/DEMO.md](harness/DEMO.md) is the demo path.
+
+## Limitations
+
+- Tested at CORE-Bench's medium level (the paper's Dockerfile and instructions are kept), mostly with Claude Haiku 5.5. The hard level hasn't been tested.
+- Papers that need a GPU or hours of CPU are flagged, not reproduced.
+- The planning step adds about 5 minutes per run on easy papers.
+- The arXiv-link mode (`python -m agent.arxiv <id>`) runs end to end but hasn't reproduced a paper yet.
+
+## Repository
+
+| Path | What it is |
+|---|---|
+| [agent/](agent/README.md) | The deep agent |
+| [harness/](harness/README.md) | Task loaders, scoring, the web UI, the batch runner and the scoreboard |
+| [contract/](contract/CONTRACT.md) | The file-based interface between the two |
+| [research/](research/) | Evaluation reports, the build plan, and the hackathon research below |
+
+## Hackathon research notes
 
 HackPrinceton research.
 
