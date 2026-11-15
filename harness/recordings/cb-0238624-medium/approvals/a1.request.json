@@ -1,0 +1,7 @@
+{
+  "id": "a1",
+  "kind": "long_run",
+  "summary": "Time a probe: run cd /work/repo/code && /tmp/venv38/bin/python -u ensemble.py for at most 180 s, then stop it, to measure its speed: Time the full ensemble.py run (stacked head: 150 epochs, batch 10, validation_split 0.33) to see whether it fits in 30 min on CPU.",
+  "command": "cd /work/repo/code && /tmp/venv38/bin/python -u ensemble.py",
+  "diff": null
+}

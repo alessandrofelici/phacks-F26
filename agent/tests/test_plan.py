@@ -115,6 +115,15 @@ class PlanTest(Base):
         self.assertTrue(any("not verifiable within budget" in o["summary"] for o in report["obstacles"]))
         self.assertEqual(len(self.events("no_answer")), 2)
 
+    def test_a_finish_within_budget_needs_a_plan_and_a_budget_reason_for_every_gap(self) -> None:
+        self.findings.no_answers["q1"] = {"category": "not_verifiable_within_budget", "reason": "x"}
+        self.findings.no_answers["q2"] = {"category": "not_verifiable_within_budget", "reason": "x"}
+        self.assertFalse(self.findings.finished_within_budget(), "no plan, no finish within budget")
+        self.plan_scaled()  # a scaled run that found out on the way (0238624, 15 November)
+        self.assertTrue(self.findings.finished_within_budget())
+        self.findings.no_answers["q2"] = {"category": "environment", "reason": "R packages failed"}
+        self.assertFalse(self.findings.finished_within_budget(), "an environment failure is still a give-up")
+
 
 class AnswerCheckTest(Base):
     def setUp(self) -> None:

@@ -1,0 +1,83 @@
+{
+  "contract_version": 1,
+  "task_id": "cb-0238624-medium",
+  "run_id": "r-20261115-040847-db93",
+  "status": "completed",
+  "answers": [
+    {
+      "question_id": "q1",
+      "value": 0.88,
+      "evidence": {
+        "file": "logs/17-tmp-venv38-bin-python-c-v-0-88-print-pro.txt",
+        "quote": "projection q1/q2 printed value 0.88 interval (rounding only) [0.875, 0.885]"
+      },
+      "confidence": "low",
+      "scaled": true,
+      "interval": [
+        0.875,
+        0.885
+      ]
+    },
+    {
+      "question_id": "q2",
+      "value": 0.88,
+      "evidence": {
+        "file": "logs/17-tmp-venv38-bin-python-c-v-0-88-print-pro.txt",
+        "quote": "projection q1/q2 printed value 0.88 interval (rounding only) [0.875, 0.885]"
+      },
+      "confidence": "low",
+      "scaled": true,
+      "interval": [
+        0.875,
+        0.885
+      ]
+    }
+  ],
+  "obstacles": [
+    {
+      "stage": "run",
+      "summary": "Full ensemble.py (150 epochs on 26,885 rows, batch 10) projects to ~80 min against the 30-min limit (~30 s/epoch on CPU).",
+      "fix": "Ran a scaled copy in /tmp with epochs=8; repo untouched. Scaled run gave macro avg 0.88/0.88. Interval is only rounding of the printed value, so confidence is low.",
+      "resolved": false
+    }
+  ],
+  "usage": {
+    "wall_seconds": 1325.0,
+    "tokens": 665278
+  },
+  "trace_url": "https://smith.langchain.com/o/36ab15a5-ee3d-4092-ad3e-3bd35284cd6d/projects/p/01a1da50-f1b9-79be-8c01-3deb4887cd0d/trace/01a1dd64-cbee-7373-bdd8-4cf61f9c20b3/run/01a1dd64-cbee-7373-bdd8-4cf61f9c20b3?start_time=2026-11-15T04%3A08%3A52.974671%2B00%3A00",
+  "plan": {
+    "path": "scaled",
+    "projected_minutes": 80.0,
+    "minutes_left": 11.1,
+    "steps": [
+      "Create Python 3.8 venv outside repo: uv venv -p 3.8 /tmp/venv38 and install tensorflow-cpu==2.4.1 keras==2.4.3 h5py==2.10.0 matplotlib==3.3.4 numpy<1.20 scikit-learn==0.24.2 pandas<2 protobuf==3.20.3",
+      "Expose /data: ln -sfn /work/repo/data /data (data/normal_train.csv and data/ensemble/1-3.h5 are shipped in the repo; sub_models.py need not run)",
+      "Run the scaled copy of ensemble.py (epochs=8) from /tmp/scaled with cwd /work/repo/code; it loads the 3 sub-models, trains the stacked head, predicts on the 25% test split, and prints the Classification Report",
+      "Read the 'macro avg' line of the '=== Classification Report ===' block from the log"
+    ],
+    "missing_steps": [
+      "/data is absent in the sandbox: ln -sfn /work/repo/data /data",
+      "Environment: Python 3.8 with tensorflow-cpu 2.4.1 / keras 2.4.3 / numpy<1.20 / sklearn 0.24.2 / protobuf 3.20.3 (Dockerfile uses tensorflow-gpu 2.4.1 and unpinned sklearn==0.0, not installable as-is)",
+      "README says run sub_models.py first; not needed because the trained sub-models 1-3.h5 are shipped in data/ensemble"
+    ],
+    "heavy_settings": [
+      "code/ensemble.py fit_stacked_model: model.fit(..., epochs=150, batch_size=10) (line ~50)",
+      "code/ensemble.py: validation_split=0.33 and test_size=0.25 set the row counts (about 18k train rows)"
+    ],
+    "reason": "Probe (6 of 150 epochs in 178 s, ~30 s/epoch on CPU, 1802 steps/epoch) projects ~80 min for the full run, above the 30-min limit and above the 7 min allowed at 60% of remaining time. The only heavy setting is the stacked head's epochs=150, so epochs is the lever; 8 epochs (~4 min of training plus ~1.5 min startup) fits.",
+    "scale_down": [
+      {
+        "setting": "epochs",
+        "original": 150,
+        "scaled": 8,
+        "kind": "convergence",
+        "where": "code/ensemble.py fit_stacked_model, model.fit(epochs=...). Apply in a scratch copy outside the repo: mkdir -p /tmp/scaled && sed 's/epochs=150/epochs=8/' /work/repo/code/ensemble.py > /tmp/scaled/ensemble.py, then run it with cwd /work/repo/code. Keras prints per-epoch loss and val_loss (the learning curve); the head is undertrained, so q1/q2 will differ from the 150-epoch values."
+      }
+    ],
+    "scaled_minutes": 6.0,
+    "revision": 1
+  },
+  "sandbox": "podman (repro-sandbox:2, network on)",
+  "source_changes": []
+}

@@ -1,0 +1,14 @@
+$ cd repo && wc -l data/normal_train.csv && head -3 data/normal_train.csv && which python3 uv; python3 --version; python3 -c "import tensorflow" 2>&1 | tail -1; python3 -c "import keras, sklearn, numpy; print(keras.__version__, sklearn.__version__, numpy.__version__)" 2>&1 | tail -1; nproc; free -g | head -2
+35848 data/normal_train.csv
+major,researchExp,industryExp,specialization,toeflScore,program,department,internExp,greV,greQ,journalPubs,greA,topperCgpa,termAndYear,confPubs,ugCollege,cgpa,cgpaScale,univName
+0.49056603773584906,1.0,0.42063492063492064,0.0,0.7916666666666666,0.3333333333333333,0.7512953367875648,0.03125,0.185,0.19,0.0,0.5,0.094,0.45,0.0,0.02857142857142857,0.008979591836734694,0.1,0.9811320754716981,1
+0.49056603773584906,1.0,0.42063492063492064,0.0,0.7916666666666666,0.3333333333333333,0.7512953367875648,0.03125,0.185,0.19,0.0,0.5,0.094,0.45,0.0,0.02857142857142857,0.008979591836734694,0.1,0.20754716981132076,1
+/opt/conda/bin/python3
+/opt/conda/bin/uv
+Python 3.14.10
+ModuleNotFoundError: No module named 'tensorflow'
+ModuleNotFoundError: No module named 'keras'
+10
+               total        used        free      shared  buff/cache   available
+Mem:              15           5           0           0          10          10
+

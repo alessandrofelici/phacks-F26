@@ -1,0 +1,7 @@
+$ ps aux | grep -c "uv pip" ; ps aux | grep "uv pip" | grep -v grep | head -3; /tmp/venv38/bin/python -c "import tensorflow as tf, keras, sklearn, numpy; print(tf.__version__, keras.__version__, sklearn.__version__, numpy.__version__)" 2>&1 | tail -2
+5
+root          20  0.0  0.0   2812  1828 ?        S    04:09   0:00 sh -c uv venv -p 3.8 /tmp/venv38 && VIRTUAL_ENV=/tmp/venv38 uv pip install tensorflow-cpu==2.4.1 keras==2.4.3 h5py==2.10.0 matplotlib==3.3.4 "numpy<1.20" "scikit-learn==0.24.2" "pandas<2" protobuf==3.20.3
+root          34  3.7  0.3 4718012 64864 ?       Sl   04:09   0:16 uv pip install tensorflow-cpu==2.4.1 keras==2.4.3 h5py==2.10.0 matplotlib==3.3.4 numpy<1.20 scikit-learn==0.24.2 pandas<2 protobuf==3.20.3
+    from tensorflow.python.tools import module_util as _module_util
+ModuleNotFoundError: No module named 'tensorflow.python'
+

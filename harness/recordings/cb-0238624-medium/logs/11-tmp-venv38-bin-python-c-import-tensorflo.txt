@@ -1,0 +1,6 @@
+$ /tmp/venv38/bin/python -c "import tensorflow as tf, keras, sklearn, numpy; print(tf.__version__, keras.__version__, sklearn.__version__, numpy.__version__)" 2>&1 | tail -2
+<no output>
+
+Exit code: 124
+
+Error: Command timed out after 90 seconds. For long-running commands, re-run using the timeout parameter.

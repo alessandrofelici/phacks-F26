@@ -1,0 +1,2 @@
+$ sleep 88; ps aux | grep "uv pip" | grep -v grep | wc -l; tail -1 /tmp/install.log
+Error: Command timed out after 90 seconds.

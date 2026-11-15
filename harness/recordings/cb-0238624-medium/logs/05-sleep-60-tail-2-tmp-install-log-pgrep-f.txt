@@ -1,0 +1,8 @@
+$ sleep 60; tail -2 /tmp/install.log; pgrep -f "uv pip install" | head -2; /tmp/venv38/bin/python -c "import tensorflow as tf, keras, sklearn, numpy; print(tf.__version__, keras.__version__, sklearn.__version__, numpy.__version__)" 2>&1 | tail -2
+         If the cache and target directories are on different filesystems, hardlinking may not be supported.
+         If this is intentional, set `export UV_LINK_MODE=copy` or use `--link-mode=copy` to suppress this warning.
+20
+34
+    from tensorflow.python.tools import module_util as _module_util
+ModuleNotFoundError: No module named 'tensorflow.python'
+

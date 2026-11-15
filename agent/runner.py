@@ -119,15 +119,12 @@ def run_task(task_dir: Path | str, run_dir: Path | str, *, auto_approve: bool = 
             _drive(agent, task, run_id, writer, mapper, deadline, rejected, approved_edits, work, findings)
         if backend.out_of_time or time.monotonic() > deadline:
             raise RunTimeout
-        budget_reasoned = (findings.plan or {}).get("path") == "not_verifiable" and all(
-            q["id"] in findings.no_answers for q in findings.missing_questions()
-        )
         if findings.missing() and rejected:
             status = "rejected"
             why_missing = f"approval {', '.join(rejected)} was rejected and the run could not continue without it"
-        elif findings.answers or budget_reasoned:
-            # A plan that says "not verifiable within budget", with a reason for every question, is a
-            # finished run, not a give-up.
+        elif findings.answers or findings.finished_within_budget():
+            # Saying "not verifiable within budget" for every unanswered question is a finished run, not a
+            # give-up, also when a scaled run found it out on the way.
             status = "completed"
         else:
             status = "failed"

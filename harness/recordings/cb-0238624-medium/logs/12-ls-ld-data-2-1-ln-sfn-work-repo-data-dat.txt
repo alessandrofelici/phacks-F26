@@ -1,0 +1,6 @@
+$ ls -ld /data 2>&1; ln -sfn /work/repo/data /data && mkdir -p /results && ls /data/ensemble; cd /work/repo/code && (timeout 600 /tmp/venv38/bin/python -c "import tensorflow as tf, keras, sklearn, numpy; print(tf.__version__, keras.__version__, sklearn.__version__, numpy.__version__)" > /tmp/imp.log 2>&1 &); sleep 60; cat /tmp/imp.log | tail -2
+ls: cannot access '/data': No such file or directory
+1.h5
+2.h5
+3.h5
+

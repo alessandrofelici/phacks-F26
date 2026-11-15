@@ -12,6 +12,10 @@ Open `index.html` in a browser for the full report: metrics, the 7 figures, a pe
 - 9 cycle 2 papers were not run: the OpenRouter credit ran out.
 - Runs that ended at the 30-minute limit used 61% of all tokens.
 
+## Update, 15 November: plan-first runs
+
+After the planning step was added (commit `8b6a88a`), 19 more runs covered 13 of these papers, including the 9 cut off by credit. **17 of 20 papers have now reproduced in at least one run** (14 above), and none of those runs hit the 30-minute limit. The papers too slow for a CPU now end as "verifiable within budget" or "not verifiable within budget" instead of timing out. Details, figures and data: `research/eval-2026-11-15-plan-first/`.
+
 ## Files
 
 | Path | What it is |
@@ -20,6 +24,7 @@ Open `index.html` in a browser for the full report: metrics, the 7 figures, a pe
 | `images/` | 7 figures, each as `-light.png` and `-dark.png` |
 | `data/runs.json` | One row per run: outcome, model, tools, approvals, obstacles |
 | `data/questions.json` | One row per scored question: answered, correct, confidence |
+| `data/runs_ran.json` | The 36 scored runs with the root cause assigned to each failure |
 | `data/metrics.json` | Everything the report and the figures are drawn from |
 | `scripts/` | `build_dataset.py` → `metrics.py` → `render.py` (matplotlib) |
 

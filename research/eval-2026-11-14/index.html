@@ -120,6 +120,7 @@ code { font-family: var(--font-mono); font-size: 0.88em; background: var(--panel
 <section aria-label="Bottom line">
   <div class="bottomline">
     <p><strong>Bottom line.</strong> On 20 real CORE-Bench papers (medium level, Haiku 5.5, 30 minutes each), Repro Bot reproduced 14 in at least one run, at a median of 5.7 minutes and about 4.5 cents per reproduced paper. In 54 recorded answers it never reported a wrong number: the only 2 misses were the text "no answer" typed into the answer field. Apart from one harness crash, every failure traced to the environment (mostly R packages on the first sandbox image) or to compute (training that needs more than 30 CPU minutes, or a GPU). Fixing the environment between cycles doubled the reproduction rate on the same 11 papers, from 4 to 8.</p>
+    <p><strong>Update, 15 November.</strong> With the planning step added (commit 8b6a88a), 19 more runs covered 13 of these papers, including the 9 cut off by credit. 17 of 20 papers have now reproduced in at least one run (14 below), and none of those runs hit the 30-minute limit. Figures and data are in <code>research/eval-2026-11-15-plan-first/</code> in the repository.</p>
     <p>The two weak spots for the pitch: Haiku never used the subagents unless forced, and 61% of tokens went to runs that ended at the time limit.</p>
   </div>
 </section>

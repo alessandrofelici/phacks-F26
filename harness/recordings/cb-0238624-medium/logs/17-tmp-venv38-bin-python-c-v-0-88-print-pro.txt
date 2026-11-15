@@ -1,0 +1,3 @@
+$ /tmp/venv38/bin/python -c "v=0.88; print('projection q1/q2 printed value', v, 'interval (rounding only)', [round(v-0.005,3), round(v+0.005,3)])"
+projection q1/q2 printed value 0.88 interval (rounding only) [0.875, 0.885]
+

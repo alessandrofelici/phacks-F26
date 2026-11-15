@@ -1,0 +1,8 @@
+$ pwd; ls; cd /tmp && (nohup sh -c 'uv venv -p 3.8 /tmp/venv38 && VIRTUAL_ENV=/tmp/venv38 uv pip install tensorflow-cpu==2.4.1 keras==2.4.3 h5py==2.10.0 matplotlib==3.3.4 "numpy<1.20" "scikit-learn==0.24.2" "pandas<2" protobuf==3.20.3' > /tmp/install.log 2>&1 &) ; sleep 5; tail -3 /tmp/install.log
+/work
+logs
+repo
+Using CPython 3.8.20
+Creating virtual environment at: venv38
+Using Python 3.8.20 environment at: venv38
+

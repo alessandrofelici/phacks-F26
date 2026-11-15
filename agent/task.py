@@ -461,6 +461,17 @@ class Findings:
     def missing_questions(self) -> list[dict[str, Any]]:
         return [q for q in self.task.questions if q["id"] not in self.answers]
 
+    def finished_within_budget(self) -> bool:
+        """A planned run that says, for every unanswered question, that it can't be shown within the budget.
+
+        That is an honest finish (status ``completed``), whether the plan said so from the start or a
+        scaled run found out on the way. A no-answer for any other reason is still a give-up.
+        """
+        return self.plan is not None and all(
+            (self.no_answers.get(q["id"]) or {}).get("category") == "not_verifiable_within_budget"
+            for q in self.missing_questions()
+        )
+
     def report(
         self,
         *,

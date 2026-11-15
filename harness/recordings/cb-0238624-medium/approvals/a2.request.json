@@ -1,0 +1,16 @@
+{
+  "scale_down": [
+    {
+      "setting": "epochs",
+      "original": 150,
+      "scaled": 8,
+      "kind": "convergence",
+      "where": "code/ensemble.py fit_stacked_model, model.fit(epochs=...). Apply in a scratch copy outside the repo: mkdir -p /tmp/scaled && sed 's/epochs=150/epochs=8/' /work/repo/code/ensemble.py > /tmp/scaled/ensemble.py, then run it with cwd /work/repo/code. Keras prints per-epoch loss and val_loss (the learning curve); the head is undertrained, so q1/q2 will differ from the 150-epoch values."
+    }
+  ],
+  "id": "a2",
+  "kind": "long_run",
+  "summary": "Run mkdir -p /tmp/scaled /results && sed 's/epochs=150/epochs=8/' /work/repo/code/ensemble.py > /tmp/scaled/ensemble.py && ln -sfn /work/repo/data /data && cd /work/repo/code && /tmp/venv38/bin/python -u /tmp/scaled/ensemble.py (est. 6 min): Scaled run (8 epochs instead of 150, the full run projects to ~80 min vs 30 min limit) to get a classification report with macro avg precision and recall (q1, q2). · scaled down per the plan: epochs 150 → 8 (convergence)",
+  "command": "mkdir -p /tmp/scaled /results && sed 's/epochs=150/epochs=8/' /work/repo/code/ensemble.py > /tmp/scaled/ensemble.py && ln -sfn /work/repo/data /data && cd /work/repo/code && /tmp/venv38/bin/python -u /tmp/scaled/ensemble.py",
+  "diff": null
+}

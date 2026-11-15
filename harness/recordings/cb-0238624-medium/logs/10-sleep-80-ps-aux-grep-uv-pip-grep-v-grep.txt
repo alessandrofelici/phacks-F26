@@ -1,0 +1,5 @@
+$ sleep 80; ps aux | grep "uv pip" | grep -v grep | wc -l; tail -2 /tmp/install.log | cut -c1-200
+0
+ + wrapt==1.12.1
+ + zipp==3.20.2
+

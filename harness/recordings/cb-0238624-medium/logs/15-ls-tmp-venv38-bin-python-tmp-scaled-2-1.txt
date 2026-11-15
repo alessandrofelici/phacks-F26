@@ -1,0 +1,12 @@
+$ ls /tmp/venv38/bin/python /tmp/scaled 2>&1; ls /work/repo; ls /memories/ 2>&1
+ls: cannot access '/tmp/scaled': No such file or directory
+/tmp/venv38/bin/python
+REPRODUCING.md
+code
+data
+environment
+metadata
+results
+ls: cannot access '/memories/': No such file or directory
+
+Exit code: 2

@@ -1,0 +1,5 @@
+$ ps aux | grep "uv pip" | grep -v grep | wc -l; tail -2 /tmp/install.log
+2
+         If the cache and target directories are on different filesystems, hardlinking may not be supported.
+         If this is intentional, set `export UV_LINK_MODE=copy` or use `--link-mode=copy` to suppress this warning.
+

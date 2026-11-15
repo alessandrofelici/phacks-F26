@@ -1,0 +1,491 @@
+{
+ "runs_after": 19,
+ "papers_after": 13,
+ "outcomes_after": {
+  "verifiable": 4,
+  "reproduced": 12,
+  "not_verifiable": 3
+ },
+ "scoper_first": 19,
+ "plan_recorded": 19,
+ "plan_before_experiment": 19,
+ "plan_paths": {
+  "scaled": 6,
+  "full": 12,
+  "not_verifiable": 1
+ },
+ "probes_runs": 14,
+ "refused_before_plan_runs": 0,
+ "plan_minute_median": 8.6,
+ "timeouts_after": 0,
+ "timeouts_before_same_papers": 5,
+ "runs_before_same_papers": 22,
+ "per_paper": {
+  "0238624": {
+   "group": "compute wall",
+   "before": [
+    "timed out",
+    "gave up"
+   ],
+   "after": [
+    "verifiable",
+    "not_verifiable"
+   ],
+   "plans": [
+    "scaled",
+    "scaled"
+   ],
+   "projected_minutes": [
+    80.0,
+    57.4
+   ],
+   "scale_down": [
+    [
+     {
+      "setting": "epochs",
+      "original": 150,
+      "scaled": 8,
+      "kind": "convergence",
+      "where": "code/ensemble.py fit_stacked_model, model.fit(epochs=...). Apply in a scratch copy outside the repo: mkdir -p /tmp/scaled && sed 's/epochs=150/epochs=8/' /work/repo/code/ensemble.py > /tmp/scaled/ensemble.py, then run it with cwd /work/repo/code. Keras prints per-epoch loss and val_loss (the learning curve); the head is undertrained, so q1/q2 will differ from the 150-epoch values."
+     }
+    ],
+    [
+     {
+      "setting": "epochs",
+      "original": 150,
+      "scaled": 30,
+      "kind": "convergence",
+      "where": "/work/scratch/code/ensemble.py line 52 (scratch copy only; repo untouched). Apply with: sed -i 's/epochs=150, batch_size=10/epochs=30, batch_size=10/' scratch/code/ensemble.py"
+     }
+    ]
+   ],
+   "minutes_before": 20.8,
+   "minutes_after": 19.9,
+   "tokens_before": 305883.5,
+   "tokens_after": 551046.5
+  },
+  "0940461": {
+   "group": "reproduced before",
+   "before": [
+    "reproduced",
+    "reproduced",
+    "reproduced"
+   ],
+   "after": [
+    "reproduced",
+    "reproduced"
+   ],
+   "plans": [
+    "full",
+    "full"
+   ],
+   "projected_minutes": [
+    2.0,
+    0.5
+   ],
+   "scale_down": [
+    null,
+    null
+   ],
+   "minutes_before": 2.8,
+   "minutes_after": 10.5,
+   "tokens_before": 327796,
+   "tokens_after": 548148.5
+  },
+  "1108125": {
+   "group": "reproduced before",
+   "before": [
+    "reproduced",
+    "reproduced"
+   ],
+   "after": [
+    "reproduced",
+    "reproduced"
+   ],
+   "plans": [
+    "full",
+    "full"
+   ],
+   "projected_minutes": [
+    0.5,
+    1.0
+   ],
+   "scale_down": [
+    null,
+    null
+   ],
+   "minutes_before": 15.9,
+   "minutes_after": 7.2,
+   "tokens_before": 426366.0,
+   "tokens_after": 610929.0
+  },
+  "3137115": {
+   "group": "cut off by credit",
+   "before": [
+    "timed out"
+   ],
+   "after": [
+    "reproduced"
+   ],
+   "plans": [
+    "full"
+   ],
+   "projected_minutes": [
+    1.0
+   ],
+   "scale_down": [
+    null
+   ],
+   "minutes_before": 30.6,
+   "minutes_after": 11.9,
+   "tokens_before": 1181844,
+   "tokens_after": 1382089
+  },
+  "3497606": {
+   "group": "cut off by credit",
+   "before": [
+    "reproduced"
+   ],
+   "after": [
+    "verifiable"
+   ],
+   "plans": [
+    "scaled"
+   ],
+   "projected_minutes": [
+    12.5
+   ],
+   "scale_down": [
+    [
+     {
+      "setting": "NITER",
+      "original": 200,
+      "scaled": 150,
+      "kind": "convergence",
+      "where": "code/Super-Iterative.py line ~557 (NITER= 200); applied in a scratch copy via sed 's/^NITER= 200/NITER= 150/'"
+     }
+    ]
+   ],
+   "minutes_before": 24.7,
+   "minutes_after": 19.7,
+   "tokens_before": 338827,
+   "tokens_after": 878161
+  },
+  "3894632": {
+   "group": "cut off by credit",
+   "before": [
+    "timed out"
+   ],
+   "after": [
+    "reproduced"
+   ],
+   "plans": [
+    "full"
+   ],
+   "projected_minutes": [
+    2.0
+   ],
+   "scale_down": [
+    null
+   ],
+   "minutes_before": 30.2,
+   "minutes_after": 19.3,
+   "tokens_before": 689160,
+   "tokens_after": 764071
+  },
+  "5286757": {
+   "group": "cut off by credit",
+   "before": [
+    "reproduced"
+   ],
+   "after": [
+    "reproduced"
+   ],
+   "plans": [
+    "full"
+   ],
+   "projected_minutes": [
+    6.0
+   ],
+   "scale_down": [
+    null
+   ],
+   "minutes_before": 23.9,
+   "minutes_after": 20.5,
+   "tokens_before": 333507,
+   "tokens_after": 1209504
+  },
+  "5496369": {
+   "group": "compute wall",
+   "before": [
+    "partly",
+    "timed out"
+   ],
+   "after": [
+    "verifiable",
+    "verifiable"
+   ],
+   "plans": [
+    "scaled",
+    "scaled"
+   ],
+   "projected_minutes": [
+    70.0,
+    80.0
+   ],
+   "scale_down": [
+    [
+     {
+      "setting": "diagnosis feature-selection rounds: range(0,10000) -> range(0,500) (cell 4)",
+      "original": "10000 rounds",
+      "scaled": "500 rounds",
+      "kind": "precision",
+      "where": "code/GC-diagnosis-model/run.ipynb cell 4; scratch copy /work/scratch/diag_scaled.py (sed), repo untouched"
+     },
+     {
+      "setting": "permutation importance shuffles n_iter (cells 6 and 12)",
+      "original": "15",
+      "scaled": "2",
+      "kind": "precision",
+      "where": "code/GC-prognosis-model/run.ipynb cells 6 and 12; scratch copy /work/scratch/prog_scaled.py"
+     },
+     {
+      "setting": "RSF trees in cell-8 feature-count loop only (not on figure path)",
+      "original": "1000",
+      "scaled": "50",
+      "kind": "precision",
+      "where": "code/GC-prognosis-model/run.ipynb cell 8; scratch copy /work/scratch/prog_scaled.py"
+     }
+    ],
+    [
+     {
+      "setting": "GC-diagnosis-model/run.ipynb cell 4: range(0,10000) Lasso selection rounds",
+      "original": "10000",
+      "scaled": "3000",
+      "kind": "precision",
+      "where": "work copy of the diagnosis notebook/extracted script; repo untouched. Top-10 feature Counts are an average over rounds, so fewer rounds add selection noise and may change the features behind the figure."
+     },
+     {
+      "setting": "GC-prognosis-model/run.ipynb cell 8: loop over range(1,148) RandomSurvivalForest refits",
+      "original": "all 147 refits",
+      "scaled": "skipped",
+      "kind": "data",
+      "where": "extracted work copy; cell 8 does not feed the AUROC figure"
+     },
+     {
+      "setting": "PermutationImportance n_iter in GC-prognosis-model/run.ipynb cell 6",
+      "original": "15",
+      "scaled": "2",
+      "kind": "precision",
+      "where": "extracted work copy; changes the feature ranking and so the top-28 features in the figure, the answer may shift vs the full run"
+     },
+     {
+      "setting": "PermutationImportance n_iter in GC-prognosis-model/run.ipynb cell 12",
+      "original": "15",
+      "scaled": "2",
+      "kind": "precision",
+      "where": "extracted work copy; feature-importance xlsx only"
+     }
+    ]
+   ],
+   "minutes_before": 30.1,
+   "minutes_after": 24.5,
+   "tokens_before": 1659643.5,
+   "tokens_after": 1613867.5
+  },
+  "5975162": {
+   "group": "cut off by credit",
+   "before": [
+    "reproduced"
+   ],
+   "after": [
+    "reproduced"
+   ],
+   "plans": [
+    "full"
+   ],
+   "projected_minutes": [
+    1.0
+   ],
+   "scale_down": [
+    null
+   ],
+   "minutes_before": 2.9,
+   "minutes_after": 4.0,
+   "tokens_before": 258424,
+   "tokens_after": 380690
+  },
+  "6133093": {
+   "group": "cut off by credit",
+   "before": [
+    "timed out"
+   ],
+   "after": [
+    "reproduced"
+   ],
+   "plans": [
+    "full"
+   ],
+   "projected_minutes": [
+    1.0
+   ],
+   "scale_down": [
+    null
+   ],
+   "minutes_before": 30.2,
+   "minutes_after": 14.3,
+   "tokens_before": 399444,
+   "tokens_after": 764219
+  },
+  "6460826": {
+   "group": "reproduced before",
+   "before": [
+    "reproduced",
+    "reproduced",
+    "reproduced",
+    "reproduced"
+   ],
+   "after": [
+    "reproduced",
+    "reproduced"
+   ],
+   "plans": [
+    "full",
+    "full"
+   ],
+   "projected_minutes": [
+    1.0,
+    4.0
+   ],
+   "scale_down": [
+    null,
+    null
+   ],
+   "minutes_before": 0.9,
+   "minutes_after": 7.2,
+   "tokens_before": 221113.5,
+   "tokens_after": 416947.5
+  },
+  "6746514": {
+   "group": "cut off by credit",
+   "before": [
+    "reproduced"
+   ],
+   "after": [
+    "reproduced"
+   ],
+   "plans": [
+    "full"
+   ],
+   "projected_minutes": [
+    3.0
+   ],
+   "scale_down": [
+    null
+   ],
+   "minutes_before": 15.3,
+   "minutes_after": 7.8,
+   "tokens_before": 303628,
+   "tokens_after": 566530
+  },
+  "9370340": {
+   "group": "compute wall",
+   "before": [
+    "gave up",
+    "gave up"
+   ],
+   "after": [
+    "not_verifiable",
+    "not_verifiable"
+   ],
+   "plans": [
+    "not_verifiable",
+    "scaled"
+   ],
+   "projected_minutes": [
+    46.0,
+    67.0
+   ],
+   "scale_down": [
+    null,
+    [
+     {
+      "setting": "train_size (preprocess_data, train_size = 60000)",
+      "original": 60000,
+      "scaled": 6000,
+      "kind": "data",
+      "where": "/work/scaled/run_chl.py replaces the line with CHL_TRAIN_N (text substitution at run time; repo file untouched)"
+     },
+     {
+      "setting": "eval size (test_size in preprocess_data and check_accuracy, 10000)",
+      "original": 10000,
+      "scaled": 2000,
+      "kind": "data",
+      "where": "/work/scaled/run_chl.py replaces both lines with CHL_EVAL_N; np.load arrays are sliced to the first rows"
+     }
+    ]
+   ],
+   "minutes_before": 26.3,
+   "minutes_after": 27.9,
+   "tokens_before": 703277.5,
+   "tokens_after": 1127979.5
+  }
+ },
+ "group compute wall": {
+  "papers": 3,
+  "runs_after": 6,
+  "outcomes_after": {
+   "verifiable": 3,
+   "not_verifiable": 3
+  },
+  "papers_reproduced_after": 0,
+  "minutes_median_before": 29.6,
+  "minutes_median_after": 24.5,
+  "tokens_median_before": 703277.5,
+  "tokens_median_after": 1079374.5
+ },
+ "group reproduced before": {
+  "papers": 3,
+  "runs_after": 6,
+  "outcomes_after": {
+   "reproduced": 6
+  },
+  "papers_reproduced_after": 3,
+  "minutes_median_before": 2.6,
+  "minutes_median_after": 7.4,
+  "tokens_median_before": 317128,
+  "tokens_median_after": 561410.5
+ },
+ "group cut off by credit": {
+  "papers": 7,
+  "runs_after": 7,
+  "outcomes_after": {
+   "reproduced": 6,
+   "verifiable": 1
+  },
+  "papers_reproduced_after": 6,
+  "minutes_median_before": 24.7,
+  "minutes_median_after": 14.3,
+  "tokens_median_before": 338827,
+  "tokens_median_after": 764219
+ },
+ "papers_total": 20,
+ "papers_reproduced_any_run": 17,
+ "papers_reproduced_before": 14,
+ "papers_verifiable_only": 2,
+ "tokens_after_total": 15683101,
+ "tokens_median_after": 680113,
+ "minutes_median_after": 15.1,
+ "usd_spent": 1.69,
+ "usd_per_run": 0.089,
+ "usd_per_mtok": 0.108,
+ "answers_after": {
+  "total": 47,
+  "correct": 36,
+  "verifiable": 7,
+  "answered": 44,
+  "no_answer_categories": {
+   "not_verifiable_within_budget": 3
+  }
+ }
+}
