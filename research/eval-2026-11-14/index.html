@@ -1,0 +1,363 @@
+<title>Repro Bot Evaluation</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column (68ch) with figures allowed wider (1000px); a lab-report rhythm of
+   numbered findings, each with its figure, the numbers behind it, and what to do. */
+:root {
+  --bg: #fcfcfb;          /* same surface as the chart images, so they sit flush */
+  --panel: #f3f2ee;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --muted: #898781;
+  --rule: #e1e0d9;
+  --accent: #2a78d6;
+  --accent-wash: #eaf2fc;
+  --good: #0a7d0a;
+  --bad: #c03030;
+  --warn-ink: #8a5a00;
+  --font-display: "Space Grotesk", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-body: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1a1a19; --panel: #242423; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781; --rule: #2c2c2a;
+    --accent: #5598e7; --accent-wash: #1c2a3c; --good: #3cc23c; --bad: #ef6b6b; --warn-ink: #f0b44a;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1a1a19; --panel: #242423; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781; --rule: #2c2c2a;
+  --accent: #5598e7; --accent-wash: #1c2a3c; --good: #3cc23c; --bad: #ef6b6b; --warn-ink: #f0b44a;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+}
+.wrap { max-width: 1000px; margin: 0 auto; display: grid; gap: 56px; }
+.prose { max-width: 68ch; }
+h1, h2, h3 { font-family: var(--font-display); text-wrap: balance; line-height: 1.2; margin: 0; }
+h1 { font-size: clamp(30px, 5vw, 44px); font-weight: 700; letter-spacing: -0.01em; }
+h2 { font-size: 26px; font-weight: 600; }
+h3 { font-size: 18px; font-weight: 600; }
+p { margin: 0; }
+section { display: grid; gap: 20px; scroll-margin-top: 16px; }
+.eyebrow { font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.lede { font-size: 18px; color: var(--ink-2); max-width: 68ch; }
+.meta { font-family: var(--font-mono); font-size: 13px; color: var(--muted); }
+a { color: var(--accent); }
+a:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 2px; }
+nav.toc { display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 14px; padding-top: 4px; }
+nav.toc a { text-decoration: none; color: var(--ink-2); border-bottom: 1px solid var(--rule); }
+nav.toc a:hover { color: var(--accent); border-color: var(--accent); }
+.bottomline { background: var(--accent-wash); border-radius: 10px; padding: 20px 22px; display: grid; gap: 10px; max-width: 78ch; }
+.bottomline strong { font-family: var(--font-display); font-weight: 600; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(175px, 1fr)); gap: 12px; }
+.tile { background: var(--panel); border-radius: 10px; padding: 16px; display: grid; gap: 4px; align-content: start; min-width: 0; }
+.tile .label { font-size: 13px; color: var(--ink-2); }
+.tile .value { font-family: var(--font-display); font-size: 30px; font-weight: 600; font-variant-numeric: tabular-nums; line-height: 1.15; }
+.tile .note { font-size: 12.5px; color: var(--muted); }
+figure.fig { margin: 0; display: grid; gap: 10px; }
+figure.fig img { width: 100%; height: auto; display: block; border-radius: 6px; }
+figure.fig img.dark { display: none; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) figure.fig img.light { display: none; }
+  :root:not([data-theme="light"]) figure.fig img.dark { display: block; }
+}
+:root[data-theme="dark"] figure.fig img.light { display: none; }
+:root[data-theme="dark"] figure.fig img.dark { display: block; }
+figcaption { font-size: 14px; color: var(--ink-2); max-width: 78ch; }
+figcaption b { color: var(--ink); font-weight: 600; }
+.file { font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); }
+.tablewrap { overflow-x: auto; border: 1px solid var(--rule); border-radius: 8px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+th { font-family: var(--font-body); font-weight: 600; font-size: 12.5px; color: var(--ink-2); background: var(--panel); white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+td.mono { font-family: var(--font-mono); font-size: 12.5px; white-space: nowrap; }
+.pill { display: inline-block; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 999px; white-space: nowrap; border: 1px solid currentColor; }
+.pill.good { color: var(--good); }
+.pill.bad { color: var(--bad); }
+.pill.part { color: var(--warn-ink); }
+.two { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 24px; }
+.two > div { min-width: 0; display: grid; gap: 10px; align-content: start; }
+ul.points, ol.points { margin: 0; padding-left: 20px; display: grid; gap: 10px; }
+ul.points li, ol.points li { padding-left: 4px; }
+ul.points li b, ol.points li b { font-weight: 600; }
+.mark-good, .mark-bad { font-weight: 700; margin-right: 4px; }
+.mark-good { color: var(--good); }
+.mark-bad { color: var(--bad); }
+.caveat { border-left: 3px solid var(--rule); padding-left: 14px; color: var(--ink-2); font-size: 14.5px; max-width: 78ch; }
+code { font-family: var(--font-mono); font-size: 0.88em; background: var(--panel); padding: 1px 5px; border-radius: 4px; }
+@media (max-width: 520px) {
+  body { font-size: 15px; }
+  .tile .value { font-size: 26px; }
+  th, td { padding: 8px 9px; }
+}
+</style>
+
+<div class="wrap">
+
+<header style="display:grid; gap:14px">
+  <div class="eyebrow">HackPrinceton F26 · Repro Bot · evaluation of the run data from 14 Nov 2026</div>
+  <h1>Repro Bot evaluation</h1>
+  <p class="lede">What the first real runs on CORE-Bench show: how often a paper reproduced, what the agent got right, where it failed, what it cost, and which fixes give the most for the least.</p>
+  <p class="meta">Source: every run directory and batch file in CT 120 (<code>runs/</code>, <code>runs/.batches/</code>), scored with <code>harness/score.py</code>. Commit 9d1a400.</p>
+  <nav class="toc" aria-label="Sections">
+    <a href="#results">Results</a><a href="#failures">Failures</a><a href="#answers">Answer quality</a>
+    <a href="#agent">The deep agent</a><a href="#categories">By category</a><a href="#papers">Per paper</a>
+    <a href="#fixes">Fixes</a><a href="#present">How to present it</a><a href="#method">Method</a>
+  </nav>
+</header>
+
+<section aria-label="Bottom line">
+  <div class="bottomline">
+    <p><strong>Bottom line.</strong> On 20 real CORE-Bench papers (medium level, Haiku 5.5, 30 minutes each), Repro Bot reproduced 14 in at least one run, at a median of 5.7 minutes and about 4.5 cents per reproduced paper. In 54 recorded answers it never reported a wrong number: the only 2 misses were the text "no answer" typed into the answer field. Apart from one harness crash, every failure traced to the environment (mostly R packages on the first sandbox image) or to compute (training that needs more than 30 CPU minutes, or a GPU). Fixing the environment between cycles doubled the reproduction rate on the same 11 papers, from 4 to 8.</p>
+    <p>The two weak spots for the pitch: Haiku never used the subagents unless forced, and 61% of tokens went to runs that ended at the time limit.</p>
+  </div>
+</section>
+
+<section aria-label="Headline numbers">
+  <div class="tiles">
+    <div class="tile"><span class="label">Papers reproduced, any run</span><span class="value">14 / 20</span><span class="note">70% · 95% CI 48–85%</span></div>
+    <div class="tile"><span class="label">Same 11 papers, cycle 1 → 2</span><span class="value">4 → 8</span><span class="note">36% → 73% after the environment fixes</span></div>
+    <div class="tile"><span class="label">Recorded answers that were right</span><span class="value">52 / 54</span><span class="note">96% · the 2 misses were "no answer"</span></div>
+    <div class="tile"><span class="label">Median reproduced paper</span><span class="value">5.7 min</span><span class="note">328k tokens · about 4.5 cents</span></div>
+    <div class="tile"><span class="label">Tokens spent on failed runs</span><span class="value">61%</span><span class="note">for 1 correct answer out of 26</span></div>
+  </div>
+</section>
+
+<section aria-label="What the data covers">
+  <h2>What the data covers</h2>
+  <div class="prose" style="display:grid; gap:12px">
+    <p>71 run directories exist. This evaluation scores the 45 real-model runs on CORE-Bench papers: 36 ran to the end and 9 were cut off at 18:13 UTC when the OpenRouter account ran out of credit. Those 9 are reported as "not run", never as agent failures. The rest are 8 runs of the toy task (all reproduced, 6 on Haiku and 2 on Opus), 2 arXiv-mode runs, and 16 offline replays used to test the harness.</p>
+    <p>The 20 papers come from CORE-Bench's public train split: 12 in Python and 8 in R, spread over computer science (8), social sciences (7) and medical sciences (5). Eight papers have questions that must be read off a figure. All CORE-Bench runs used Haiku 5.5 at the medium level, where the Dockerfile and REPRODUCING.md are kept but the authors' results are removed.</p>
+  </div>
+  <p class="caveat">Small sample. Most papers ran once or twice, so a single flip moves a rate by 5–10 points. The confidence intervals are Wilson 95% intervals. Read the comparisons as direction, not precision.</p>
+</section>
+
+<section id="results">
+  <div class="eyebrow">Finding 1</div>
+  <h2>Reproduction results</h2>
+  <figure class="fig">
+    <img class="light" src="images/01-outcomes-by-cycle-light.png" alt="Segmented bars of paper outcomes. Cycle 1: 9 reproduced, 1 partly, 7 timed out, 1 gave up, 1 wrong answers, 1 harness crash. Cycle 2: 8 reproduced, 1 timed out, 2 gave up, 9 not run because credit ran out. Best run per paper: 14 reproduced, 1 partly, 3 timed out, 2 gave up.">
+    <img class="dark" src="images/01-outcomes-by-cycle-dark.png" alt="" aria-hidden="true">
+    <figcaption><b>Figure 1.</b> Cycle 1 reproduced 9 of 20 papers on the first try. Cycle 2 reproduced 8 of the 11 that ran to the end. Taking the best run for each paper, 14 of 20 reproduced. <span class="file">images/01-outcomes-by-cycle-*.png</span></figcaption>
+  </figure>
+  <figure class="fig">
+    <img class="light" src="images/02-same-papers-cycle1-vs-cycle2-light.png" alt="Dumbbell chart. R papers went from 2 of 6 to 5 of 6. Python papers from 2 of 5 to 3 of 5. All 11 papers from 4 of 11 to 8 of 11.">
+    <img class="dark" src="images/02-same-papers-cycle1-vs-cycle2-dark.png" alt="" aria-hidden="true">
+    <figcaption><b>Figure 2.</b> On the 11 papers that ran to the end in both cycles, the rate doubled. Most of the gain is R: sandbox image :2 brought current R from CRAN with common packages preinstalled. <span class="file">images/02-same-papers-cycle1-vs-cycle2-*.png</span></figcaption>
+  </figure>
+  <h3>Success-rate metrics</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Metric</th><th class="num">Value</th><th class="num">95% CI</th><th>What it means</th></tr></thead>
+    <tbody>
+      <tr><td>Paper pass@any (best of 1–3 runs)</td><td class="num">14/20 · 70%</td><td class="num">48–85%</td><td>Reproduced in at least one real run</td></tr>
+      <tr><td>Paper pass@1, cycle 1</td><td class="num">9/20 · 45%</td><td class="num">26–66%</td><td>First attempt, sandbox image :1</td></tr>
+      <tr><td>Cycle 2, papers that ran to the end</td><td class="num">8/11 · 73%</td><td class="num">43–90%</td><td>9 more were cut off by credit</td></tr>
+      <tr><td>Run success rate</td><td class="num">21/36 · 58%</td><td class="num">42–73%</td><td>All real CORE-Bench runs that ran to the end</td></tr>
+      <tr><td>Answer accuracy</td><td class="num">52/77 · 68%</td><td class="num">56–77%</td><td>Every question, blanks counted as wrong</td></tr>
+      <tr><td>Answer coverage</td><td class="num">54/77 · 70%</td><td class="num"></td><td>Questions the agent gave a value for</td></tr>
+      <tr><td>Answer precision</td><td class="num">52/54 · 96%</td><td class="num">87–99%</td><td>Right when it answered; 0 wrong numbers</td></tr>
+      <tr><td>Partial credit in failed runs</td><td class="num">1/26 · 4%</td><td class="num"></td><td>Failed runs leave blanks (23 of 26) instead of guessing</td></tr>
+      <tr><td>Run-to-run consistency</td><td class="num">8/13</td><td class="num"></td><td>Papers with 2+ runs and the same outcome each time. Of the 5 flips, 3 are the cycle 2 fixes, 1 is the harness crash, 1 is flaky (cb-1906954)</td></tr>
+      <tr><td>Toy task</td><td class="num">8/8</td><td class="num"></td><td>6 Haiku and 2 Opus runs, about 94k tokens and 40 s each</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="failures">
+  <div class="eyebrow">Finding 2</div>
+  <h2>Where it failed</h2>
+  <figure class="fig">
+    <img class="light" src="images/03-failure-causes-light.png" alt="Root causes of 15 failed runs: R packages 8 (7 in cycle 1, 1 in cycle 2), training longer than 30 minutes on CPU 4, CUDA-only code 2, harness crash 1. Plus 9 runs not run because credit ran out.">
+    <img class="dark" src="images/03-failure-causes-dark.png" alt="" aria-hidden="true">
+    <figcaption><b>Figure 3.</b> Root cause of each failed run, read from its obstacles and last commands. R packages caused 8 of the 15, almost all on the first image. The compute wall (CPU training over 30 minutes, or code that only runs on a GPU) caused 6 and is not fixable inside the current limits. <span class="file">images/03-failure-causes-*.png</span></figcaption>
+  </figure>
+  <figure class="fig">
+    <img class="light" src="images/04-time-vs-tokens-light.png" alt="Scatter of wall time against tokens. Reproduced runs cluster under 7 minutes and under 0.7M tokens. Failed runs cluster at the 30-minute limit, up to 2.3M tokens.">
+    <img class="dark" src="images/04-time-vs-tokens-dark.png" alt="" aria-hidden="true">
+    <figcaption><b>Figure 4.</b> Failed runs sit on the 30-minute wall. They used 61% of all tokens and 65% of all run time, and produced 1 correct answer out of 26. Stopping a doomed run early is the biggest cost lever. <span class="file">images/04-time-vs-tokens-*.png</span></figcaption>
+  </figure>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Failure point</th><th class="num">Runs</th><th>Evidence</th><th>Status</th></tr></thead>
+    <tbody>
+      <tr><td>R packages missing or compiling for 20+ minutes</td><td class="num">8</td><td><code>Matrix</code> needs R ≥ 4.4; Ubuntu's R 4.3 compiled from source until the limit</td><td><span class="pill good">Mostly fixed</span> image :2; 3 of 4 re-runs passed</td></tr>
+      <tr><td>Training longer than 30 minutes on CPU</td><td class="num">4</td><td>TensorFlow ensemble, 150 epochs (about 50 min); a 1000-tree survival forest</td><td><span class="pill bad">Open</span> needs a longer limit</td></tr>
+      <tr><td>Code requires a GPU</td><td class="num">2</td><td><code>torch.cuda.FloatTensor</code>; about 9 min per epoch on CPU</td><td><span class="pill bad">Open</span> needs a GPU</td></tr>
+      <tr><td>Harness crash</td><td class="num">1</td><td><code>podman rm</code> timed out while an image build held the storage lock</td><td><span class="pill good">Fixed</span></td></tr>
+      <tr><td>OpenRouter credit ran out mid-cycle</td><td class="num">9</td><td>PaymentRequired from 18:13 UTC; the account had $15, other usage took most of it</td><td><span class="pill part">Needs credit</span> batch now stops on it</td></tr>
+      <tr><td>Approval flood while waiting</td><td class="num">1</td><td>23 approvals for <code>sleep</code> waits and 2.3M tokens in one run</td><td><span class="pill good">Fixed</span> cycle 2 max is 8</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="answers">
+  <div class="eyebrow">Finding 3</div>
+  <h2>Answer quality</h2>
+  <figure class="fig">
+    <img class="light" src="images/05-answer-quality-light.png" alt="77 questions: 52 correct, 23 left blank, 2 wrong. Correct by confidence: high 35 of 35, medium 9 of 9, low 8 of 10.">
+    <img class="dark" src="images/05-answer-quality-dark.png" alt="" aria-hidden="true">
+    <figcaption><b>Figure 5.</b> The agent either answered correctly or left the question blank. Its confidence was well calibrated: high-confidence answers were right 35 of 35 times, and both misses were marked low. <span class="file">images/05-answer-quality-*.png</span></figcaption>
+  </figure>
+  <div class="prose" style="display:grid; gap:12px">
+    <p>The two wrong answers came from one cycle 1 run (cb-1324693) that couldn't install its R packages. The agent called <code>record_answer</code> with the value "no answer" and quoted the line <code>installation of 7 packages failed:</code>. The evidence check accepted it, because it only checks that the quote appears somewhere in the run's output, not that the quote contains the value. 51 of the 54 quotes do contain their value; the third is a figure answer described in words.</p>
+    <p>Figure questions did as well as text questions: 14 of 21 (67%) against 38 of 56 (68%). Twelve answers cite a rendered figure as evidence, read through the <code>look_at_figure</code> tool.</p>
+  </div>
+</section>
+
+<section id="agent">
+  <div class="eyebrow">Finding 4</div>
+  <h2>The deep agent: what worked and what didn't</h2>
+  <figure class="fig">
+    <img class="light" src="images/06-agent-flow-failure-points-light.png" alt="Flow diagram from CORE-Bench task through workspace and Podman sandbox, memory and skills, main deep agent, subagents, approvals, the record_answer evidence check, and report scoring, with five failure points and three strengths marked.">
+    <img class="dark" src="images/06-agent-flow-failure-points-dark.png" alt="" aria-hidden="true">
+    <figcaption><b>Figure 6.</b> Where each part of the deep agent shows up in the run data, with failure points (F1–F5) and strengths (S1–S3). <span class="file">images/06-agent-flow-failure-points-*.png</span></figcaption>
+  </figure>
+  <div class="two">
+    <div>
+      <h3>Most effective</h3>
+      <ul class="points">
+        <li><span class="mark-good">✓</span><b>Evidence-gated answers.</b> 52 of 54 answers right and zero wrong numbers. When the run couldn't produce a value, the agent left it blank (23 times) instead of filling it in from the paper.</li>
+        <li><span class="mark-good">✓</span><b><code>execute</code> in a sandbox.</b> 487 shell commands, 12% with a non-zero exit, each one read and acted on. Obstacles were logged 33 times and 61% were resolved in the run.</li>
+        <li><span class="mark-good">✓</span><b>Sandbox image as the main lever.</b> Image :2 moved R papers from 2 of 6 to 5 of 6 on the same papers.</li>
+        <li><span class="mark-good">✓</span><b>Background runs with waits.</b> Two papers dropped from about 28 minutes to about 2.5 minutes between cycles (1108125: 1753 s → 159 s; 9168639: 1616 s → 131 s), with fewer than half the tokens.</li>
+        <li><span class="mark-good">✓</span><b>Skills and memory are used.</b> Skills were read in 25 of 36 runs. The memory file loads every run and was written in 17. A second toy run with the remembered fix used 15% fewer tokens and hit one fewer obstacle.</li>
+        <li><span class="mark-good">✓</span><b>Human-in-the-loop gating.</b> 188 approval requests were recorded, each with a summary, and auto-approved in batches. The offline replays and the test suite cover approve, reject and timeout.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Failure points</h3>
+      <ul class="points">
+        <li><span class="mark-bad">!</span><b>Subagents went unused.</b> Haiku called a subagent in 0 of 34 normal runs and did every step itself. The strict-delegation trial delegated in 2 of 2 runs, reproducing one of the two papers.</li>
+        <li><span class="mark-bad">!</span><b>Planning is patchy.</b> A <code>write_todos</code> plan exists in only 12 of 36 runs. Runs with a plan didn't do better (6 of 12 against 15 of 24 without), so this matters for the story more than the score.</li>
+        <li><span class="mark-bad">!</span><b>No early stop.</b> 11 of 15 failures ran to the 30-minute limit. The one honest early give-up (cb-0238624 in cycle 2, at 11 minutes) shows the agent can estimate when it is told to.</li>
+        <li><span class="mark-bad">!</span><b>The evidence check is loose.</b> A quote doesn't have to contain the value, and any command's output counts, including <code>cat paper.md</code> or <code>echo</code>.</li>
+        <li><span class="mark-bad">!</span><b><code>run_experiment</code> fails often.</b> 16 of 38 experiment commands exited non-zero, so the first attempt at running a paper often needed a second.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="categories">
+  <div class="eyebrow">Finding 5</div>
+  <h2>Success by category</h2>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Category</th><th class="num">Papers reproduced</th><th class="num">Runs reproduced</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td>Python</td><td class="num">8/12</td><td class="num">13/21 · 62%</td><td>Open papers: 3 compute-bound, 1 blocked on R dependencies</td></tr>
+      <tr><td>R</td><td class="num">6/8</td><td class="num">8/15 · 53%</td><td>Cycle 1: 2/8 runs. Cycle 2: 5/6 runs</td></tr>
+      <tr><td>Computer science</td><td class="num">6/8</td><td class="num">11/16 · 69%</td><td>Both open papers train models</td></tr>
+      <tr><td>Social sciences</td><td class="num">5/7</td><td class="num">6/13 · 46%</td><td>All R; open papers never re-ran on image :2</td></tr>
+      <tr><td>Medical sciences</td><td class="num">3/5</td><td class="num">4/7 · 57%</td><td>The open ones are survival analyses</td></tr>
+      <tr><td>Figure questions</td><td class="num"></td><td class="num">14/21 answers</td><td>Same rate as text questions (38/56)</td></tr>
+    </tbody>
+  </table></div>
+  <h3>Efficiency and behaviour</h3>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Metric</th><th class="num">Value</th><th>Note</th></tr></thead>
+    <tbody>
+      <tr><td>Median wall time, reproduced / failed</td><td class="num">5.7 / 30.1 min</td><td>11 of 15 failures ended at the limit</td></tr>
+      <tr><td>Median tokens, reproduced / failed</td><td class="num">328k / 809k</td><td>Includes cached prompt tokens</td></tr>
+      <tr><td>Tokens per correct answer</td><td class="num">368k</td><td>All 36 completed CORE-Bench runs</td></tr>
+      <tr><td>Estimated cost per reproduced paper</td><td class="num">about 4.5¢</td><td>$3.18 key spend over 23.0M tokens, about $0.14 per million</td></tr>
+      <tr><td>Cost of a 20-paper Haiku cycle</td><td class="num">about $1.70</td><td>Cycle 1 used 12.0M tokens</td></tr>
+      <tr><td>Tool calls that failed</td><td class="num">86/776 · 11%</td><td><code>execute</code> 12%, <code>run_experiment</code> 42%</td></tr>
+      <tr><td>Approvals per run, median (max)</td><td class="num">2.5 (23)</td><td>Cycle 1 max 23, cycle 2 max 8</td></tr>
+      <tr><td>Runs that used subagents</td><td class="num">0/34</td><td>2/2 with <code>REPRO_DELEGATION=strict</code></td></tr>
+      <tr><td>Runs that kept a plan</td><td class="num">12/36</td><td>Plan-first prompt written, not yet tested</td></tr>
+      <tr><td>Unapproved changes to the paper's files</td><td class="num">2 runs</td><td>Both look like files the code rewrites itself (.RData outputs, a .pyc)</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="papers">
+  <div class="eyebrow">Finding 6</div>
+  <h2>Per-paper results</h2>
+  <p class="prose" style="color:var(--ink-2)">Best result across all real runs that ran to the end. Expected values are left out on purpose, so whoever tunes the agent next can read this without seeing the answer key.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Capsule</th><th>Paper</th><th>Lang.</th><th>Field</th><th class="num">Qs (fig)</th><th class="num">Runs</th><th>Best result</th><th>Cause, if not reproduced</th></tr></thead>
+    <tbody>
+      <tr><td class="mono">6460826</td><td>CULP: classification using link prediction</td><td>Py</td><td>CS</td><td class="num">6 (0)</td><td class="num">2</td><td><span class="pill good">6/6</span></td><td></td></tr>
+      <tr><td class="mono">1108125</td><td>Payments for ecosystem services, Vietnam</td><td>R</td><td>Social</td><td class="num">4 (1)</td><td class="num">2</td><td><span class="pill good">4/4</span></td><td></td></tr>
+      <tr><td class="mono">6746514</td><td>Diagnosis of epilepsy from EEG</td><td>Py</td><td>Medical</td><td class="num">3 (3)</td><td class="num">1</td><td><span class="pill good">3/3</span></td><td></td></tr>
+      <tr><td class="mono">2916503</td><td>Data analysis tools for open science</td><td>R</td><td>Social</td><td class="num">3 (0)</td><td class="num">2</td><td><span class="pill good">3/3</span></td><td>Cycle 1: R packages</td></tr>
+      <tr><td class="mono">0940461</td><td>WABL defuzzifier in fuzzy gradient boosting</td><td>Py</td><td>CS</td><td class="num">2 (0)</td><td class="num">3</td><td><span class="pill good">2/2</span></td><td></td></tr>
+      <tr><td class="mono">1324693</td><td>Self-esteem and dependency regulation (replication)</td><td>R</td><td>Social</td><td class="num">2 (2)</td><td class="num">2</td><td><span class="pill good">2/2</span></td><td>Cycle 1: R packages, "no answer" recorded</td></tr>
+      <tr><td class="mono">1906954</td><td>Reducing meat consumption: what works?</td><td>R</td><td>Social</td><td class="num">2 (0)</td><td class="num">3</td><td><span class="pill good">2/2</span></td><td>Flaky: dev run passed, both cycles timed out installing R packages</td></tr>
+      <tr><td class="mono">4098236</td><td>Multi-label classification via ART clustering</td><td>Py</td><td>CS</td><td class="num">2 (0)</td><td class="num">3</td><td><span class="pill good">2/2</span></td><td>Cycle 1: harness crash</td></tr>
+      <tr><td class="mono">5975162</td><td>ExPSO: exponential particle swarm optimization</td><td>Py</td><td>CS</td><td class="num">2 (0)</td><td class="num">1</td><td><span class="pill good">2/2</span></td><td></td></tr>
+      <tr><td class="mono">9168639</td><td>Ethics committees and a priori sample sizes</td><td>R</td><td>Medical</td><td class="num">2 (2)</td><td class="num">2</td><td><span class="pill good">2/2</span></td><td></td></tr>
+      <tr><td class="mono">2011424</td><td>Fuzzy-temporal gradual patterns (BorderT-GRAANK)</td><td>Py</td><td>CS</td><td class="num">1 (0)</td><td class="num">2</td><td><span class="pill good">1/1</span></td><td></td></tr>
+      <tr><td class="mono">2061060</td><td>Delphi study on psychology methods training</td><td>R</td><td>Social</td><td class="num">1 (1)</td><td class="num">2</td><td><span class="pill good">1/1</span></td><td>Cycle 1: R packages</td></tr>
+      <tr><td class="mono">3497606</td><td>Super-iterative image reconstruction for tomography</td><td>Py</td><td>Medical</td><td class="num">1 (1)</td><td class="num">1</td><td><span class="pill good">1/1</span></td><td></td></tr>
+      <tr><td class="mono">5286757</td><td>Label-aware graph representation, trajectory prediction</td><td>Py</td><td>CS</td><td class="num">1 (0)</td><td class="num">1</td><td><span class="pill good">1/1</span></td><td></td></tr>
+      <tr><td class="mono">5496369</td><td>Metabolomic predictor for gastric cancer</td><td>Py</td><td>Medical</td><td class="num">2 (2)</td><td class="num">2</td><td><span class="pill part">1/2</span></td><td>Survival forest (1000 trees) over 30 min on CPU</td></tr>
+      <tr><td class="mono">0238624</td><td>University admission prediction, stacked ensemble</td><td>Py</td><td>CS</td><td class="num">2 (0)</td><td class="num">2</td><td><span class="pill bad">0/2</span></td><td>TensorFlow, 150 epochs: about 50 min on CPU</td></tr>
+      <tr><td class="mono">9370340</td><td>Neurons learn by predicting future activity</td><td>Py</td><td>CS</td><td class="num">1 (0)</td><td class="num">2</td><td><span class="pill bad">0/1</span></td><td>CUDA-only code</td></tr>
+      <tr><td class="mono">3137115</td><td>Analytic reproducibility of open-data-badge articles</td><td>R</td><td>Social</td><td class="num">4 (1)</td><td class="num">1</td><td><span class="pill bad">0/4</span></td><td>Cycle 1: R packages. Cycle 2: cut off by credit</td></tr>
+      <tr><td class="mono">3894632</td><td>DAPPER leiomyosarcoma survival analysis</td><td>Py</td><td>Medical</td><td class="num">1 (0)</td><td class="num">1</td><td><span class="pill bad">0/1</span></td><td>Cycle 1: R dependencies. Cycle 2: cut off by credit</td></tr>
+      <tr><td class="mono">6133093</td><td>Subtle media bias and perceptions of terrorism</td><td>R</td><td>Social</td><td class="num">1 (0)</td><td class="num">1</td><td><span class="pill bad">0/1</span></td><td>Cycle 1: R packages. Cycle 2: cut off by credit</td></tr>
+    </tbody>
+  </table></div>
+  <p class="prose" style="color:var(--ink-2); font-size:14.5px">Three of the six unreproduced papers (3137115, 3894632, 6133093) never got a complete run on image :2, the image that fixed most R papers. They are the most likely to flip with one more run.</p>
+</section>
+
+<section id="fixes">
+  <div class="eyebrow">Finding 7</div>
+  <h2>Fixes, ranked by benefit for cost</h2>
+  <figure class="fig">
+    <img class="light" src="images/07-fix-priority-light.png" alt="Benefit against cost matrix of nine fixes. In the do-first corner: value must appear in the quote, re-run the 9 credit-stopped papers, stop early when projected runtime exceeds the limit, and score infeasible-on-CPU separately.">
+    <img class="dark" src="images/07-fix-priority-dark.png" alt="" aria-hidden="true">
+    <figcaption><b>Figure 7.</b> Estimates from the run data, not measurements. Costs use Haiku's measured spend of about 4.5 cents per reproduced paper and about $1.70 per 20-paper cycle. <span class="file">images/07-fix-priority-*.png</span></figcaption>
+  </figure>
+  <div class="tablewrap"><table>
+    <thead><tr><th class="num">#</th><th>Fix</th><th>Why, from the data</th><th>Cost</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td>In <code>record_answer</code>, require the value to appear in the quote; add a way to record "no answer" with a reason</td><td>Both wrong answers in the data came through this gap</td><td>About 30 min, <code>agent/task.py</code> plus a test</td></tr>
+      <tr><td class="num">2</td><td>Re-run the 9 papers cut off when credit ran out</td><td>Completes cycle 2. Three of them never had a full run on image :2, and image :2 reproduced 73% of comparable papers</td><td>About $1 and an hour at <code>--parallel 5</code>; needs credit</td></tr>
+      <tr><td class="num">3</td><td>Stop early when the projected runtime exceeds the limit (time the first epoch or step, then extrapolate)</td><td>61% of tokens and 65% of run time went to runs that ended at the wall</td><td>1–2 h: a prompt rule plus a projection in <code>check_background_run</code></td></tr>
+      <tr><td class="num">4</td><td>Score "infeasible on CPU in 30 min" as its own outcome on the scoreboard</td><td>6 failed runs (3 papers) are compute limits, not agent failures. Makes the headline honest both ways</td><td>About 30 min in <code>harness/batch.py</code></td></tr>
+      <tr><td class="num">5</td><td>Accept evidence only from experiment output, not from <code>cat</code> or <code>echo</code></td><td>Closes the remaining way to quote a number the code didn't compute</td><td>About 1 h</td></tr>
+      <tr><td class="num">6</td><td>Run 3 papers 3 times each</td><td>Only 1 of 13 repeated papers is known to be flaky; a measured pass^k makes the claim solid</td><td>About $0.50</td></tr>
+      <tr><td class="num">7</td><td>One cycle with <code>REPRO_DELEGATION=strict</code></td><td>The deep-agents story needs subagents; the trial delegated 2 of 2 times</td><td>About $2–3</td></tr>
+      <tr><td class="num">8</td><td>Hard-level cycle</td><td>Task directories are fetched; shows whether the agent copes without the Dockerfile</td><td>About $2–3</td></tr>
+      <tr><td class="num">9</td><td>Opus on the 6 unreproduced papers</td><td>Their causes are compute and environment, which a stronger model won't fix</td><td>About 40× Haiku; low value</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="present">
+  <div class="eyebrow">Using this</div>
+  <h2>How to present the results</h2>
+  <ol class="points prose">
+    <li><b>Open with Figure 1.</b> "14 of 20 real CORE-Bench papers reproduced, at a median of about 5 cents and 6 minutes each." Say it is Haiku at medium level.</li>
+    <li><b>Then Figure 5, the trust slide.</b> When Repro Bot gave a number, it was right 52 of 54 times, and it never invented one. Each answer quotes the line of output it came from. This also answers "isn't the model just remembering the benchmark?": an answer is refused unless its quote appears in this run's output. Fixes 1 and 5 close the two ways around that check.</li>
+    <li><b>Figure 2 for "what did you try and fail on".</b> Cycle 1 lost most R papers to package installs. Rebuilding the sandbox image doubled the rate on the same papers.</li>
+    <li><b>Figures 3 and 4 for the limits.</b> The remaining failures are compute walls: training that needs a GPU or more than 30 CPU minutes. The agent reports them instead of faking a number.</li>
+    <li><b>Figure 6 for "did you use all of deep agents".</b> Sandbox and <code>execute</code>, approvals, memory, skills and the figure tool all appear in the run data. Be upfront that Haiku skipped the subagents unless forced. If fix 7 runs before the demo, show it.</li>
+    <li><b>Close with Figure 7.</b> Next steps, cheapest first.</li>
+  </ol>
+</section>
+
+<section id="method">
+  <h2>Method and caveats</h2>
+  <ul class="points prose">
+    <li>Scoring uses the harness's CORE-Bench rules: a number is right inside the 95% prediction interval of the reference runs plus 0.5% slack, and text must match exactly, ignoring case.</li>
+    <li>Root causes were assigned by reading each failed run's obstacles and its last commands. Timeouts with no recorded obstacle were classified from the commands they were running at the limit.</li>
+    <li>Cost is estimated: the OpenRouter key's total spend ($3.18) divided by the tokens of all real runs (23.0M, cached tokens included). Spend per run isn't recorded.</li>
+    <li>All CORE-Bench runs used Haiku 5.5. Opus ran only on the toy task, and hard level hasn't run.</li>
+    <li>The cycle 1 harness crash is counted as "not scored" in Figure 1 and as a failure in the run-level rates.</li>
+    <li>The images, <code>metrics.json</code> and the per-run dataset are in <code>/home/claude/repro-agent/eval/2026-11-14/</code> on the Proxmox host.</li>
+  </ul>
+</section>
+
+</div>

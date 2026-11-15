@@ -1,0 +1,544 @@
+{
+ "papers_total": 20,
+ "papers_ever_reproduced": 14,
+ "papers_partial_best": 1,
+ "paper_best": {
+  "capsule-0238624": {
+   "best_fraction": 0.0,
+   "ever_reproduced": false,
+   "runs": 2,
+   "language": "Python",
+   "field": "Computer Science",
+   "title": "A University Admission Prediction System using Stacked Ensemble Learning",
+   "n_q": 2,
+   "fig_q": 0,
+   "causes": [
+    "Compute: CPU training > 30 min"
+   ]
+  },
+  "capsule-0940461": {
+   "best_fraction": 1.0,
+   "ever_reproduced": true,
+   "runs": 3,
+   "language": "Python",
+   "field": "Computer Science",
+   "title": "WABL Method as a Universal Defuzzifier in the Fuzzy Gradient Boosting Regression Model",
+   "n_q": 2,
+   "fig_q": 0,
+   "causes": []
+  },
+  "capsule-1108125": {
+   "best_fraction": 1.0,
+   "ever_reproduced": true,
+   "runs": 2,
+   "language": "R",
+   "field": "Social Sciences",
+   "title": "Effectiveness and equity of Payments for Ecosystem Services: Real-effort experiments with Vietnamese land users",
+   "n_q": 4,
+   "fig_q": 1,
+   "causes": []
+  },
+  "capsule-1324693": {
+   "best_fraction": 1.0,
+   "ever_reproduced": true,
+   "runs": 2,
+   "language": "R",
+   "field": "Social Sciences",
+   "title": "Code for: Self-esteem, relationship threat, and dependency regulation: Independent replication of Murray, Rose, Bellavia, Holmes, and Kusche (2002) Study 3",
+   "n_q": 2,
+   "fig_q": 2,
+   "causes": [
+    "Environment: R packages"
+   ]
+  },
+  "capsule-1906954": {
+   "best_fraction": 1.0,
+   "ever_reproduced": true,
+   "runs": 3,
+   "language": "R",
+   "field": "Social Sciences",
+   "title": "Reducing meat and animal product consumption: what works?",
+   "n_q": 2,
+   "fig_q": 0,
+   "causes": [
+    "Environment: R packages"
+   ]
+  },
+  "capsule-2011424": {
+   "best_fraction": 1.0,
+   "ever_reproduced": true,
+   "runs": 2,
+   "language": "Python",
+   "field": "Computer Science",
+   "title": "Mining Emerging Fuzzy-Temporal Gradual Patterns [BorderT-GRAANK]",
+   "n_q": 1,
+   "fig_q": 0,
+   "causes": []
+  },
+  "capsule-2061060": {
+   "best_fraction": 1.0,
+   "ever_reproduced": true,
+   "runs": 2,
+   "language": "R",
+   "field": "Social Sciences",
+   "title": "A Delphi study to strengthen research methods training in undergraduate psychology programmes",
+   "n_q": 1,
+   "fig_q": 1,
+   "causes": [
+    "Environment: R packages"
+   ]
+  },
+  "capsule-2916503": {
+   "best_fraction": 1.0,
+   "ever_reproduced": true,
+   "runs": 2,
+   "language": "R",
+   "field": "Social Sciences",
+   "title": "Example of compute capsule for the book chapter \"Developing and Disseminating Data Analysis Tools for Open Science\"",
+   "n_q": 3,
+   "fig_q": 0,
+   "causes": [
+    "Environment: R packages"
+   ]
+  },
+  "capsule-3137115": {
+   "best_fraction": 0.0,
+   "ever_reproduced": false,
+   "runs": 1,
+   "language": "R",
+   "field": "Social Sciences",
+   "title": "Analytic reproducibility in articles receiving open data badges at the journal Psychological Science: An observational study",
+   "n_q": 4,
+   "fig_q": 1,
+   "causes": [
+    "Environment: R packages"
+   ]
+  },
+  "capsule-3497606": {
+   "best_fraction": 1.0,
+   "ever_reproduced": true,
+   "runs": 1,
+   "language": "Python",
+   "field": "Medical Sciences",
+   "title": "Super-Iterative Image Reconstruction for Tomography",
+   "n_q": 1,
+   "fig_q": 1,
+   "causes": []
+  },
+  "capsule-3894632": {
+   "best_fraction": 0.0,
+   "ever_reproduced": false,
+   "runs": 1,
+   "language": "Python",
+   "field": "Medical Sciences",
+   "title": "DAPPER Leiomyosarcoma : Correlation and Survival Analysis of Radiomic, Microbiome and Clinical Data",
+   "n_q": 1,
+   "fig_q": 0,
+   "causes": [
+    "Environment: R packages"
+   ]
+  },
+  "capsule-4098236": {
+   "best_fraction": 1.0,
+   "ever_reproduced": true,
+   "runs": 3,
+   "language": "Python",
+   "field": "Computer Science",
+   "title": "Multi-Label Classification via Adaptive Resonance Theory-Based Clustering",
+   "n_q": 2,
+   "fig_q": 0,
+   "causes": [
+    "Harness crash (Podman lock)"
+   ]
+  },
+  "capsule-5286757": {
+   "best_fraction": 1.0,
+   "ever_reproduced": true,
+   "runs": 1,
+   "language": "Python",
+   "field": "Computer Science",
+   "title": "PyTorch-based implementation of label-aware graph representation for multi-class trajectory prediction",
+   "n_q": 1,
+   "fig_q": 0,
+   "causes": []
+  },
+  "capsule-5496369": {
+   "best_fraction": 0.5,
+   "ever_reproduced": false,
+   "runs": 2,
+   "language": "Python",
+   "field": "Medical Sciences",
+   "title": "Metabolomic machine learning predictor for diagnosis and prognosis of gastric cancer",
+   "n_q": 2,
+   "fig_q": 2,
+   "causes": [
+    "Compute: CPU training > 30 min"
+   ]
+  },
+  "capsule-5975162": {
+   "best_fraction": 1.0,
+   "ever_reproduced": true,
+   "runs": 1,
+   "language": "Python",
+   "field": "Computer Science",
+   "title": "ExPSO Package: Exponential Particle Swarm Optimization for Global Optimization",
+   "n_q": 2,
+   "fig_q": 0,
+   "causes": []
+  },
+  "capsule-6133093": {
+   "best_fraction": 0.0,
+   "ever_reproduced": false,
+   "runs": 1,
+   "language": "R",
+   "field": "Social Sciences",
+   "title": "Replication Material for \"The Subconscious Effect of Subtle Media Bias on Perceptions of Terrorism\" appearing in American Politics Research (APR)",
+   "n_q": 1,
+   "fig_q": 0,
+   "causes": [
+    "Environment: R packages"
+   ]
+  },
+  "capsule-6460826": {
+   "best_fraction": 1.0,
+   "ever_reproduced": true,
+   "runs": 2,
+   "language": "Python",
+   "field": "Computer Science",
+   "title": "CULP: Classification Using Link Prediction",
+   "n_q": 6,
+   "fig_q": 0,
+   "causes": []
+  },
+  "capsule-6746514": {
+   "best_fraction": 1.0,
+   "ever_reproduced": true,
+   "runs": 1,
+   "language": "Python",
+   "field": "Medical Sciences",
+   "title": "Diagnosis of epilepsy based on EEG",
+   "n_q": 3,
+   "fig_q": 3,
+   "causes": []
+  },
+  "capsule-9168639": {
+   "best_fraction": 1.0,
+   "ever_reproduced": true,
+   "runs": 2,
+   "language": "R",
+   "field": "Medical Sciences",
+   "title": "Research Ethics Committees as an intervention point to promote a priori sample size calculations",
+   "n_q": 2,
+   "fig_q": 2,
+   "causes": []
+  },
+  "capsule-9370340": {
+   "best_fraction": 0.0,
+   "ever_reproduced": false,
+   "runs": 2,
+   "language": "Python",
+   "field": "Computer Science",
+   "title": "Replication files for Neurons Learn by Predicting Future Activity",
+   "n_q": 1,
+   "fig_q": 0,
+   "causes": [
+    "Compute: GPU-only code"
+   ]
+  }
+ },
+ "cycle1": {
+  "papers": 20,
+  "ran_to_end": 20,
+  "credit_stopped": 0,
+  "reproduced": 9,
+  "partial": 1,
+  "answers_correct": 23,
+  "answers_total": 41,
+  "outcomes": {
+   "reproduced": 9,
+   "timed out": 7,
+   "finished, answers wrong": 1,
+   "crashed (no report)": 1,
+   "partly reproduced": 1,
+   "gave up / failed": 1
+  },
+  "toy": "reproduced"
+ },
+ "cycle2": {
+  "papers": 20,
+  "ran_to_end": 11,
+  "credit_stopped": 9,
+  "reproduced": 8,
+  "partial": 0,
+  "answers_correct": 17,
+  "answers_total": 22,
+  "outcomes": {
+   "reproduced": 8,
+   "gave up / failed": 2,
+   "timed out": 1,
+   "not run (credit ran out)": 9
+  },
+  "toy": "reproduced"
+ },
+ "same_papers": {
+  "n": 11,
+  "cycle1_reproduced": 4,
+  "cycle2_reproduced": 8
+ },
+ "runs_cb_ran": 36,
+ "runs_cb_reproduced": 21,
+ "runs_cb_outcomes": {
+  "reproduced": 21,
+  "timed out": 9,
+  "finished, answers wrong": 1,
+  "crashed (no report)": 1,
+  "partly reproduced": 1,
+  "gave up / failed": 3
+ },
+ "runs_causes": {
+  "Compute: CPU training > 30 min": 4,
+  "Environment: R packages": 8,
+  "Harness crash (Podman lock)": 1,
+  "Compute: GPU-only code": 2
+ },
+ "runs_credit_stopped": 9,
+ "q_total": 77,
+ "q_correct": 52,
+ "q_answered": 54,
+ "q_answered_correct": 52,
+ "q_answered_wrong": 2,
+ "q_unanswered": 23,
+ "confidence": {
+  "medium": {
+   "correct": 9,
+   "answered": 9
+  },
+  "low": {
+   "correct": 8,
+   "answered": 10
+  },
+  "high": {
+   "correct": 35,
+   "answered": 35
+  }
+ },
+ "q_figure": {
+  "total": 21,
+  "correct": 14,
+  "answered": 16
+ },
+ "q_text": {
+  "total": 56,
+  "correct": 38,
+  "answered": 38
+ },
+ "failed_runs": 14,
+ "failed_runs_answers_correct": 1,
+ "failed_runs_answers_total": 26,
+ "failed_runs_answers_given": 3,
+ "by_language": {
+  "Python": {
+   "runs": 21,
+   "reproduced": 13,
+   "papers": 12,
+   "papers_reproduced": 8
+  },
+  "R": {
+   "runs": 15,
+   "reproduced": 8,
+   "papers": 8,
+   "papers_reproduced": 6
+  }
+ },
+ "by_field": {
+  "Computer Science": {
+   "runs": 16,
+   "reproduced": 11,
+   "papers": 8,
+   "papers_reproduced": 6
+  },
+  "Social Sciences": {
+   "runs": 13,
+   "reproduced": 6,
+   "papers": 7,
+   "papers_reproduced": 5
+  },
+  "Medical Sciences": {
+   "runs": 7,
+   "reproduced": 4,
+   "papers": 5,
+   "papers_reproduced": 3
+  }
+ },
+ "by_language_Cycle 1": {
+  "Python": [
+   7,
+   12
+  ],
+  "R": [
+   2,
+   8
+  ]
+ },
+ "by_language_Cycle 2": {
+  "R": [
+   5,
+   6
+  ],
+  "Python": [
+   3,
+   5
+  ]
+ },
+ "wall_median_reproduced_s": 339.7,
+ "wall_median_failed_s": 1805.7,
+ "failed_hit_time_limit": 11,
+ "tokens_median_reproduced": 327796,
+ "tokens_median_failed": 809477.5,
+ "tokens_all_real_runs": 22958711,
+ "usd_per_mtok_blended": 0.138,
+ "usd_key_spend": 3.1774399,
+ "usd_per_reproduced_paper_median": 0.045,
+ "tokens_per_correct_answer": 368277,
+ "tokens_spent_on_failed_runs_pct": 60.6,
+ "time_spent_on_failed_runs_pct": 64.6,
+ "reproduced_both_cycles": [
+  {
+   "paper": "capsule-0940461",
+   "c1_s": 141.1,
+   "c2_s": 166.3,
+   "c1_tok": 317128,
+   "c2_tok": 327796
+  },
+  {
+   "paper": "capsule-1108125",
+   "c1_s": 1752.7,
+   "c2_s": 158.9,
+   "c1_tok": 598279,
+   "c2_tok": 254453
+  },
+  {
+   "paper": "capsule-2011424",
+   "c1_s": 1031.8,
+   "c2_s": 799.1,
+   "c1_tok": 175357,
+   "c2_tok": 181011
+  },
+  {
+   "paper": "capsule-9168639",
+   "c1_s": 1616.0,
+   "c2_s": 131.2,
+   "c1_tok": 789913,
+   "c2_tok": 210126
+  }
+ ],
+ "behaviour": {
+  "runs": 36,
+  "delegated_nonstrict": 0,
+  "nonstrict_runs": 34,
+  "strict_runs": [
+   {
+    "run": "strict-cb-0940461-medium",
+    "subagents": [
+     "env-builder",
+     "runner",
+     "result-judge"
+    ],
+    "outcome": "reproduced"
+   },
+   {
+    "run": "strict-cb-5496369-medium",
+    "subagents": [
+     "env-builder",
+     "runner",
+     "env-builder",
+     "runner"
+    ],
+    "outcome": "timed out"
+   }
+  ],
+  "kept_plan": 12,
+  "approvals_median": 2.5,
+  "approvals_max": 23,
+  "approvals_total": 188,
+  "used_background": 7,
+  "used_figure_tool": 8,
+  "tool_calls": 776,
+  "tool_calls_failed": 86,
+  "tool_mix": {
+   "read_file": 112,
+   "execute": 487,
+   "run_experiment": 38,
+   "write_file": 5,
+   "glob": 15,
+   "look_at_figure": 10,
+   "start_background_run": 15,
+   "check_background_run": 58,
+   "ls": 18,
+   "grep": 16,
+   "edit_file": 2
+  },
+  "obstacles": 33,
+  "obstacles_resolved": 20,
+  "obstacle_stages": {
+   "env": 17,
+   "data": 2,
+   "run": 10,
+   "other": 2,
+   "read": 1,
+   "extract": 1
+  },
+  "unapproved_source_changes_runs": 2,
+  "memory_read_runs": 36,
+  "memory_written_runs": 17,
+  "reproduced_with_plan": "6/12",
+  "reproduced_without_plan": "15/24"
+ },
+ "toy": {
+  "runs": 8,
+  "reproduced": 8,
+  "models": {
+   "Haiku 5.5": 6,
+   "Opus 5.5": 2
+  },
+  "tokens_median": 94015.5,
+  "wall_median": 40.3
+ },
+ "memory_pair": {
+  "memory-1": {
+   "tokens": 101645,
+   "wall": 77.8,
+   "obstacles": 2,
+   "memory_read": 1
+  },
+  "memory-2": {
+   "tokens": 86386,
+   "wall": 65.1,
+   "obstacles": 1,
+   "memory_read": 1
+  }
+ },
+ "arxiv": [
+  {
+   "run": "arxiv-1810-00717-1",
+   "outcome": "finished, answers wrong",
+   "correct": 0,
+   "total": 4,
+   "tokens": 527827
+  },
+  {
+   "run": "arxiv-1810-00717-2",
+   "outcome": "gave up / failed",
+   "correct": 0,
+   "total": 4,
+   "tokens": 119617
+  }
+ ],
+ "offline_runs": {
+  "n": 16,
+  "outcomes": {
+   "reproduced": 13,
+   "rejected": 3
+  }
+ }
+}
