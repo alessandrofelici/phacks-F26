@@ -22,8 +22,10 @@ import shutil
 import signal
 import subprocess
 import tempfile
+import threading
 import time
 import uuid
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -134,6 +136,9 @@ class LoggingShellBackend(LocalShellBackend):
         self.commands: list[CommandRecord] = []
         self.out_of_time = False  # set when a command was refused because the run's time is used up
         self.background: dict[str, dict] = {}  # runs started with start_background, by id
+        self._bg_lock = threading.Lock()  # parallel tool calls can start several background runs at once
+        # Set by the runner: returns a short note to append to command output (a run with no plan yet).
+        self.reminder: Callable[[], str | None] | None = None
 
     def execute(self, command: str, *, timeout: int | None = None) -> ExecuteResponse:
         effective = timeout if timeout is not None else SHORT_TIMEOUT_S
@@ -152,6 +157,11 @@ class LoggingShellBackend(LocalShellBackend):
         mirror.parent.mkdir(exist_ok=True)
         mirror.write_text(text, encoding="utf-8")
         self.commands.append(CommandRecord(command, response.exit_code, log, response.output))
+        note = self.reminder() if self.reminder is not None else None
+        if note:
+            # Only the model sees the note; the saved log, and so the evidence, stays the command's own output.
+            response = ExecuteResponse(output=f"{response.output}\n\n[{note}]", exit_code=response.exit_code,
+                                       truncated=response.truncated)
         return response
 
     def _run(self, command: str, timeout: int) -> ExecuteResponse:
@@ -166,7 +176,10 @@ class LoggingShellBackend(LocalShellBackend):
             self.out_of_time = True
             return ""
         limit = limit_s if remaining is None else max(1, min(limit_s, math.ceil(remaining)))
-        run_id = f"bg{len(self.background) + 1}"
+        with self._bg_lock:
+            # Choose and register the id together, so runs started in parallel never share one.
+            run_id = f"bg{len(self.background) + 1}"
+            self.background[run_id] = {"command": command, "started": time.monotonic(), "log": None, "limit": limit}
         (Path(self.cwd) / ".bg").mkdir(exist_ok=True)
         inner = f"timeout -k 5 {limit} sh -c {shlex.quote(command)}"
         launcher = (
@@ -174,7 +187,6 @@ class LoggingShellBackend(LocalShellBackend):
             f"echo $! > .bg/{run_id}.pid"
         )
         self._run(launcher, 30)
-        self.background[run_id] = {"command": command, "started": time.monotonic(), "log": None, "limit": limit}
         return run_id
 
     def check_background(self, run_id: str, tail_lines: int = 30) -> dict | None:

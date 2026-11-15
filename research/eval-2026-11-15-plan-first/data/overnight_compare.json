@@ -1,0 +1,303 @@
+{
+ "rows": [
+  {
+   "group": "plan-first",
+   "paper": "5496369",
+   "run_id": "r-20261115-040847-06e5",
+   "status": "completed",
+   "outcome": "verifiable",
+   "plan_path": "scaled",
+   "projected": 70.0,
+   "plan_minute": 16.6,
+   "minutes": 25.7,
+   "tokens": 1083319,
+   "probes": 2,
+   "reminded": 0
+  },
+  {
+   "group": "plan-first",
+   "paper": "6460826",
+   "run_id": "r-20261115-040847-14e6",
+   "status": "completed",
+   "outcome": "reproduced",
+   "plan_path": "full",
+   "projected": 1.0,
+   "plan_minute": 8.6,
+   "minutes": 9.7,
+   "tokens": 542364,
+   "probes": 2,
+   "reminded": 0
+  },
+  {
+   "group": "plan-first",
+   "paper": "9370340",
+   "run_id": "r-20261115-040847-7f82",
+   "status": "completed",
+   "outcome": "not_verifiable",
+   "plan_path": "not_verifiable",
+   "projected": 46.0,
+   "plan_minute": 29.0,
+   "minutes": 29.6,
+   "tokens": 1180529,
+   "probes": 3,
+   "reminded": 0
+  },
+  {
+   "group": "plan-first",
+   "paper": "1108125",
+   "run_id": "r-20261115-040847-d397",
+   "status": "completed",
+   "outcome": "reproduced",
+   "plan_path": "full",
+   "projected": 0.5,
+   "plan_minute": 7.2,
+   "minutes": 8.8,
+   "tokens": 580457,
+   "probes": 1,
+   "reminded": 0
+  },
+  {
+   "group": "plan-first",
+   "paper": "0940461",
+   "run_id": "r-20261115-040847-d720",
+   "status": "completed",
+   "outcome": "reproduced",
+   "plan_path": "full",
+   "projected": 2.0,
+   "plan_minute": 0.5,
+   "minutes": 15.1,
+   "tokens": 416184,
+   "probes": 0,
+   "reminded": 0
+  },
+  {
+   "group": "plan-first",
+   "paper": "0238624",
+   "run_id": "r-20261115-040847-db93",
+   "status": "completed",
+   "outcome": "verifiable",
+   "plan_path": "scaled",
+   "projected": 80.0,
+   "plan_minute": 18.8,
+   "minutes": 22.1,
+   "tokens": 665278,
+   "probes": 1,
+   "reminded": 0
+  },
+  {
+   "group": "plan-first",
+   "paper": "6460826",
+   "run_id": "r-20261115-045206-652e",
+   "status": "completed",
+   "outcome": "reproduced",
+   "plan_path": "full",
+   "projected": 4.0,
+   "plan_minute": 0.3,
+   "minutes": 4.7,
+   "tokens": 291531,
+   "probes": 0,
+   "reminded": 0
+  },
+  {
+   "group": "plan-first",
+   "paper": "5496369",
+   "run_id": "r-20261115-045206-8276",
+   "status": "completed",
+   "outcome": "verifiable",
+   "plan_path": "scaled",
+   "projected": 80.0,
+   "plan_minute": 10.4,
+   "minutes": 23.4,
+   "tokens": 2144416,
+   "probes": 2,
+   "reminded": 0
+  },
+  {
+   "group": "plan-first",
+   "paper": "0940461",
+   "run_id": "r-20261115-045206-92a0",
+   "status": "completed",
+   "outcome": "reproduced",
+   "plan_path": "full",
+   "projected": 0.5,
+   "plan_minute": 4.0,
+   "minutes": 5.9,
+   "tokens": 680113,
+   "probes": 1,
+   "reminded": 0
+  },
+  {
+   "group": "plan-first",
+   "paper": "0238624",
+   "run_id": "r-20261115-045206-97ad",
+   "status": "failed",
+   "outcome": "not_verifiable",
+   "plan_path": "scaled",
+   "projected": 57.4,
+   "plan_minute": 6.4,
+   "minutes": 17.7,
+   "tokens": 436815,
+   "probes": 1,
+   "reminded": 0
+  },
+  {
+   "group": "plan-first",
+   "paper": "1108125",
+   "run_id": "r-20261115-045206-d17a",
+   "status": "completed",
+   "outcome": "reproduced",
+   "plan_path": "full",
+   "projected": 1.0,
+   "plan_minute": 3.8,
+   "minutes": 5.6,
+   "tokens": 641401,
+   "probes": 1,
+   "reminded": 0
+  },
+  {
+   "group": "plan-first",
+   "paper": "9370340",
+   "run_id": "r-20261115-045206-d768",
+   "status": "completed",
+   "outcome": "not_verifiable",
+   "plan_path": "scaled",
+   "projected": 67.0,
+   "plan_minute": 8.3,
+   "minutes": 26.1,
+   "tokens": 1075430,
+   "probes": 3,
+   "reminded": 0
+  },
+  {
+   "group": "overnight",
+   "paper": "6460826",
+   "run_id": "r-20261115-071927-3979",
+   "status": "completed",
+   "outcome": "reproduced",
+   "plan_path": "full",
+   "projected": 3.0,
+   "plan_minute": 0.4,
+   "minutes": 2.7,
+   "tokens": 341001,
+   "probes": 0,
+   "reminded": 0
+  },
+  {
+   "group": "overnight",
+   "paper": "0238624",
+   "run_id": "r-20261115-071927-4d22",
+   "status": "completed",
+   "outcome": "not_verifiable",
+   "plan_path": "scaled",
+   "projected": 82.0,
+   "plan_minute": 7.7,
+   "minutes": 20.3,
+   "tokens": 822398,
+   "probes": 1,
+   "reminded": 0
+  },
+  {
+   "group": "overnight",
+   "paper": "1108125",
+   "run_id": "r-20261115-071927-6fe7",
+   "status": "completed",
+   "outcome": "reproduced",
+   "plan_path": "full",
+   "projected": 0.5,
+   "plan_minute": 2.8,
+   "minutes": 4.7,
+   "tokens": 342646,
+   "probes": 0,
+   "reminded": 0
+  },
+  {
+   "group": "overnight",
+   "paper": "0940461",
+   "run_id": "r-20261115-071927-73d0",
+   "status": "completed",
+   "outcome": "reproduced",
+   "plan_path": "full",
+   "projected": 3.0,
+   "plan_minute": 0.3,
+   "minutes": 2.8,
+   "tokens": 462066,
+   "probes": 0,
+   "reminded": 0
+  },
+  {
+   "group": "overnight",
+   "paper": "9370340",
+   "run_id": "r-20261115-071927-cf5e",
+   "status": "completed",
+   "outcome": "not_verifiable",
+   "plan_path": "scaled",
+   "projected": 48.0,
+   "plan_minute": 0.7,
+   "minutes": 19.4,
+   "tokens": 557625,
+   "probes": 0,
+   "reminded": 0
+  },
+  {
+   "group": "overnight",
+   "paper": "5496369",
+   "run_id": "r-20261115-071927-f94b",
+   "status": "completed",
+   "outcome": "not_verifiable",
+   "plan_path": "scaled",
+   "projected": 30.0,
+   "plan_minute": 5.3,
+   "minutes": 19.6,
+   "tokens": 991406,
+   "probes": 1,
+   "reminded": 0
+  }
+ ],
+ "summary": {
+  "plan-first": {
+   "runs": 12,
+   "plan_minute_median": 7.8,
+   "minutes_median": 16.4,
+   "tokens_median": 653339.5,
+   "outcomes": {
+    "not_verifiable": 3,
+    "reproduced": 6,
+    "verifiable": 3
+   },
+   "probes": 17,
+   "timeouts": 0,
+   "easy": {
+    "plan_minute_median": 3.9,
+    "minutes_median": 7.4,
+    "tokens_median": 561410.5
+   },
+   "compute wall": {
+    "plan_minute_median": 13.5,
+    "minutes_median": 24.5,
+    "tokens_median": 1079374.5
+   }
+  },
+  "overnight": {
+   "runs": 6,
+   "plan_minute_median": 1.8,
+   "minutes_median": 12.0,
+   "tokens_median": 509845.5,
+   "outcomes": {
+    "not_verifiable": 3,
+    "reproduced": 3
+   },
+   "probes": 2,
+   "timeouts": 0,
+   "easy": {
+    "plan_minute_median": 0.4,
+    "minutes_median": 2.8,
+    "tokens_median": 342646
+   },
+   "compute wall": {
+    "plan_minute_median": 5.3,
+    "minutes_median": 19.6,
+    "tokens_median": 822398
+   }
+  }
+ }
+}

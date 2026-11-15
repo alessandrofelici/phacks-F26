@@ -24,8 +24,10 @@ Budget-Scaled Verification"). A run whose plan was "scaled" reports number
 answers as projections with an interval. Such an answer is never correct; it
 is "verifiable" when the reference value lies inside the interval and the
 interval's half-width is at most 10% of the projected value. Each run gets one
-outcome, the weakest across its answers:
+outcome, the weakest across its answers (see classify):
   reproduced | partly | verifiable | not_verifiable | not_reproduced
+A wrong answer, or one missing without a budget reason, is never hidden behind a
+budget outcome.
 """
 from __future__ import annotations
 
@@ -141,21 +143,35 @@ def score_projection(answer: dict, ref: dict) -> dict:
     return result
 
 
+def _answer_class(result: dict) -> str:
+    """E: exact and right. V: a scaled projection in range. B: shown it can't fit the budget (a budget
+    no-answer, or a projection out of range or too vague). W: wrong, or missing without a budget reason."""
+    if result["correct"]:
+        return "E"
+    if result.get("scaled"):
+        return "V" if result.get("verifiable") else "B"
+    if result.get("no_answer_category") == BUDGET_CATEGORY:
+        return "B"
+    return "W"
+
+
 def classify(report: dict, per_question: dict) -> str:
-    """One outcome per run, the weakest across its answers (see the module docstring)."""
-    plan = report.get("plan")
-    plan_path = plan.get("path") if isinstance(plan, dict) else None
-    results = list(per_question.values())
-    budget = plan_path in ("scaled", "not_verifiable") or any(
-        r.get("scaled") or r.get("no_answer_category") == BUDGET_CATEGORY for r in results)
-    if budget:
-        if results and any(r.get("scaled") for r in results) and all(r["correct"] or r.get("verifiable") for r in results):
-            return "verifiable"
-        return "not_verifiable"
-    correct = sum(1 for r in results if r["correct"])
-    if results and correct == len(results):
+    """One outcome per run, the weakest across its answers.
+
+    A wrong or unexplained answer is never hidden behind a budget outcome: any W makes the run
+    partly reproduced (some exact answers) or not reproduced. Otherwise a budget answer (B) makes it
+    not verifiable, a projection in range (V) verifiable, and all-exact reproduced.
+    """
+    classes = [_answer_class(r) for r in per_question.values()]
+    if not classes:
+        return "not_reproduced"
+    if all(c == "E" for c in classes):
         return "reproduced"
-    return "partly" if correct else "not_reproduced"
+    if "W" in classes:
+        return "partly" if "E" in classes else "not_reproduced"
+    if "B" in classes:
+        return "not_verifiable"
+    return "verifiable"
 
 
 def score_report(report: dict, key: dict) -> dict:

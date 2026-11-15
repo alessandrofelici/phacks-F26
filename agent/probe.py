@@ -42,52 +42,54 @@ def _lines(output: str) -> list[str]:
 def project(output: str, elapsed_s: float) -> dict[str, Any] | None:
     """Estimate the full run from ``elapsed_s`` seconds of ``output``.
 
-    Returns ``{"progress", "line", "projected_minutes"}`` (``projected_minutes`` may be None
+    Returns ``{"progress", "line", "projected_minutes", "lower_bound"}`` (``projected_minutes`` is None
     when the progress seen is too early to extrapolate), or None when no progress line was found.
+    ``lower_bound`` is True when the counter may be one of several loops (a bare progress bar, a
+    step counter): the run takes at least that long, maybe much longer.
     """
     lines = _lines(output)
     if elapsed_s <= 0 or not lines:
         return None
 
-    # 1. Epochs, refined by the progress bar inside the current epoch when there is one.
-    for i in range(len(lines) - 1, -1, -1):
-        match = _EPOCH.search(lines[i])
-        if not match:
-            continue
-        current, total = int(match.group(1)), int(match.group(2))
-        if total <= 0 or current > total:
-            break
-        inner = None
-        for later in lines[i + 1:]:
-            bar = _TQDM.search(later) or _BAR.search(later)
-            if bar and int(bar.group(2)) > 0 and int(bar.group(1)) <= int(bar.group(2)):
-                inner = int(bar.group(1)) / int(bar.group(2))
-        if inner is not None:
-            done = (current - 1) + inner
-        else:
-            # "Epoch k/N" is printed at the start of epoch k by most libraries: k - 1 are done.
-            done = current - 0.5 if current > 1 else 0.0
-        result = {"progress": f"epoch {current} of {total}", "line": lines[i].strip()[:200]}
-        result["projected_minutes"] = round(elapsed_s * total / done / 60, 1) if done > 0 else None
-        return result
+    # 1. Epochs with a total, refined by the progress bar inside the current epoch when there is one.
+    hits = [(i, int(m.group(1)), int(m.group(2))) for i, line in enumerate(lines) for m in [_EPOCH.search(line)] if m]
+    if hits:
+        zero_based = min(current for _, current, _ in hits) == 0  # "Epoch 0/150" counts from zero
+        i, current, total = hits[-1]
+        if 0 < total and current <= total:
+            inner = None
+            for later in lines[i + 1:]:
+                bar = _TQDM.search(later) or _BAR.search(later)
+                if bar and int(bar.group(2)) > 0 and int(bar.group(1)) <= int(bar.group(2)):
+                    inner = int(bar.group(1)) / int(bar.group(2))
+            finished = current if zero_based else current - 1  # epochs done before the current one
+            if inner is not None:
+                done = finished + inner
+            else:
+                # The epoch line is usually printed when the epoch starts: count it as half done.
+                done = finished + 0.5 if finished >= 1 else 0.0
+            projected = round(elapsed_s * total / done / 60, 1) if done > 0 else None
+            return {"progress": f"epoch {current} of {total}", "line": lines[i].strip()[:200],
+                    "projected_minutes": projected, "lower_bound": False}
 
-    # 2. A tqdm bar states its own remaining time.
+    # 2. An unfinished tqdm bar states its own remaining time. It may be one of several loops (one epoch,
+    #    one data split), so it only gives a lower bound. A finished bar says nothing about what is left.
     for line in reversed(lines):
         match = _TQDM.search(line)
         if not match:
             continue
         current, total = int(match.group(1)), int(match.group(2))
+        if total <= 0 or current >= total:
+            continue
         remaining = _clock(match.group(4)) if match.group(4) != "?" else None
-        result = {"progress": f"{current} of {total} steps", "line": line.strip()[:200]}
         if remaining is not None:
-            result["projected_minutes"] = round((elapsed_s + remaining) / 60, 1)
-        elif current > 0 and total > 0:
-            result["projected_minutes"] = round(elapsed_s * total / current / 60, 1)
+            projected = round((elapsed_s + remaining) / 60, 1)
         else:
-            result["projected_minutes"] = None
-        return result
+            projected = round(elapsed_s * total / current / 60, 1) if current > 0 else None
+        return {"progress": f"{current} of {total} steps", "line": line.strip()[:200],
+                "projected_minutes": projected, "lower_bound": True}
 
-    # 3. Any "<unit> k of N" counter.
+    # 3. Any "<unit> k of N" counter: also a lower bound, it may be an inner loop or a pipeline step.
     for line in reversed(lines):
         match = _STEP.search(line)
         if not match:
@@ -96,9 +98,9 @@ def project(output: str, elapsed_s: float) -> dict[str, Any] | None:
         if total <= 0 or current > total:
             continue
         done = current - 0.5 if current > 1 else 0.0
-        result = {"progress": f"{unit} {current} of {total}", "line": line.strip()[:200]}
-        result["projected_minutes"] = round(elapsed_s * total / done / 60, 1) if done > 0 else None
-        return result
+        projected = round(elapsed_s * total / done / 60, 1) if done > 0 else None
+        return {"progress": f"{unit} {current} of {total}", "line": line.strip()[:200],
+                "projected_minutes": projected, "lower_bound": True}
     return None
 
 
@@ -125,6 +127,13 @@ def describe(output: str, elapsed_s: float, finished: bool, exit_code: int | Non
         return (
             f"The probe was stopped after {elapsed_s:.0f} s at {estimate['progress']} ('{estimate['line']}'), "
             "too early to extrapolate. Probe again for longer (up to 180 s)."
+        )
+    if estimate.get("lower_bound"):
+        return (
+            f"The probe was stopped after {elapsed_s:.0f} s at {estimate['progress']} ('{estimate['line']}'). "
+            f"That counter alone would take about {estimate['projected_minutes']:g} min, but it may be one of "
+            "several loops (one epoch, one data split, one pipeline step): treat it as a lower bound and check "
+            "the code for outer loops before trusting it."
         )
     return (
         f"The probe was stopped after {elapsed_s:.0f} s at {estimate['progress']} ('{estimate['line']}'). "

@@ -35,3 +35,11 @@ Role B's own log. Role A doesn't need to read it.
   started from the UI) play both new paths on the toy task, for demos without a model.
 - Tests: `python3 -m unittest discover -s harness/tests -t .` (made-up key, plus both fake scenarios
   through the validator).
+
+## 2026-11-15 overnight: outcome rule
+
+`classify` (harness/score.py) now ranks each answer E (exact), V (scaled, in range), B (not verifiable
+within budget) or W (wrong, or missing without a budget reason). Any W makes the run `partly` (with an E)
+or `not_reproduced`; otherwise any B makes it `not_verifiable`, any V `verifiable`, and all E
+`reproduced`. Before this, a scaled plan whose run failed, or a wrong answer next to a budget no-answer,
+came out as the neutral `not_verifiable`.

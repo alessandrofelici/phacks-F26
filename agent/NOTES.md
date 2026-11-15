@@ -256,6 +256,44 @@ evaluation of the 14 November runs (`research/eval-2026-11-14/`): 6 of 15 failed
   scoper's report, and the scoper to write memory with `edit_file` (it tried `echo >> /memories/...`,
   which the shell can't reach). Neither tweak has run on a real model yet.
 
+### Overnight review and scoper fixes (branch `overnight-agent`, 15 November)
+
+A reviewer subagent read the plan-first diff (`e590f75..f1d404f`) and found 13 defects; 12 are fixed here, each with a test.
+
+- **The probe no longer trusts a lone progress bar.** A bar or a `step k/N` counter may be one loop of
+  many (one epoch, one split): `agent/probe.py` now reports it as a lower bound and says to check the
+  code for outer loops. A finished bar is ignored (a probe stopped during preprocessing said "1 minute"),
+  and zero-based `Epoch 0/150` counters work.
+- **Number checks are strict about what the value says.** A value counts as written (1.0 allows ±0.05,
+  not ±0.5); fraction/percentage conversions apply only to numbers written with a decimal point or `%`,
+  and never to zero; a number glued to a word (`r2`) or a range's second half (`0.44-0.46`) is read
+  correctly; comma groups are read both as one number and as a list. Infinity and NaN are refused.
+- **Echo evidence:** quoted text is set aside before splitting a command, so `echo "a; b"`, `| tee`,
+  `(echo ...)`, `/bin/echo` and `X=1 echo` are all print-only, while `$(...)` runs real code and counts.
+- **A stopped probe's output is not evidence** (its numbers come from an unfinished run).
+- **A placeholder word can be a real answer** ("none") when the quote shows it.
+- **Background runs started in parallel get distinct ids** (a lock), and a log is registered with its
+  command before it can be searched.
+- **An honest budget finish wins over a rejected approval** (a probe approval that timed out no longer
+  turns a not-verifiable run into `rejected`).
+- **The probe's time cap is computed once** (`probe_cap`), so its approval and its run agree.
+- **Harness:** `classify` no longer hides a wrong or unexplained answer behind "not verifiable": any such
+  answer makes the run partly reproduced or not reproduced.
+- **Not fixed, known gap:** if the main agent starts `scoper` and `runner` in the same turn, the runner's
+  experiment is checked after the scoper's plan lands, so a command written before the plan can run.
+
+The three fixes the 15 November runs asked for:
+
+- **Plan early.** The scoper prompt says to record the plan within about 8 minutes, to skip the probe for
+  code with no heavy setting, and to estimate from the code instead of waiting for a slow setup. From
+  minute 6 without a plan (a quarter of a short task's limit), every command's output to the model ends
+  with a reminder (`Findings.plan_reminder`, `LoggingShellBackend.reminder`); the saved log, and so the
+  evidence, stays clean.
+- **The 60% rule counts from the task's limit, not the minutes left.** A full run may take at most 60% of
+  the task's whole limit and must leave a reserve (15% of the limit, at least 3 minutes) for the answers
+  (`Findings.full_run_allowance`). 3497606 (12.5 minutes projected, plan at minute 12 of 30) now gets a
+  full run: the old rule allowed 10.8 minutes, the new one 13.5.
+
 ## Failures and what changed
 
 For `FAILURES.md` (the "what did you try and fail on" question).

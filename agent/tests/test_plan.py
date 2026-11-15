@@ -14,7 +14,7 @@ from pathlib import Path
 
 from agent.probe import describe, project
 from agent.rundir import RunWriter, prints_only
-from agent.task import Findings, Task, number_in_quote
+from agent.task import Findings, Task, number_in_quote, quote_shows
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 TOY = REPO_ROOT / "contract" / "fixtures" / "tasks" / "toy-linreg"
@@ -178,6 +178,66 @@ class AnswerCheckTest(Base):
         self.assertIn("not scaled", refused)
 
 
+class ReviewFixesTest(Base):
+    """Defects found by the overnight review of 15 November."""
+
+    def test_numbers_are_not_matched_loosely(self) -> None:
+        for value, quote in [(1.0, "test AUC: 0.62"), (1.0, "Epoch 100/150"), (0.0, "accuracy 0.3"),
+                             (0.03, "seed 3, accuracy 0.91"), (2, "test r2: 0.4555"), (200, "test r2: 0.4555")]:
+            self.assertFalse(number_in_quote(value, quote), (value, quote))
+        for value, quote in [(1.0, "test AUC: 1.00"), (0.4655, "interval 0.4455-0.4655"), (123, "1,123,456"),
+                             (1123456, "1,123,456"), (0.03, "rate 3.1%"), (0.91, "acc(0.91)")]:
+            self.assertTrue(number_in_quote(value, quote), (value, quote))
+        self.assertFalse(number_in_quote(-0.4655, "interval 0.4455-0.4655"), "a range's dash is not a minus")
+        self.assertFalse(quote_shows([], "anything", "list"))
+
+    def test_echo_forms_and_command_substitution(self) -> None:
+        for command in ['echo "q1: 0.4555; q2: ridge-weak"', "echo acc 0.9 | tee out.txt", "echo a\necho b",
+                        "(echo 0.9)", "/bin/echo 0.9", "X=1 echo 0.9"]:
+            self.assertTrue(prints_only(command), command)
+        for command in ['echo "r2: $(python eval.py)"', "python run.py\necho done", "cat results.txt"]:
+            self.assertFalse(prints_only(command), command)
+
+    def test_infinity_and_nan_are_refused(self) -> None:
+        self.plan_full()
+        self.writer.save_log("python run.py", RUN_OUTPUT)
+        for bad in ("inf", "Infinity", "nan"):
+            self.assertIn("finite", self.findings.record_answer("q1", bad, "test r2: 0.4555", "high"))
+
+    def test_a_real_answer_may_look_like_a_placeholder(self) -> None:
+        self.plan_full()
+        self.writer.save_log("python impute.py", "$ python impute.py\nbest model: none\n")
+        self.assertIn("Recorded", self.findings.record_answer("q2", "none", "best model: none", "high"))
+
+    def test_a_stopped_probe_is_not_evidence(self) -> None:
+        self.plan_full()
+        rel = self.writer.save_log("python train.py", "$ python train.py\nEpoch 2/150 val r2: 0.4555\n")
+        self.writer.exclude_from_evidence(rel)
+        self.assertIn("not in the output", self.findings.record_answer("q1", 0.4555, "val r2: 0.4555", "high"))
+
+    def test_a_late_plan_still_allows_a_full_run_that_fits(self) -> None:
+        # 3497606 on 15 November: plan at minute 12 of 30, full run projected at 12.5 minutes.
+        self.findings.task.max_minutes = 30
+        self.findings.deadline = time.monotonic() + 18 * 60
+        self.assertIn("Plan recorded", self.findings.record_plan("full", 12.5, ["run"], "fits"))
+        # Never more than 60% of the whole limit (18 of 30 minutes), even early in the run.
+        self.findings.plan = None
+        self.findings.deadline = time.monotonic() + 29 * 60
+        self.assertIn("at most 18 min", self.findings.record_plan("full", 19, ["run"], "too long"))
+        # And the reserve stays free: with 8 minutes left only 3.5 remain for the run.
+        self.findings.deadline = time.monotonic() + 8 * 60
+        self.assertTrue(self.findings.record_plan("full", 5, ["run"], "late").startswith("Error"))
+
+    def test_a_run_without_a_plan_is_reminded_after_a_few_minutes(self) -> None:
+        self.findings.task.max_minutes = 30
+        self.findings.deadline = time.monotonic() + 27 * 60  # minute 3
+        self.assertIsNone(self.findings.plan_reminder())
+        self.findings.deadline = time.monotonic() + 23 * 60  # minute 7
+        self.assertIn("record_plan", self.findings.plan_reminder())
+        self.plan_full()
+        self.assertIsNone(self.findings.plan_reminder())
+
+
 class ScaledAnswerTest(Base):
     def setUp(self) -> None:
         super().setUp()
@@ -234,6 +294,18 @@ class ProbeProjectionTest(unittest.TestCase):
         estimate = project("growing forest\ntree 40 of 1000\n", 60)
         self.assertEqual(estimate["progress"], "tree 40 of 1000")
         self.assertAlmostEqual(estimate["projected_minutes"], round(60 * 1000 / 39.5 / 60, 1))
+
+    def test_a_lone_bar_or_step_counter_is_only_a_lower_bound(self) -> None:
+        estimate = project("Epoch 0:  45%|████▌| 45/100 [00:10<00:12, 4.50it/s]", 60)
+        self.assertTrue(estimate["lower_bound"])
+        self.assertIn("lower bound", describe("Epoch 0:  45%|████▌| 45/100 [00:10<00:12, 4.50it/s]", 60, False, 124))
+        self.assertTrue(project("step 2/2: train model", 60)["lower_bound"])
+        self.assertIsNone(project("Map: 100%|██████████| 1000/1000 [00:01<00:00]", 60), "a finished bar says nothing")
+
+    def test_zero_based_epochs(self) -> None:
+        estimate = project("Epoch 0/150\n50/100 [=====>.....] - ETA: 10s", 60)
+        self.assertFalse(estimate["lower_bound"])
+        self.assertAlmostEqual(estimate["projected_minutes"], 300.0)  # half an epoch in 60 s
 
     def test_no_progress_line(self) -> None:
         self.assertIsNone(project("loading data...\n", 30))
