@@ -25,7 +25,7 @@
   header.top h1 { font-size: 17px; margin: 0; letter-spacing: -0.01em; }
   header.top span { color: var(--muted); font-size: 13px; }
   .layout { display: grid; grid-template-columns: 320px minmax(0, 1fr); gap: 16px; padding: 16px 20px; max-width: 1500px; margin: 0 auto; }
-  @media (max-width: 900px) { .layout { grid-template-columns: 1fr; } }
+  @media (max-width: 900px) { .layout { grid-template-columns: minmax(0, 1fr); } }
   .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
   .panel + .panel { margin-top: 16px; }
   h2 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); margin: 0 0 10px; font-weight: 600; }
@@ -90,6 +90,16 @@
   ol.timeline li.sub .what { padding-left: 14px; }
   ol.timeline li.memory .what { color: var(--accent); }
   ol.timeline details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
+  /* Long file names and commands in code spans must wrap instead of widening the page. */
+  ol.timeline .what code, .answer .v, blockquote span { overflow-wrap: anywhere; }
+  @media (max-width: 560px) {
+    /* Phones: time and agent on one line, the step full width below, instead of a narrow third column. */
+    ol.timeline li { grid-template-columns: 52px minmax(0, 1fr); row-gap: 2px; }
+    ol.timeline .what { grid-column: 1 / -1; }
+    header.top { flex-wrap: wrap; }
+    header.top span { order: 3; flex-basis: 100%; }
+    table { display: block; overflow-x: auto; }
+  }
   .empty { color: var(--muted); padding: 30px 10px; text-align: center; }
   .error-banner { background: var(--bad-bg); color: var(--bad); border-radius: 8px; padding: 8px 12px; margin-bottom: 12px; }
   #logview { margin-top: 16px; }
@@ -307,14 +317,14 @@ function renderScope() {
     el("div", {}, el("span", { class: "chip " + cls, text: label }), " ",
       el("span", { text: p && p.projected_minutes !== null && p.projected_minutes !== undefined
         ? `projected ${fmt(p.projected_minutes)} min with ${fmt(p.minutes_left)} min left` + (p.scaled_minutes ? `, scaled runs ${fmt(p.scaled_minutes)} min` : "")
-        : (ev ? ev.data.summary : "") })),
+        : (p ? "" : (ev ? ev.data.summary : "")) })),
     p && p.reason ? el("div", { class: "hint", text: p.reason }) : null,
     p && p.scale_down ? el("ul", { class: "scale" }, p.scale_down.map((c) => el("li", { text: scaleLine(c) }))) : null,
     p && (p.missing_steps || []).length ? el("div", { class: "hint", text: "Missing steps it found: " + p.missing_steps.join("; ") }) : null);
 }
 function renderTodos() {
   const last = [...events].reverse().find((e) => e.type === "todo_updated");
-  if (!last) return el("div", { class: "empty", text: isLive(detail.status) ? "Waiting for the agent's plan…" : "The agent didn't publish a plan." });
+  if (!last) return el("div", { class: "empty", text: isLive(detail.status) ? "Waiting for the agent's to-do list…" : "The agent didn't publish a to-do list." });
   const marks = { completed: "✓", in_progress: "▸", pending: "○" };
   return el("ol", { class: "todos" }, last.data.todos.map((t) =>
     el("li", { class: t.status }, el("span", { class: "mark", text: marks[t.status] || "○" }), el("span", { text: t.content }))));
@@ -331,7 +341,9 @@ function renderReport(task) {
   if (d.score) {
     const o = d.score.outcome || (d.score.all_correct ? "reproduced" : "not_reproduced");
     out.push(el("div", { class: "scoreline" },
-      el("span", { text: isBudget(o) ? `${d.score.verifiable || 0} of ${d.score.total} answers in range of a scaled run ` : `${d.score.correct} of ${d.score.total} answers match the reference ` }),
+      el("span", { text: !isBudget(o) ? `${d.score.correct} of ${d.score.total} answers match the reference `
+        : Object.values(d.score.per_question || {}).some((q) => q.scaled) ? `${d.score.verifiable || 0} of ${d.score.total} answers in range of a scaled run `
+        : `None of the ${d.score.total} answers could be shown within the run's limits ` }),
       outcomeChip(o)));
     if (isBudget(o)) out.push(el("p", { class: "hint", text: "This paper was too big for the run's limits. A scaled-down result never counts as reproduced, and \"not verifiable\" says nothing about whether the paper is right." }));
   } else out.push(el("p", { class: "hint", text: "No reference answers for this paper, so the answers below aren't scored." }));
@@ -353,9 +365,11 @@ function renderReport(task) {
       a.evidence ? el("blockquote", {}, el("span", { text: a.evidence.quote }),
         el("a", { href: "#", text: a.evidence.file, onclick: (e) => { e.preventDefault(); showFile(a.evidence.file); } })) : null));
   }
-  if ((rep.obstacles || []).length) {
+  const explained = (o) => { const m = /^No answer for (\S+):/.exec(o.summary || ""); return m && byId[m[1]] && byId[m[1]].no_answer; };
+  const problems = (rep.obstacles || []).filter((o) => !explained(o));
+  if (problems.length) {
     out.push(el("h2", { text: "Problems it hit", style: "margin-top:16px" }));
-    for (const o of rep.obstacles) out.push(el("div", { class: "obstacle" },
+    for (const o of problems) out.push(el("div", { class: "obstacle" },
       el("div", {}, el("span", { class: "chip " + (o.resolved ? "ok" : "bad"), text: o.resolved ? "Fixed" : "Not fixed" }), " ", el("strong", { text: o.summary })),
       o.fix ? el("div", { class: "hint", text: o.fix }) : null));
   }
